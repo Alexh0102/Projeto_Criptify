@@ -7,10 +7,12 @@ import {
   KeyRound,
   LoaderCircle,
   Lock,
+  Maximize2,
   ShieldCheck,
   Sparkles,
   Unlock,
   Upload,
+  X,
 } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
@@ -114,6 +116,7 @@ export default function App() {
   const [resultUrl, setResultUrl] = useState<string | null>(null)
   const [resultName, setResultName] = useState('')
   const [preview, setPreview] = useState<PreviewState>({ kind: 'none', mimeType: '' })
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -147,6 +150,28 @@ export default function App() {
   }, [copied])
 
   useEffect(() => {
+    if (!isPreviewOpen) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsPreviewOpen(false)
+      }
+    }
+
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isPreviewOpen])
+
+  useEffect(() => {
     return () => {
       if (resultUrlRef.current) {
         URL.revokeObjectURL(resultUrlRef.current)
@@ -163,6 +188,7 @@ export default function App() {
     setResultUrl(null)
     setResultName('')
     setPreview({ kind: 'none', mimeType: '' })
+    setIsPreviewOpen(false)
   }
 
   function handleModeChange(nextMode: Mode) {
@@ -282,6 +308,18 @@ export default function App() {
     downloadBlobUrl(resultUrl, resultName)
   }
 
+  function handleOpenPreview() {
+    if (!resultUrl || preview.kind === 'none') {
+      return
+    }
+
+    setIsPreviewOpen(true)
+  }
+
+  function handleClosePreview() {
+    setIsPreviewOpen(false)
+  }
+
   async function handleProcess() {
     if (!canUseSecureProcessing) {
       setStatus({
@@ -363,6 +401,71 @@ export default function App() {
       : status.tone === 'error'
         ? AlertCircle
         : Sparkles
+  const canExpandPreview = mode === 'decrypt' && Boolean(resultUrl) && preview.kind !== 'none'
+
+  function renderPreviewMedia(expanded: boolean) {
+    if (!resultUrl) {
+      return null
+    }
+
+    if (preview.kind === 'audio') {
+      return (
+        <div className={expanded ? 'mx-auto max-w-3xl' : undefined}>
+          <audio controls preload="metadata" className="w-full">
+            <source src={resultUrl} type={preview.mimeType || undefined} />
+            Seu navegador nao conseguiu carregar o player de audio.
+          </audio>
+        </div>
+      )
+    }
+
+    if (preview.kind === 'video') {
+      return (
+        <video
+          controls
+          preload="metadata"
+          className={`w-full rounded-2xl bg-black ${
+            expanded ? 'max-h-[76vh]' : 'max-h-[420px]'
+          }`}
+        >
+          <source src={resultUrl} type={preview.mimeType || undefined} />
+          Seu navegador nao conseguiu carregar o player de video.
+        </video>
+      )
+    }
+
+    if (preview.kind === 'image') {
+      return (
+        <img
+          src={resultUrl}
+          alt={`Previa de ${resultName}`}
+          className={`w-full rounded-2xl object-contain ${
+            expanded ? 'max-h-[76vh]' : 'max-h-[420px]'
+          }`}
+        />
+      )
+    }
+
+    if (preview.kind === 'pdf') {
+      return (
+        <iframe
+          src={resultUrl}
+          title={`Previa de ${resultName}`}
+          className={`w-full rounded-2xl bg-white ${
+            expanded ? 'h-[76vh]' : 'h-[420px]'
+          }`}
+        />
+      )
+    }
+
+    return (
+      <p className="text-sm leading-7 text-zinc-300">
+        O arquivo foi recuperado com sucesso, mas este formato nao tem preview
+        nativo disponivel no navegador. Use o botao de download para abrir o
+        conteudo no app adequado.
+      </p>
+    )
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-ink text-white">
@@ -727,48 +830,46 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-[24px] border border-white/10 bg-black/20 p-4">
-                    {preview.kind === 'audio' ? (
-                      <audio controls preload="metadata" className="w-full">
-                        <source src={resultUrl} type={preview.mimeType || undefined} />
-                        Seu navegador nao conseguiu carregar o player de audio.
-                      </audio>
-                    ) : null}
-
-                    {preview.kind === 'video' ? (
-                      <video
-                        controls
-                        preload="metadata"
-                        className="max-h-[420px] w-full rounded-2xl bg-black"
-                      >
-                        <source src={resultUrl} type={preview.mimeType || undefined} />
-                        Seu navegador nao conseguiu carregar o player de video.
-                      </video>
-                    ) : null}
-
-                    {preview.kind === 'image' ? (
-                      <img
-                        src={resultUrl}
-                        alt={`Previa de ${resultName}`}
-                        className="max-h-[420px] w-full rounded-2xl object-contain"
-                      />
-                    ) : null}
-
-                    {preview.kind === 'pdf' ? (
-                      <iframe
-                        src={resultUrl}
-                        title={`Previa de ${resultName}`}
-                        className="h-[420px] w-full rounded-2xl bg-white"
-                      />
-                    ) : null}
-
-                    {preview.kind === 'none' ? (
-                      <p className="text-sm leading-7 text-zinc-300">
-                        O arquivo foi recuperado com sucesso, mas este formato nao tem
-                        preview nativo disponivel no navegador. Use o botao de download
-                        para abrir o conteudo no app adequado.
+                  {canExpandPreview ? (
+                    <div className="mt-4 flex items-center justify-between gap-3 text-xs uppercase tracking-[0.24em] text-zinc-500">
+                      <p>
+                        {preview.kind === 'image' || preview.kind === 'pdf'
+                          ? 'Clique na previa para ampliar'
+                          : 'Abra em destaque para visualizar melhor'}
                       </p>
-                    ) : null}
+                      <button
+                        type="button"
+                        onClick={handleOpenPreview}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium text-white transition hover:bg-white/10"
+                      >
+                        <Maximize2 className="h-3.5 w-3.5" />
+                        Abrir ampliado
+                      </button>
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 rounded-[24px] border border-white/10 bg-black/20 p-4">
+                    {preview.kind === 'image' ? (
+                      <button
+                        type="button"
+                        onClick={handleOpenPreview}
+                        className="block w-full cursor-zoom-in rounded-2xl transition hover:opacity-95"
+                        aria-label="Ampliar previa da imagem"
+                      >
+                        {renderPreviewMedia(false)}
+                      </button>
+                    ) : preview.kind === 'pdf' ? (
+                      <button
+                        type="button"
+                        onClick={handleOpenPreview}
+                        className="block w-full cursor-zoom-in rounded-2xl transition hover:opacity-95"
+                        aria-label="Ampliar previa do PDF"
+                      >
+                        <div className="pointer-events-none">{renderPreviewMedia(false)}</div>
+                      </button>
+                    ) : (
+                      renderPreviewMedia(false)
+                    )}
                   </div>
                 </div>
               ) : null}
@@ -799,6 +900,57 @@ export default function App() {
           </p>
         </footer>
       </main>
+
+      {isPreviewOpen && resultUrl ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Visualizacao ampliada do arquivo recuperado"
+        >
+          <button
+            type="button"
+            onClick={handleClosePreview}
+            className="absolute inset-0"
+            aria-label="Fechar visualizacao ampliada"
+          />
+
+          <div className="relative z-10 flex w-full max-w-6xl flex-col gap-4 rounded-[32px] border border-white/10 bg-zinc-950/95 p-4 shadow-2xl shadow-black/40 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">
+                  Visualizacao ampliada
+                </p>
+                <p className="mt-2 text-lg font-semibold text-white">{resultName}</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+                >
+                  <Download className="h-4 w-4" />
+                  Baixar arquivo
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleClosePreview}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+                >
+                  <X className="h-4 w-4" />
+                  Fechar
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/10 bg-black/40 p-3 sm:p-4">
+              {renderPreviewMedia(true)}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
