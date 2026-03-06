@@ -41,6 +41,11 @@ type PreviewState = {
   mimeType: string
 }
 
+type MediaStatus = {
+  hasError: boolean
+  message: string
+}
+
 const MODE_COPY: Record<
   Mode,
   {
@@ -116,6 +121,10 @@ export default function App() {
   const [resultUrl, setResultUrl] = useState<string | null>(null)
   const [resultName, setResultName] = useState('')
   const [preview, setPreview] = useState<PreviewState>({ kind: 'none', mimeType: '' })
+  const [mediaStatus, setMediaStatus] = useState<MediaStatus>({
+    hasError: false,
+    message: '',
+  })
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -188,6 +197,7 @@ export default function App() {
     setResultUrl(null)
     setResultName('')
     setPreview({ kind: 'none', mimeType: '' })
+    setMediaStatus({ hasError: false, message: '' })
     setIsPreviewOpen(false)
   }
 
@@ -320,6 +330,20 @@ export default function App() {
     setIsPreviewOpen(false)
   }
 
+  function handleMediaReady() {
+    setMediaStatus({ hasError: false, message: '' })
+  }
+
+  function handleMediaError(kind: 'audio' | 'video') {
+    const kindLabel = kind === 'audio' ? 'audio' : 'video'
+    const mimeLabel = preview.mimeType || 'este formato'
+
+    setMediaStatus({
+      hasError: true,
+      message: `O navegador nao conseguiu reproduzir este ${kindLabel}. Isso geralmente indica codec sem suporte para ${mimeLabel}. Baixe o arquivo e teste em um player externo, ou use um formato com codec suportado pelo navegador.`,
+    })
+  }
+
   async function handleProcess() {
     if (!canUseSecureProcessing) {
       setStatus({
@@ -414,6 +438,9 @@ export default function App() {
           <audio
             key={resultUrl}
             controls
+            onCanPlay={handleMediaReady}
+            onLoadedMetadata={handleMediaReady}
+            onError={() => handleMediaError('audio')}
             preload="metadata"
             src={resultUrl}
             className="w-full"
@@ -429,6 +456,9 @@ export default function App() {
         <video
           key={resultUrl}
           controls
+          onCanPlay={handleMediaReady}
+          onLoadedMetadata={handleMediaReady}
+          onError={() => handleMediaError('video')}
           preload="metadata"
           playsInline
           src={resultUrl}
@@ -878,6 +908,12 @@ export default function App() {
                       renderPreviewMedia(false)
                     )}
                   </div>
+
+                  {mediaStatus.hasError ? (
+                    <div className="mt-4 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-50">
+                      {mediaStatus.message}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
