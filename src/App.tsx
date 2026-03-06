@@ -411,8 +411,13 @@ export default function App() {
     if (preview.kind === 'audio') {
       return (
         <div className={expanded ? 'mx-auto max-w-3xl' : undefined}>
-          <audio controls preload="metadata" className="w-full">
-            <source src={resultUrl} type={preview.mimeType || undefined} />
+          <audio
+            key={resultUrl}
+            controls
+            preload="metadata"
+            src={resultUrl}
+            className="w-full"
+          >
             Seu navegador nao conseguiu carregar o player de audio.
           </audio>
         </div>
@@ -422,13 +427,15 @@ export default function App() {
     if (preview.kind === 'video') {
       return (
         <video
+          key={resultUrl}
           controls
           preload="metadata"
+          playsInline
+          src={resultUrl}
           className={`w-full rounded-2xl bg-black ${
             expanded ? 'max-h-[76vh]' : 'max-h-[420px]'
           }`}
         >
-          <source src={resultUrl} type={preview.mimeType || undefined} />
           Seu navegador nao conseguiu carregar o player de video.
         </video>
       )
