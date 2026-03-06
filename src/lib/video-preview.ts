@@ -11,6 +11,10 @@ type VideoPreviewResult = {
   mimeType: string
 }
 
+type FFmpegLogEvent = {
+  message: string
+}
+
 let ffmpegInstance: FFmpeg | null = null
 let ffmpegLoadPromise: Promise<FFmpeg> | null = null
 
@@ -107,6 +111,7 @@ export async function transcodeVideoForBrowserPreview(
   const ffmpeg = await ensureFFmpegLoaded(onProgress)
   const inputFsName = normalizeFsName(`preview-input-${Date.now()}-${fileName}`)
   const outputFsName = normalizeFsName(`preview-output-${Date.now()}.mp4`)
+  let lastRelevantLog = ''
 
   const progressHandler = ({ progress }: { progress: number }) => {
     const normalizedProgress = Math.max(0, Math.min(progress, 1))
@@ -118,8 +123,18 @@ export async function transcodeVideoForBrowserPreview(
       )}%)`,
     )
   }
+  const logHandler = ({ message }: FFmpegLogEvent) => {
+    if (
+      /error|invalid|unsupported|failed|unknown|encoder|decoder|codec|pthread/i.test(
+        message,
+      )
+    ) {
+      lastRelevantLog = message.trim()
+    }
+  }
 
   ffmpeg.on('progress', progressHandler)
+  ffmpeg.on('log', logHandler)
 
   try {
     onProgress?.(18, 'Copiando video descriptografado para o motor local')
@@ -139,13 +154,17 @@ export async function transcodeVideoForBrowserPreview(
       mimeType: 'video/mp4',
     }
   } catch (error) {
+    const details =
+      error instanceof Error && error.message
+        ? error.message
+        : lastRelevantLog || 'Falha ao converter o video localmente para preview compativel.'
+
     throw new Error(
-      error instanceof Error
-        ? `Falha ao converter o video localmente: ${error.message}`
-        : 'Falha ao converter o video localmente para preview compativel.',
+      `Falha ao converter o video localmente: ${details}`,
     )
   } finally {
     ffmpeg.off('progress', progressHandler)
+    ffmpeg.off('log', logHandler)
 
     try {
       await ffmpeg.deleteFile(inputFsName)

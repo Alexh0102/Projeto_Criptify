@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const projectRoot = resolve(scriptDir, '..')
-const sourceDir = resolve(projectRoot, 'node_modules', '@ffmpeg', 'core', 'dist', 'umd')
+const sourceDir = resolve(projectRoot, 'node_modules', '@ffmpeg', 'core', 'dist', 'esm')
 const targetDir = resolve(projectRoot, 'public', 'ffmpeg')
 
 async function main() {
