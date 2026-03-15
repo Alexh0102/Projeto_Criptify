@@ -15,6 +15,7 @@ import type { ChangeEvent, ClipboardEvent } from 'react'
 import {
   CriptifyError,
   decryptText,
+  encryptText,
   formatFileSize,
 } from '../lib/cryptify'
 import {
@@ -25,13 +26,9 @@ import {
 import {
   SecretTextPayloadError,
   parseEncryptedTextPayload,
+  serializeEncryptedTextPayload,
 } from '../lib/secret-text-payload'
 import { useSecretQrCode } from '../hooks/useSecretQrCode'
-
-type QRCodeGeneratorProps = {
-  encryptedPayload: string
-  defaultPassword?: string
-}
 
 type Tab = 'generate' | 'read'
 type Tone = 'info' | 'success' | 'error'
@@ -77,21 +74,22 @@ function getClipboardImageFile(clipboardData: DataTransfer | null) {
   return null
 }
 
-export default function QRCodeGenerator({
-  encryptedPayload,
-  defaultPassword = '',
-}: QRCodeGeneratorProps) {
+export default function QRCodeGenerator() {
   const [tab, setTab] = useState<Tab>('generate')
+  const [plainText, setPlainText] = useState('')
+  const [generatePassword, setGeneratePassword] = useState('')
+  const [encryptedPayload, setEncryptedPayload] = useState('')
+  const [isEncrypting, setIsEncrypting] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [qrImage, setQrImage] = useState<File | null>(null)
-  const [readPassword, setReadPassword] = useState(defaultPassword)
+  const [readPassword, setReadPassword] = useState('')
   const [decodedPayload, setDecodedPayload] = useState('')
   const [revealedText, setRevealedText] = useState('')
   const [isReading, setIsReading] = useState(false)
   const [generateStatus, setGenerateStatus] = useState<StatusState>({
     tone: 'info',
     message:
-      'Criptografe o texto acima e gere um QR Code secreto sem sair do navegador.',
+      'Digite um texto, informe uma senha e criptografe localmente antes de gerar o QR Code.',
   })
   const [readStatus, setReadStatus] = useState<StatusState>({
     tone: 'info',
@@ -102,7 +100,6 @@ export default function QRCodeGenerator({
   const {
     qrCodeDataUrl,
     isGenerating,
-    error: qrError,
     generateQrCode,
     clearQrCode,
     downloadQrCode,
@@ -111,12 +108,6 @@ export default function QRCodeGenerator({
     margin: 1,
     downloadFileName: 'qr-code-secreto.png',
   })
-
-  useEffect(() => {
-    if (!readPassword && defaultPassword) {
-      setReadPassword(defaultPassword)
-    }
-  }, [defaultPassword, readPassword])
 
   useEffect(() => {
     if (!isModalOpen) {
@@ -140,13 +131,54 @@ export default function QRCodeGenerator({
     }
   }, [isModalOpen])
 
+  async function handleEncryptText() {
+    if (!plainText.trim()) {
+      setGenerateStatus({
+        tone: 'error',
+        message: 'Digite um texto antes de criptografar para gerar o QR Code.',
+      })
+      return
+    }
+
+    if (!generatePassword) {
+      setGenerateStatus({
+        tone: 'error',
+        message: 'Digite uma senha antes de criptografar o texto do QR Code.',
+      })
+      return
+    }
+
+    setIsEncrypting(true)
+    clearQrCode()
+
+    try {
+      const encrypted = await encryptText(plainText, generatePassword)
+      const serialized = serializeEncryptedTextPayload(encrypted)
+
+      setEncryptedPayload(serialized)
+      setReadPassword((currentPassword) => currentPassword || generatePassword)
+      setGenerateStatus({
+        tone: 'success',
+        message:
+          'Texto criptografado com sucesso. Agora voce pode gerar o QR Code secreto.',
+      })
+    } catch (error) {
+      setGenerateStatus({
+        tone: 'error',
+        message: getFriendlyErrorMessage(error),
+      })
+    } finally {
+      setIsEncrypting(false)
+    }
+  }
+
   async function handleGenerateModalOpen() {
     setTab('generate')
 
     if (!encryptedPayload) {
       setGenerateStatus({
         tone: 'error',
-        message: 'Criptografe um texto antes de gerar o QR Code secreto.',
+        message: 'Criptografe o texto antes de gerar o QR Code secreto.',
       })
       return
     }
@@ -158,8 +190,7 @@ export default function QRCodeGenerator({
       tone: generated ? 'success' : 'error',
       message: generated
         ? 'QR Code secreto gerado localmente. Baixe o PNG ou escaneie com o celular.'
-        : qrError ??
-          'Nao foi possivel gerar o QR Code secreto com o payload atual.',
+        : 'Nao foi possivel gerar o QR Code secreto com o payload atual.',
     })
   }
 
@@ -251,258 +282,288 @@ export default function QRCodeGenerator({
   }
 
   return (
-    <section className="rounded-[28px] border border-white/10 bg-black/25 p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">
-            QR Code secreto
-          </p>
-          <h3 className="mt-2 text-2xl font-semibold text-white">
-            Gere ou leia um QR Code com payload criptografado
-          </h3>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-300">
-            Gere um QR Code com o ciphertext completo ou leia um QR de imagem para
-            descriptografar o texto diretamente no navegador.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-3 text-cyan-100">
-          <Sparkles className="h-6 w-6" />
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-2 rounded-3xl border border-white/10 bg-black/20 p-1.5">
-        <button
-          type="button"
-          aria-pressed={tab === 'generate'}
-          onClick={() => setTab('generate')}
-          className={`flex items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm font-medium transition ${
-            tab === 'generate'
-              ? 'bg-white text-zinc-950 shadow-lg shadow-cyan-500/10'
-              : 'text-zinc-300 hover:bg-white/5'
-          }`}
-        >
-          <Lock className="h-4 w-4" />
-          Gerar QR
-        </button>
-
-        <button
-          type="button"
-          aria-pressed={tab === 'read'}
-          onClick={() => setTab('read')}
-          className={`flex items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm font-medium transition ${
-            tab === 'read'
-              ? 'bg-white text-zinc-950 shadow-lg shadow-cyan-500/10'
-              : 'text-zinc-300 hover:bg-white/5'
-          }`}
-        >
-          <Search className="h-4 w-4" />
-          Ler QR
-        </button>
-      </div>
-
-      {tab === 'generate' ? (
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
-            <p className="text-sm font-medium text-white">
-              Gerar QR Code secreto
+    <section className="panel-surface rounded-[32px] p-4 sm:p-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">
+              QR Code secreto
             </p>
-            <p className="mt-2 text-sm leading-7 text-zinc-400">
-              Depois de criptografar o texto, gere um QR Code com o payload completo
-              para levar a mensagem com voce. O conteudo continua protegido pela senha.
+            <h2 className="mt-2 text-3xl font-semibold text-white">
+              Gere ou leia um QR Code com texto criptografado
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
+              Criptografe um texto localmente, gere um QR Code com o payload
+              completo e depois leia esse QR em qualquer dispositivo usando a mesma
+              senha.
             </p>
-
-            {encryptedPayload ? (
-              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
-                  Payload pronto para QR
-                </p>
-                <p className="mt-2 break-all font-mono text-xs text-zinc-300">
-                  {encryptedPayload.slice(0, 220)}
-                  {encryptedPayload.length > 220 ? '...' : ''}
-                </p>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.035] p-4 text-sm leading-7 text-zinc-400">
-                Criptografe um texto no passo acima para liberar a geracao do QR Code
-                secreto.
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleGenerateModalOpen}
-              disabled={!encryptedPayload || isGenerating}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[24px] border border-cyan-300/25 bg-cyan-300/10 px-5 py-4 text-base font-semibold text-cyan-50 transition hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isGenerating ? (
-                <LoaderCircle className="h-5 w-5 animate-spin" />
-              ) : (
-                <Sparkles className="h-5 w-5" />
-              )}
-              Gerar QR Code secreto
-            </button>
-
-            <div
-              role="status"
-              aria-live="polite"
-              className={`mt-4 rounded-[24px] border p-4 text-sm ${STATUS_STYLES[generateStatus.tone]}`}
-            >
-              <div className="flex items-start gap-3">
-                {isGenerating ? (
-                  <LoaderCircle className="mt-0.5 h-5 w-5 shrink-0 animate-spin" />
-                ) : generateStatus.tone === 'success' ? (
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                ) : generateStatus.tone === 'error' ? (
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                ) : (
-                  <Sparkles className="mt-0.5 h-5 w-5 shrink-0" />
-                )}
-                <p className="leading-6">{generateStatus.message}</p>
-              </div>
-            </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
-            <p className="text-sm font-medium text-white">Como usar no celular</p>
-            <ol className="mt-3 space-y-3 text-sm leading-7 text-zinc-400">
-              <li>1. Gere o QR Code secreto com o payload criptografado.</li>
-              <li>2. Escaneie a imagem com o celular ou baixe o PNG.</li>
-              <li>3. Abra o Criptify e use a aba de leitura de QR Code.</li>
-              <li>4. Digite a mesma senha para revelar o texto original.</li>
-            </ol>
+          <div className="rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-3 text-cyan-100">
+            <Sparkles className="h-6 w-6" />
           </div>
         </div>
-      ) : (
-        <div className="mt-5 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
-            <p className="text-sm font-medium text-white">
-              Ler QR Code secreto da imagem
-            </p>
-            <p className="mt-2 text-sm leading-7 text-zinc-400">
-              Envie um PNG/JPG com QR Code ou cole uma captura usando Ctrl+V.
-            </p>
 
-            <label
-              htmlFor={fileInputId}
-              className="mt-4 flex cursor-pointer flex-col gap-3 rounded-[24px] border border-dashed border-white/15 bg-white/[0.035] p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.06]"
-            >
-              <input
-                id={fileInputId}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp"
-                className="hidden"
-                onChange={handleQrImageChange}
+        <div className="grid grid-cols-2 gap-2 rounded-3xl border border-white/10 bg-black/20 p-1.5">
+          <button
+            type="button"
+            aria-pressed={tab === 'generate'}
+            onClick={() => setTab('generate')}
+            className={`flex items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm font-medium transition ${
+              tab === 'generate'
+                ? 'bg-white text-zinc-950 shadow-lg shadow-cyan-500/10'
+                : 'text-zinc-300 hover:bg-white/5'
+            }`}
+          >
+            <Lock className="h-4 w-4" />
+            Gerar QR
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={tab === 'read'}
+            onClick={() => setTab('read')}
+            className={`flex items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm font-medium transition ${
+              tab === 'read'
+                ? 'bg-white text-zinc-950 shadow-lg shadow-cyan-500/10'
+                : 'text-zinc-300 hover:bg-white/5'
+            }`}
+          >
+            <Search className="h-4 w-4" />
+            Ler QR
+          </button>
+        </div>
+
+        {tab === 'generate' ? (
+          <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+              <p className="text-sm font-medium text-white">
+                1. Criptografe o texto
+              </p>
+              <p className="mt-2 text-sm leading-7 text-zinc-400">
+                Digite a mensagem e a senha. O payload criptografado sera usado para
+                montar o QR Code secreto.
+              </p>
+
+              <textarea
+                value={plainText}
+                onChange={(event) => setPlainText(event.target.value)}
+                rows={8}
+                placeholder="Digite aqui o texto que sera protegido antes de virar QR Code."
+                className="mt-4 min-h-[200px] w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/50 focus:bg-white/10 focus:ring-2 focus:ring-cyan-400/20"
               />
 
-              <div className="flex items-center gap-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-cyan-100">
-                  <ImageUp className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    Selecionar imagem com QR Code
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    Limite de {formatFileSize(MAX_QR_IMAGE_SIZE_BYTES)}.
-                  </p>
-                </div>
-              </div>
+              <input
+                type="password"
+                value={generatePassword}
+                onChange={(event) => setGeneratePassword(event.target.value)}
+                placeholder="Digite a senha do texto secreto"
+                className="mt-4 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/50 focus:bg-white/10 focus:ring-2 focus:ring-cyan-400/20"
+              />
 
-              {qrImage ? (
-                <p className="text-sm text-emerald-300">
-                  {qrImage.name} - {formatFileSize(qrImage.size)}
-                </p>
-              ) : (
-                <p className="text-sm text-zinc-400">
-                  Nenhuma imagem com QR foi enviada ainda.
-                </p>
-              )}
-            </label>
-
-            <div
-              tabIndex={0}
-              onPaste={handlePasteImage}
-              className="mt-4 rounded-[24px] border border-dashed border-white/15 bg-white/[0.035] p-5 text-sm leading-7 text-zinc-400 outline-none transition focus:border-cyan-400/40 focus:bg-white/[0.06]"
-            >
-              Cole aqui uma captura do QR Code com Ctrl+V. O navegador processa a
-              imagem localmente pelo canvas.
-            </div>
-
-            <input
-              type="password"
-              value={readPassword}
-              onChange={(event) => setReadPassword(event.target.value)}
-              placeholder="Digite a senha usada na criptografia"
-              className="mt-4 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/50 focus:bg-white/10 focus:ring-2 focus:ring-cyan-400/20"
-            />
-
-            <button
-              type="button"
-              onClick={handleReadQrCode}
-              disabled={!qrImage || !readPassword || isReading}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[24px] bg-white px-5 py-4 text-base font-semibold text-zinc-950 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isReading ? (
-                <LoaderCircle className="h-5 w-5 animate-spin" />
-              ) : (
-                <Search className="h-5 w-5" />
-              )}
-              Ler QR e descriptografar
-            </button>
-
-            <div
-              role="status"
-              aria-live="polite"
-              className={`mt-4 rounded-[24px] border p-4 text-sm ${STATUS_STYLES[readStatus.tone]}`}
-            >
-              <div className="flex items-start gap-3">
-                {isReading ? (
-                  <LoaderCircle className="mt-0.5 h-5 w-5 shrink-0 animate-spin" />
-                ) : readStatus.tone === 'success' ? (
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                ) : readStatus.tone === 'error' ? (
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <button
+                type="button"
+                onClick={handleEncryptText}
+                disabled={isEncrypting}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[24px] border border-cyan-300/25 bg-cyan-300/10 px-5 py-4 text-base font-semibold text-cyan-50 transition hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isEncrypting ? (
+                  <LoaderCircle className="h-5 w-5 animate-spin" />
                 ) : (
-                  <Sparkles className="mt-0.5 h-5 w-5 shrink-0" />
+                  <Lock className="h-5 w-5" />
                 )}
-                <p className="leading-6">{readStatus.message}</p>
+                Criptografar texto
+              </button>
+
+              {encryptedPayload ? (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
+                    Payload pronto para QR
+                  </p>
+                  <p className="mt-2 break-all font-mono text-xs text-zinc-300">
+                    {encryptedPayload.slice(0, 220)}
+                    {encryptedPayload.length > 220 ? '...' : ''}
+                  </p>
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleGenerateModalOpen}
+                disabled={!encryptedPayload || isGenerating}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[24px] bg-white px-5 py-4 text-base font-semibold text-zinc-950 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isGenerating ? (
+                  <LoaderCircle className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-5 w-5" />
+                )}
+                Gerar QR Code secreto
+              </button>
+
+              <div
+                role="status"
+                aria-live="polite"
+                className={`mt-4 rounded-[24px] border p-4 text-sm ${STATUS_STYLES[generateStatus.tone]}`}
+              >
+                <div className="flex items-start gap-3">
+                  {isEncrypting || isGenerating ? (
+                    <LoaderCircle className="mt-0.5 h-5 w-5 shrink-0 animate-spin" />
+                  ) : generateStatus.tone === 'success' ? (
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                  ) : generateStatus.tone === 'error' ? (
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                  ) : (
+                    <Sparkles className="mt-0.5 h-5 w-5 shrink-0" />
+                  )}
+                  <p className="leading-6">{generateStatus.message}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
-            <p className="text-sm font-medium text-white">
-              Resultado local do QR Code
-            </p>
-            <p className="mt-2 text-sm leading-7 text-zinc-400">
-              Depois da leitura, o payload e descriptografado localmente e o texto
-              aparece abaixo.
-            </p>
-
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
-                Texto revelado
+            <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+              <p className="text-sm font-medium text-white">
+                Como usar no celular
               </p>
-              <div className="mt-3 min-h-[180px] rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm leading-7 text-white">
-                {revealedText || 'Nenhum texto foi revelado ainda a partir de QR Code.'}
+              <ol className="mt-3 space-y-3 text-sm leading-7 text-zinc-400">
+                <li>1. Criptografe o texto e gere o QR Code secreto.</li>
+                <li>2. Escaneie a imagem com o celular ou baixe o PNG.</li>
+                <li>3. Abra o Criptify e use a aba de leitura de QR Code.</li>
+                <li>4. Digite a mesma senha para revelar o texto original.</li>
+              </ol>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+              <p className="text-sm font-medium text-white">
+                1. Envie o QR Code
+              </p>
+              <p className="mt-2 text-sm leading-7 text-zinc-400">
+                Envie um PNG/JPG com QR Code ou cole uma captura usando Ctrl+V.
+              </p>
+
+              <label
+                htmlFor={fileInputId}
+                className="mt-4 flex cursor-pointer flex-col gap-3 rounded-[24px] border border-dashed border-white/15 bg-white/[0.035] p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.06]"
+              >
+                <input
+                  id={fileInputId}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className="hidden"
+                  onChange={handleQrImageChange}
+                />
+
+                <div className="flex items-center gap-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-cyan-100">
+                    <ImageUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      Selecionar imagem com QR Code
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      Limite de {formatFileSize(MAX_QR_IMAGE_SIZE_BYTES)}.
+                    </p>
+                  </div>
+                </div>
+
+                {qrImage ? (
+                  <p className="text-sm text-emerald-300">
+                    {qrImage.name} - {formatFileSize(qrImage.size)}
+                  </p>
+                ) : (
+                  <p className="text-sm text-zinc-400">
+                    Nenhuma imagem com QR foi enviada ainda.
+                  </p>
+                )}
+              </label>
+
+              <div
+                tabIndex={0}
+                onPaste={handlePasteImage}
+                className="mt-4 rounded-[24px] border border-dashed border-white/15 bg-white/[0.035] p-5 text-sm leading-7 text-zinc-400 outline-none transition focus:border-cyan-400/40 focus:bg-white/[0.06]"
+              >
+                Cole aqui uma captura do QR Code com Ctrl+V. O navegador processa a
+                imagem localmente pelo canvas.
+              </div>
+
+              <input
+                type="password"
+                value={readPassword}
+                onChange={(event) => setReadPassword(event.target.value)}
+                placeholder="Digite a senha usada na criptografia"
+                className="mt-4 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/50 focus:bg-white/10 focus:ring-2 focus:ring-cyan-400/20"
+              />
+
+              <button
+                type="button"
+                onClick={handleReadQrCode}
+                disabled={!qrImage || !readPassword || isReading}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[24px] bg-white px-5 py-4 text-base font-semibold text-zinc-950 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isReading ? (
+                  <LoaderCircle className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Search className="h-5 w-5" />
+                )}
+                Ler QR e descriptografar
+              </button>
+
+              <div
+                role="status"
+                aria-live="polite"
+                className={`mt-4 rounded-[24px] border p-4 text-sm ${STATUS_STYLES[readStatus.tone]}`}
+              >
+                <div className="flex items-start gap-3">
+                  {isReading ? (
+                    <LoaderCircle className="mt-0.5 h-5 w-5 shrink-0 animate-spin" />
+                  ) : readStatus.tone === 'success' ? (
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                  ) : readStatus.tone === 'error' ? (
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                  ) : (
+                    <Sparkles className="mt-0.5 h-5 w-5 shrink-0" />
+                  )}
+                  <p className="leading-6">{readStatus.message}</p>
+                </div>
               </div>
             </div>
 
-            {decodedPayload ? (
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+              <p className="text-sm font-medium text-white">
+                2. Texto recuperado do QR
+              </p>
+              <p className="mt-2 text-sm leading-7 text-zinc-400">
+                Depois da leitura, o payload e descriptografado localmente e o texto
+                aparece abaixo.
+              </p>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
                 <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
-                  Payload lido do QR
+                  Texto revelado
                 </p>
-                <p className="mt-2 break-all font-mono text-xs text-zinc-300">
-                  {decodedPayload.slice(0, 220)}
-                  {decodedPayload.length > 220 ? '...' : ''}
-                </p>
+                <div className="mt-3 min-h-[180px] rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm leading-7 text-white">
+                  {revealedText || 'Nenhum texto foi revelado ainda a partir de QR Code.'}
+                </div>
               </div>
-            ) : null}
+
+              {decodedPayload ? (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
+                    Payload lido do QR
+                  </p>
+                  <p className="mt-2 break-all font-mono text-xs text-zinc-300">
+                    {decodedPayload.slice(0, 220)}
+                    {decodedPayload.length > 220 ? '...' : ''}
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {isModalOpen ? (
         <div

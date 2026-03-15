@@ -31,7 +31,6 @@ import {
   extractMessageFromImage,
   hideMessageInImage,
 } from '../lib/steganography'
-import QRCodeGenerator from './QRCodeGenerator'
 
 type Tab = 'hide' | 'reveal'
 type Tone = 'info' | 'success' | 'error'
@@ -513,10 +512,6 @@ export default function SteganographyPanel() {
               </div>
             </div>
 
-            <QRCodeGenerator
-              encryptedPayload={encryptedPayload}
-              defaultPassword={hidePassword}
-            />
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
