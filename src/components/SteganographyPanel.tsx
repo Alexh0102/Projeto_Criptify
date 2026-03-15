@@ -16,19 +16,22 @@ import type { ChangeEvent } from 'react'
 
 import {
   CriptifyError,
-  decodeBase64ToBytes,
   decryptText,
-  encodeBytesToBase64,
   encryptText,
   formatFileSize,
 } from '../lib/cryptify'
 import {
+  SecretTextPayloadError,
+  parseEncryptedTextPayload,
+  serializeEncryptedTextPayload,
+} from '../lib/secret-text-payload'
+import {
   MAX_STEG_IMAGE_SIZE_BYTES,
-  STEGANOGRAPHY_PAYLOAD_PREFIX,
   SteganographyError,
   extractMessageFromImage,
   hideMessageInImage,
 } from '../lib/steganography'
+import QRCodeGenerator from './QRCodeGenerator'
 
 type Tab = 'hide' | 'reveal'
 type Tone = 'info' | 'success' | 'error'
@@ -36,13 +39,6 @@ type Tone = 'info' | 'success' | 'error'
 type StatusState = {
   tone: Tone
   message: string
-}
-
-type SerializedPayload = {
-  version: 1
-  ciphertext: string
-  iv: string
-  salt: string
 }
 
 const STATUS_STYLES: Record<Tone, string> = {
@@ -62,49 +58,12 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url)
 }
 
-function serializeEncryptedPayload(payload: Awaited<ReturnType<typeof encryptText>>) {
-  const serialized: SerializedPayload = {
-    version: 1,
-    ciphertext: payload.ciphertext,
-    iv: encodeBytesToBase64(payload.iv),
-    salt: encodeBytesToBase64(payload.salt),
-  }
-
-  return `${STEGANOGRAPHY_PAYLOAD_PREFIX}${JSON.stringify(serialized)}`
-}
-
-function parseSerializedPayload(payload: string) {
-  if (!payload.startsWith(STEGANOGRAPHY_PAYLOAD_PREFIX)) {
-    throw new SteganographyError(
-      'INVALID_PAYLOAD',
-      'A imagem não contém uma mensagem do Criptify reconhecível.',
-    )
-  }
-
-  const rawJson = payload.slice(STEGANOGRAPHY_PAYLOAD_PREFIX.length)
-  const parsed = JSON.parse(rawJson) as Partial<SerializedPayload>
-
-  if (
-    parsed.version !== 1 ||
-    typeof parsed.ciphertext !== 'string' ||
-    typeof parsed.iv !== 'string' ||
-    typeof parsed.salt !== 'string'
-  ) {
-    throw new SteganographyError(
-      'INVALID_PAYLOAD',
-      'A mensagem escondida esta corrompida ou incompleta.',
-    )
-  }
-
-  return {
-    ciphertext: parsed.ciphertext,
-    iv: decodeBase64ToBytes(parsed.iv),
-    salt: decodeBase64ToBytes(parsed.salt),
-  }
-}
-
 function getFriendlyErrorMessage(error: unknown) {
-  if (error instanceof SteganographyError || error instanceof CriptifyError) {
+  if (
+    error instanceof SteganographyError ||
+    error instanceof CriptifyError ||
+    error instanceof SecretTextPayloadError
+  ) {
     return error.message
   }
 
@@ -225,13 +184,13 @@ export default function SteganographyPanel() {
 
     try {
       const encrypted = await encryptText(plainText, hidePassword)
-      const serialized = serializeEncryptedPayload(encrypted)
+      const serialized = serializeEncryptedTextPayload(encrypted)
 
       setEncryptedPayload(serialized)
       setHideStatus({
         tone: 'success',
         message:
-          'Texto criptografado com sucesso. Agora envie uma imagem e esconda a mensagem nela.',
+          'Texto criptografado com sucesso. Agora envie uma imagem ou gere um QR Code secreto.',
       })
     } catch (error) {
       setHideStatus({
@@ -247,7 +206,7 @@ export default function SteganographyPanel() {
     if (!encryptedPayload) {
       setHideStatus({
         tone: 'error',
-        message: 'Criptografe o texto antes de tentar escondê-lo em uma imagem.',
+        message: 'Criptografe o texto antes de tentar escondelo em uma imagem.',
       })
       return
     }
@@ -293,7 +252,7 @@ export default function SteganographyPanel() {
     if (!revealPassword) {
       setRevealStatus({
         tone: 'error',
-        message: 'Digite a senha correta para descriptografar a mensagem extraída.',
+        message: 'Digite a senha correta para descriptografar a mensagem extraida.',
       })
       return
     }
@@ -303,7 +262,7 @@ export default function SteganographyPanel() {
 
     try {
       const extractedPayload = await extractMessageFromImage(revealImage)
-      const encrypted = parseSerializedPayload(extractedPayload)
+      const encrypted = parseEncryptedTextPayload(extractedPayload)
       const decrypted = await decryptText(encrypted, revealPassword)
 
       setRevealedCiphertext(extractedPayload)
@@ -376,183 +335,188 @@ export default function SteganographyPanel() {
         </div>
 
         {tab === 'hide' ? (
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-[28px] border border-white/10 bg-black/25 p-5">
-              <div className="flex items-start gap-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-2 text-cyan-100">
-                  <Lock className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    1. Criptografe o texto
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-400">
-                    A mensagem é criptografada antes de ser escondida na imagem.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-col gap-3">
-                <textarea
-                  value={plainText}
-                  onChange={(event) => setPlainText(event.target.value)}
-                  rows={7}
-                  placeholder="Digite aqui a mensagem secreta que será criptografada e escondida."
-                  className="min-h-[180px] w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/50 focus:bg-white/10 focus:ring-2 focus:ring-cyan-400/20"
-                />
-
-                <input
-                  type="password"
-                  value={hidePassword}
-                  onChange={(event) => setHidePassword(event.target.value)}
-                  placeholder="Digite a senha da mensagem secreta"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/50 focus:bg-white/10 focus:ring-2 focus:ring-cyan-400/20"
-                />
-
-                <button
-                  type="button"
-                  onClick={handleEncryptText}
-                  disabled={isEncrypting}
-                  className="inline-flex items-center justify-center gap-2 rounded-[22px] border border-cyan-300/25 bg-cyan-300/10 px-5 py-3.5 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isEncrypting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Lock className="h-4 w-4" />
-                  )}
-                  Criptografar texto
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-white/10 bg-black/25 p-5">
-              <div className="flex items-start gap-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-2 text-cyan-100">
-                  <ImageUp className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    2. Esconda a mensagem em uma imagem
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-400">
-                    Use PNG ou JPG de até {formatFileSize(MAX_STEG_IMAGE_SIZE_BYTES)}.
-                  </p>
-                </div>
-              </div>
-
-              <label
-                htmlFor={hideFileInputId}
-                className="mt-4 flex cursor-pointer flex-col gap-3 rounded-[24px] border border-dashed border-white/15 bg-white/[0.035] p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.06]"
-              >
-                <input
-                  id={hideFileInputId}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg"
-                  className="hidden"
-                  onChange={handleCoverImageChange}
-                />
-
-                <div className="flex items-center gap-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-cyan-100">
-                    <FileImage className="h-5 w-5" />
+          <div className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-[28px] border border-white/10 bg-black/25 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-2 text-cyan-100">
+                    <Lock className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">
-                      Selecionar imagem base
+                      1. Criptografe o texto
                     </p>
-                    <p className="text-xs text-zinc-500">
-                      PNG ou JPG. O download final será sempre em PNG.
-                      PNG ou JPG. O download final será sempre em PNG.
+                    <p className="mt-1 text-sm text-zinc-400">
+                      A mensagem e criptografada antes de ser escondida na imagem.
                     </p>
                   </div>
                 </div>
 
-                {coverImage ? (
-                  <p className="text-sm text-emerald-300">
-                    {coverImage.name} • {formatFileSize(coverImage.size)}
-                  </p>
-                ) : (
-                  <p className="text-sm text-zinc-400">
-                    Nenhuma imagem selecionada ainda.
-                  </p>
-                )}
-              </label>
+                <div className="mt-4 flex flex-col gap-3">
+                  <textarea
+                    value={plainText}
+                    onChange={(event) => setPlainText(event.target.value)}
+                    rows={7}
+                    placeholder="Digite aqui a mensagem secreta que sera criptografada e escondida."
+                    className="min-h-[180px] w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/50 focus:bg-white/10 focus:ring-2 focus:ring-cyan-400/20"
+                  />
 
-              {encryptedPayload ? (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
-                    Payload criptografado pronto
-                  </p>
-                  <p className="mt-2 break-all font-mono text-xs text-zinc-300">
-                    {encryptedPayload.slice(0, 180)}
-                    {encryptedPayload.length > 180 ? '...' : ''}
-                  </p>
-                </div>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={handleHideMessage}
-                disabled={!encryptedPayload || !coverImage || isEmbedding}
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[24px] bg-white px-5 py-4 text-base font-semibold text-zinc-950 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isEmbedding ? (
-                  <LoaderCircle className="h-5 w-5 animate-spin" />
-                ) : (
-                  <ImageUp className="h-5 w-5" />
-                )}
-                Esconder mensagem em imagem
-              </button>
-
-              {secretImageBlob ? (
-                <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-200" />
-                    <p className="text-sm text-emerald-50">
-                      A imagem secreta foi gerada. Baixe como
-                      {' '}
-                      <span className="font-semibold">imagem-secreta.png</span>.
-                    </p>
-                  </div>
-
-                  {secretImageUrl ? (
-                    <img
-                      src={secretImageUrl}
-                      alt="Previa da imagem secreta"
-                      className="max-h-[280px] w-full rounded-2xl object-contain"
-                    />
-                  ) : null}
+                  <input
+                    type="password"
+                    value={hidePassword}
+                    onChange={(event) => setHidePassword(event.target.value)}
+                    placeholder="Digite a senha da mensagem secreta"
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/50 focus:bg-white/10 focus:ring-2 focus:ring-cyan-400/20"
+                  />
 
                   <button
                     type="button"
-                    onClick={() => downloadBlob(secretImageBlob, 'imagem-secreta.png')}
-                    className="inline-flex items-center justify-center gap-2 rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+                    onClick={handleEncryptText}
+                    disabled={isEncrypting}
+                    className="inline-flex items-center justify-center gap-2 rounded-[22px] border border-cyan-300/25 bg-cyan-300/10 px-5 py-3.5 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <Download className="h-4 w-4" />
-                    Baixar imagem-secreta.png
+                    {isEncrypting ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Lock className="h-4 w-4" />
+                    )}
+                    Criptografar texto
                   </button>
                 </div>
-              ) : null}
+              </div>
 
-              <div
-                role="status"
-                aria-live="polite"
-                className={`mt-4 rounded-[24px] border p-4 text-sm ${STATUS_STYLES[hideStatus.tone]}`}
-              >
+              <div className="rounded-[28px] border border-white/10 bg-black/25 p-5">
                 <div className="flex items-start gap-3">
-                  {isEncrypting || isEmbedding ? (
-                    <LoaderCircle className="mt-0.5 h-5 w-5 shrink-0 animate-spin" />
-                  ) : hideStatus.tone === 'success' ? (
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                  ) : hideStatus.tone === 'error' ? (
-                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-2 text-cyan-100">
+                    <ImageUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      2. Esconda a mensagem em uma imagem
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      Use PNG ou JPG de ate {formatFileSize(MAX_STEG_IMAGE_SIZE_BYTES)}.
+                    </p>
+                  </div>
+                </div>
+
+                <label
+                  htmlFor={hideFileInputId}
+                  className="mt-4 flex cursor-pointer flex-col gap-3 rounded-[24px] border border-dashed border-white/15 bg-white/[0.035] p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.06]"
+                >
+                  <input
+                    id={hideFileInputId}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    className="hidden"
+                    onChange={handleCoverImageChange}
+                  />
+
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-cyan-100">
+                      <FileImage className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        Selecionar imagem base
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        PNG ou JPG. O download final sera sempre em PNG.
+                      </p>
+                    </div>
+                  </div>
+
+                  {coverImage ? (
+                    <p className="text-sm text-emerald-300">
+                      {coverImage.name} - {formatFileSize(coverImage.size)}
+                    </p>
                   ) : (
-                    <Sparkles className="mt-0.5 h-5 w-5 shrink-0" />
+                    <p className="text-sm text-zinc-400">
+                      Nenhuma imagem selecionada ainda.
+                    </p>
                   )}
-                  <p className="leading-6">{hideStatus.message}</p>
+                </label>
+
+                {encryptedPayload ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
+                      Payload criptografado pronto
+                    </p>
+                    <p className="mt-2 break-all font-mono text-xs text-zinc-300">
+                      {encryptedPayload.slice(0, 180)}
+                      {encryptedPayload.length > 180 ? '...' : ''}
+                    </p>
+                  </div>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={handleHideMessage}
+                  disabled={!encryptedPayload || !coverImage || isEmbedding}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[24px] bg-white px-5 py-4 text-base font-semibold text-zinc-950 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isEmbedding ? (
+                    <LoaderCircle className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <ImageUp className="h-5 w-5" />
+                  )}
+                  Esconder mensagem em imagem
+                </button>
+
+                {secretImageBlob ? (
+                  <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-200" />
+                      <p className="text-sm text-emerald-50">
+                        A imagem secreta foi gerada. Baixe como{' '}
+                        <span className="font-semibold">imagem-secreta.png</span>.
+                      </p>
+                    </div>
+
+                    {secretImageUrl ? (
+                      <img
+                        src={secretImageUrl}
+                        alt="Previa da imagem secreta"
+                        className="max-h-[280px] w-full rounded-2xl object-contain"
+                      />
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => downloadBlob(secretImageBlob, 'imagem-secreta.png')}
+                      className="inline-flex items-center justify-center gap-2 rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+                    >
+                      <Download className="h-4 w-4" />
+                      Baixar imagem-secreta.png
+                    </button>
+                  </div>
+                ) : null}
+
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className={`mt-4 rounded-[24px] border p-4 text-sm ${STATUS_STYLES[hideStatus.tone]}`}
+                >
+                  <div className="flex items-start gap-3">
+                    {isEncrypting || isEmbedding ? (
+                      <LoaderCircle className="mt-0.5 h-5 w-5 shrink-0 animate-spin" />
+                    ) : hideStatus.tone === 'success' ? (
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                    ) : hideStatus.tone === 'error' ? (
+                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                    ) : (
+                      <Sparkles className="mt-0.5 h-5 w-5 shrink-0" />
+                    )}
+                    <p className="leading-6">{hideStatus.message}</p>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <QRCodeGenerator
+              encryptedPayload={encryptedPayload}
+              defaultPassword={hidePassword}
+            />
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
@@ -592,14 +556,14 @@ export default function SteganographyPanel() {
                       Selecionar imagem secreta
                     </p>
                     <p className="text-xs text-zinc-500">
-                      PNG ou JPG de até {formatFileSize(MAX_STEG_IMAGE_SIZE_BYTES)}.
+                      PNG ou JPG de ate {formatFileSize(MAX_STEG_IMAGE_SIZE_BYTES)}.
                     </p>
                   </div>
                 </div>
 
                 {revealImage ? (
                   <p className="text-sm text-emerald-300">
-                    {revealImage.name} • {formatFileSize(revealImage.size)}
+                    {revealImage.name} - {formatFileSize(revealImage.size)}
                   </p>
                 ) : (
                   <p className="text-sm text-zinc-400">
@@ -660,7 +624,8 @@ export default function SteganographyPanel() {
                     2. Texto original recuperado
                   </p>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Depois da extração, o payload é descriptografado localmente e o texto aparece aqui.
+                    Depois da extracao, o payload e descriptografado localmente e o
+                    texto aparece aqui.
                   </p>
                 </div>
               </div>
@@ -677,7 +642,7 @@ export default function SteganographyPanel() {
               {revealedCiphertext ? (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
                   <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
-                    Payload extraído
+                    Payload extraido
                   </p>
                   <p className="mt-2 break-all font-mono text-xs text-zinc-300">
                     {revealedCiphertext.slice(0, 220)}
