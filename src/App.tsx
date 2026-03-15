@@ -9,6 +9,7 @@ import {
   Lock,
   Maximize2,
   MoonStar,
+  Search,
   ShieldCheck,
   Sparkles,
   SunMedium,
@@ -28,10 +29,11 @@ import {
   generateWhatsappStyleKey,
   getPasswordStrength,
 } from './lib/cryptify'
+import QRCodeGenerator from './components/QRCodeGenerator'
 import SteganographyPanel from './components/SteganographyPanel'
 
 type Mode = 'encrypt' | 'decrypt'
-type ActiveView = 'files' | 'steganography'
+type ActiveView = 'files' | 'steganography' | 'qrcode'
 type Theme = 'dark' | 'light'
 type StatusTone = 'info' | 'success' | 'error'
 type PreviewKind = 'image' | 'none'
@@ -430,7 +432,8 @@ export default function App() {
         ? AlertCircle
         : Sparkles
   const canExpandPreview = mode === 'decrypt' && Boolean(resultUrl) && preview.kind === 'image'
-  const isToolsView = activeView === 'steganography'
+  const isToolsView = activeView === 'steganography' || activeView === 'qrcode'
+  const isSteganographyView = activeView === 'steganography'
 
   function renderPreviewImage(expanded: boolean) {
     if (!resultUrl) {
@@ -553,6 +556,29 @@ export default function App() {
                   </div>
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => setActiveView('qrcode')}
+                  aria-pressed={activeView === 'qrcode'}
+                  className={`rounded-[24px] border px-4 py-4 text-left transition ${
+                    activeView === 'qrcode'
+                      ? 'border-cyan-400/35 bg-cyan-400/10'
+                      : 'border-white/10 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-2 text-cyan-100">
+                      <Search className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">QR Code secreto</p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-400">
+                        Gere e leia QR Codes com texto criptografado.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
                 <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-zinc-400">
                   As próximas funções ficarão nesta área lateral.
                 </div>
@@ -572,15 +598,17 @@ export default function App() {
 
                     <div className="space-y-4">
                       <p className="text-sm uppercase tracking-[0.45em] text-zinc-400">
-                        Esteganografia local
+                        {isSteganographyView ? 'Esteganografia local' : 'QR Code secreto'}
                       </p>
                       <h2 className="max-w-3xl text-4xl font-semibold leading-none tracking-tight text-white sm:text-5xl">
-                        Esconda texto criptografado dentro de imagens.
+                        {isSteganographyView
+                          ? 'Esconda texto criptografado dentro de imagens.'
+                          : 'Criptografe um texto e leve o payload em QR Code.'}
                       </h2>
                       <p className="max-w-2xl text-base leading-7 text-zinc-300 sm:text-lg">
-                        Use LSB nos canais RGB com header de 32 bits para ocultar
-                        mensagens criptografadas. Tudo acontece 100% no navegador,
-                        sem servidor e sem bibliotecas pesadas.
+                        {isSteganographyView
+                          ? 'Use LSB nos canais RGB com header de 32 bits para ocultar mensagens criptografadas. Tudo acontece 100% no navegador, sem servidor e sem bibliotecas pesadas.'
+                          : 'Criptografe um texto localmente, gere um QR Code com o payload completo e depois leia esse QR em qualquer dispositivo usando a mesma senha.'}
                       </p>
                     </div>
 
@@ -606,7 +634,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <SteganographyPanel />
+                  {isSteganographyView ? <SteganographyPanel /> : <QRCodeGenerator />}
                 </div>
               </section>
             ) : (
