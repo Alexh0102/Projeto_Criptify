@@ -10,7 +10,7 @@ export default function FilesPage() {
         <ToolHeroCompact
           eyebrow="Criptografia de arquivos"
           title="Proteja ou recupere arquivos sem sair do navegador."
-          description="Escolha os arquivos, defina a senha e gere o resultado na hora, em uma tela dedicada a essa tarefa."
+          description="Pré-visualize vídeos, fotos, PDFs e documentos locais antes de proteger ou recuperar arquivos com senha, sem upload."
         />
 
         <FileCryptoWorkspace />

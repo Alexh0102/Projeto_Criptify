@@ -558,6 +558,18 @@ export default function FileCryptoWorkspace() {
               </div>
             </div>
 
+            <div className="surface-technical rounded-[24px] p-4 text-sm leading-7 text-zinc-300">
+              <p>
+                Envie seu arquivo apenas para o seu navegador. O CriptoVéu permite
+                pré-visualizar vídeos, fotos, PDFs e documentos localmente antes da
+                criptografia.
+              </p>
+              <p className="mt-2 text-zinc-400">
+                Nenhum arquivo é enviado para servidores do CriptoVéu - a
+                visualização e a proteção acontecem apenas no seu dispositivo.
+              </p>
+            </div>
+
             <label
               htmlFor={fileInputId}
               onDrop={handleDrop}

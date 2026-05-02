@@ -14,8 +14,9 @@ export const toolDefinitions: ToolDefinition[] = [
     path: '/arquivos',
     title: 'Criptografia de arquivos',
     shortTitle: 'Arquivos',
-    description: 'Proteja ou recupere arquivos com senha diretamente no navegador.',
-    helper: 'Escolha os arquivos, defina a senha e gere o resultado na hora.',
+    description:
+      'Pré-visualize e proteja arquivos de vídeo, imagem, PDF e documentos locais com senha, sem enviar nada para servidores.',
+    helper: 'Visualize localmente, defina a senha e gere o resultado na hora.',
     eyebrow: 'Proteção local',
   },
   {

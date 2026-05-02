@@ -201,6 +201,12 @@ export default function UniversalPreview({
         </div>
       ) : null}
 
+      <p className="text-xs leading-6 text-zinc-500">
+        Pré-visualização local: este arquivo está sendo exibido diretamente do seu
+        dispositivo. Você pode navegar pelo vídeo ou documento sem fazer upload para
+        nenhum servidor.
+      </p>
+
       <div
         className="surface-technical min-w-0 overflow-hidden rounded-[24px] p-3 transition duration-300 sm:p-4"
         style={{ filter: isInactive ? 'blur(15px)' : 'none' }}
