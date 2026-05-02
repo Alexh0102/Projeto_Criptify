@@ -528,7 +528,6 @@ export default function FileCryptoWorkspace() {
               label="Modo"
               value={mode}
               onChange={handleModeChange}
-              sticky
               options={[
                 {
                   value: 'encrypt',
