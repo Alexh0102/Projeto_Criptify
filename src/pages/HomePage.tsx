@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ExternalLink,
   FileArchive,
+  Github,
   ImageUp,
   Instagram,
   Link2,
@@ -164,8 +165,8 @@ const transparencyLinks = [
 const socialLinks = [
   {
     href: 'https://www.instagram.com/criptoveu?igsh=MWE2YXc5dGU4Mmdkaw==',
-    title: 'Instagram do CriptoVeu',
-    description: 'Acompanhe novidades, conteudos visuais e atualizacoes do projeto.',
+    title: 'Instagram do CriptoVéu',
+    description: 'Acompanhe novidades, conteúdos visuais e atualizações do projeto.',
     cta: 'Abrir Instagram',
     eyebrow: '@criptoveu',
     icon: Instagram,
@@ -181,6 +182,16 @@ const socialLinks = [
     icon: Linkedin,
     accent:
       'border-sky-400/25 bg-[linear-gradient(135deg,rgba(56,189,248,0.14),rgba(34,211,238,0.12))] shadow-[0_20px_44px_rgba(56,189,248,0.12)]',
+  },
+  {
+    href: 'https://github.com/Alexh0102/Projeto_Criptoveu',
+    title: 'Código-fonte',
+    description: 'Consulte o repositório público, acompanhe mudanças e veja como o CriptoVéu funciona por dentro.',
+    cta: 'Abrir GitHub',
+    eyebrow: 'GitHub',
+    icon: Github,
+    accent:
+      'border-zinc-300/20 bg-[linear-gradient(135deg,rgba(244,244,245,0.12),rgba(34,211,238,0.08))] shadow-[0_20px_44px_rgba(244,244,245,0.08)]',
   },
 ] as const
 
@@ -353,14 +364,14 @@ export default function HomePage() {
         <section className="surface-secondary rounded-[32px] p-4 sm:p-5">
           <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">Redes e contatos</p>
           <h2 className="mt-2 text-xl font-semibold text-white sm:text-[1.9rem]">
-            Saiba mais sobre o CriptoVeu
+            Saiba mais sobre o CriptoVéu
           </h2>
           <p className="mt-2.5 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">
-            Para acompanhar novidades do site e conhecer melhor o perfil por tras do projeto, acesse
-            os canais abaixo.
+            Para acompanhar novidades do site, conhecer melhor o perfil por trás do projeto
+            e consultar o código-fonte, acesse os canais abaixo.
           </p>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
             {socialLinks.map((item) => {
               const Icon = item.icon
 
