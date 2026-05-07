@@ -597,8 +597,13 @@ html[data-theme='light'] .cv-note-warning {
     padding-inline: 0.85rem;
   }
 
+  .cv-shell-header-actions {
+    flex-wrap: nowrap;
+  }
+
   .cv-header-install {
-    flex-basis: 100%;
+    flex: 1 1 10.75rem;
+    max-width: 12.5rem;
     min-width: 0;
   }
 
