@@ -68,12 +68,14 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                 Ferramentas
               </button>
 
-              <InstallAppButton />
+              <div className="cv-header-install min-w-0">
+                <InstallAppButton />
+              </div>
 
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="btn-secondary h-11 w-11 shrink-0 justify-center rounded-full px-0 py-0 sm:h-auto sm:w-auto sm:rounded-[999px] sm:px-4 sm:py-3"
+                className="cv-header-theme btn-secondary h-11 w-11 shrink-0 justify-center rounded-full px-0 py-0 sm:h-auto sm:w-auto sm:rounded-[999px] sm:px-4 sm:py-3"
                 aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
               >
                 {theme === 'dark' ? (
@@ -92,7 +94,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
           </div>
         </header>
 
-        <main className={`flex-1 py-4 sm:py-7 ${showToolsDock ? 'pb-28 sm:pb-7' : ''}`}>{children}</main>
+        <main className={`cv-shell-main flex-1 py-4 sm:py-7 ${showToolsDock ? 'pb-28 sm:pb-7' : ''}`}>{children}</main>
 
         <footer className="mt-auto flex flex-col gap-3 border-t border-white/10 pt-5 text-sm text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
           <p>Privacidade local para arquivos, mensagens, QR Codes e imagens.</p>

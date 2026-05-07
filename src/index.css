@@ -485,22 +485,47 @@ html[data-theme='light'] .cv-note-warning {
   .cv-shell-header {
     top: 0;
     padding-inline: 0.9rem;
-    padding-block: 0.7rem;
+    padding-block: 0.85rem;
     border-radius: 22px;
   }
 
   .cv-shell-header-inner {
-    gap: 0.65rem;
-    align-items: center;
+    gap: 0.8rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 
   .cv-shell-header-brand {
+    flex: 1 1 100%;
     max-width: 100%;
     min-width: 0;
   }
 
   .cv-shell-header-actions {
-    flex-shrink: 0;
+    width: 100%;
+    flex-shrink: 1;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .cv-header-install {
+    flex: 1 1 220px;
+    min-width: min(100%, 220px);
+  }
+
+  .cv-header-install > button {
+    width: 100%;
+    min-height: 3rem;
+    justify-content: center;
+  }
+
+  .cv-header-theme {
+    margin-left: auto;
+  }
+
+  .cv-shell-main {
+    padding-top: 1.35rem !important;
   }
 
   .cv-tools-trigger {
@@ -530,6 +555,14 @@ html[data-theme='light'] .cv-note-warning {
     line-height: 1.7;
   }
 
+  .cv-tool-hero {
+    margin-top: 0.1rem;
+  }
+
+  .cv-tool-hero-grid {
+    gap: 1rem;
+  }
+
   .cv-hero-actions {
     gap: 0.55rem !important;
     flex-wrap: wrap;
@@ -556,6 +589,26 @@ html[data-theme='light'] .cv-note-warning {
 
   html[data-theme='light'] .cv-tools-dock-button {
     box-shadow: 0 16px 34px rgba(31, 53, 73, 0.16);
+  }
+}
+
+@media (max-width: 480px) {
+  .cv-shell-header {
+    padding-inline: 0.85rem;
+  }
+
+  .cv-header-install {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .cv-shell-main {
+    padding-top: 1.5rem !important;
+  }
+
+  .cv-hero-heading {
+    font-size: 1.6rem !important;
+    line-height: 1.2 !important;
   }
 }
 
