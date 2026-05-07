@@ -2,9 +2,12 @@ import {
   ArrowRight,
   BriefcaseBusiness,
   CheckCircle2,
+  ExternalLink,
   FileArchive,
   ImageUp,
+  Instagram,
   Link2,
+  Linkedin,
   LockKeyhole,
   NotebookPen,
   QrCode,
@@ -157,6 +160,29 @@ const transparencyLinks = [
     description: 'Objetivo do CriptoVéu, contexto do produto e direção da plataforma.',
   },
 ]
+
+const socialLinks = [
+  {
+    href: 'https://www.instagram.com/criptoveu?igsh=MWE2YXc5dGU4Mmdkaw==',
+    title: 'Instagram do CriptoVeu',
+    description: 'Acompanhe novidades, conteudos visuais e atualizacoes do projeto.',
+    cta: 'Abrir Instagram',
+    eyebrow: '@criptoveu',
+    icon: Instagram,
+    accent:
+      'border-pink-400/25 bg-[linear-gradient(135deg,rgba(244,114,182,0.14),rgba(251,191,36,0.14))] shadow-[0_20px_44px_rgba(244,114,182,0.12)]',
+  },
+  {
+    href: 'https://www.linkedin.com/in/alex-silva-289108160?utm_source=share_via&utm_content=profile&utm_medium=member_android',
+    title: 'Perfil no LinkedIn',
+    description: 'Veja o perfil profissional ligado ao projeto e encontre mais informacoes sobre a iniciativa.',
+    cta: 'Abrir LinkedIn',
+    eyebrow: 'Alex Silva',
+    icon: Linkedin,
+    accent:
+      'border-sky-400/25 bg-[linear-gradient(135deg,rgba(56,189,248,0.14),rgba(34,211,238,0.12))] shadow-[0_20px_44px_rgba(56,189,248,0.12)]',
+  },
+] as const
 
 export default function HomePage() {
   return (
@@ -321,6 +347,50 @@ export default function HomePage() {
           <h2 className="mt-2 text-xl font-semibold text-white sm:text-[1.9rem]">Perguntas frequentes</h2>
           <div className="mt-4">
             <HelpAccordion items={faqItems} defaultOpenIndex={0} />
+          </div>
+        </section>
+
+        <section className="surface-secondary rounded-[32px] p-4 sm:p-5">
+          <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">Redes e contatos</p>
+          <h2 className="mt-2 text-xl font-semibold text-white sm:text-[1.9rem]">
+            Saiba mais sobre o CriptoVeu
+          </h2>
+          <p className="mt-2.5 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">
+            Para acompanhar novidades do site e conhecer melhor o perfil por tras do projeto, acesse
+            os canais abaixo.
+          </p>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {socialLinks.map((item) => {
+              const Icon = item.icon
+
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`group rounded-[24px] border p-4 transition duration-200 hover:-translate-y-1 ${item.accent}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="icon-chip transition group-hover:scale-105">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <span className="text-[10px] uppercase tracking-[0.3em] text-zinc-500">
+                      {item.eyebrow}
+                    </span>
+                  </div>
+
+                  <h3 className="mt-4 text-[1.2rem] font-semibold leading-tight text-white">{item.title}</h3>
+                  <p className="mt-2.5 text-sm leading-6 text-zinc-300">{item.description}</p>
+
+                  <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-cyan-100">
+                    {item.cta}
+                    <ExternalLink className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                  </div>
+                </a>
+              )
+            })}
           </div>
         </section>
 

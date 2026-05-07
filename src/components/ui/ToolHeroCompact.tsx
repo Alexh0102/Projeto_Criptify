@@ -17,16 +17,16 @@ export default function ToolHeroCompact({
   actions,
 }: Props) {
   return (
-    <section className="cv-hero space-y-4">
+    <section className="cv-hero cv-tool-hero space-y-4">
       <div className="hero-badge">
         <ShieldCheck className="h-4 w-4" />
         {badge}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <div className="cv-tool-hero-grid grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="cv-hero-copy space-y-3">
           <p className="text-xs uppercase tracking-[0.38em] text-zinc-500">{eyebrow}</p>
-          <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-white sm:text-[2.65rem] sm:leading-[1.05]">
+          <h1 className="cv-hero-heading max-w-4xl text-3xl font-semibold tracking-tight text-white sm:text-[2.65rem] sm:leading-[1.05]">
             {title}
           </h1>
           <p className="max-w-3xl text-sm leading-7 text-zinc-300 sm:text-[15px]">
