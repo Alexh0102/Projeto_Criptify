@@ -19,12 +19,37 @@
   status = 200
 
 [[redirects]]
+  from = "/veu-notes"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/privacidade"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/seguranca"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/detalhes-tecnicos"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
   from = "/termos"
   to = "/index.html"
   status = 200
 
 [[redirects]]
   from = "/termos-de-uso"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/sobre"
   to = "/index.html"
   status = 200
 [[headers]]

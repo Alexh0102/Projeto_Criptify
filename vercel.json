@@ -135,6 +135,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/veu-notes",
+      "destination": "/index.html"
+    },
+    {
       "source": "/privacidade",
       "destination": "/index.html"
     },
