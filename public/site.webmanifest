@@ -1,21 +1,26 @@
 {
-  "name": "CriptoVéu",
+  "name": "CriptoVéu – Privacidade local",
   "short_name": "CriptoVéu",
+  "description": "Ferramentas locais para criptografar e proteger arquivos, mensagens, links e imagens diretamente no navegador.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "lang": "pt-BR",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#05070B",
+  "theme_color": "#0EE38D",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     },
     {
       "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
-  ],
-  "theme_color": "#0d5c50",
-  "background_color": "#ffffff",
-  "display": "standalone"
+  ]
 }

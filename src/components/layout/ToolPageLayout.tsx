@@ -6,6 +6,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { toolDefinitions } from '../../config/tools'
 import { useTheme } from '../../context/theme'
 import BrandLogo from '../ui/BrandLogo'
+import InstallAppButton from '../ui/InstallAppButton'
 
 type Props = {
   children: ReactNode
@@ -66,6 +67,8 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                 <Grid2x2 className="h-4 w-4" />
                 Ferramentas
               </button>
+
+              <InstallAppButton />
 
               <button
                 type="button"
