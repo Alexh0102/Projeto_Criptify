@@ -1,4 +1,4 @@
-export type LimitedFeature = 'protected-link' | 'qr-code' | 'hidden-message'
+﻿export type LimitedFeature = 'protected-link' | 'qr-code' | 'hidden-message'
 
 export type EmailValidationResult =
   | { valid: true; normalizedEmail: string }
