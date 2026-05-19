@@ -23,7 +23,13 @@ import {
   readAutoDestructPayloadFromInput,
   serializeAutoDestructPayload,
 } from '../lib/auto-destruct-link'
+import { usePremium } from '../context/premium'
 import { CriptoveuError, decryptText, encryptText } from '../lib/criptoveu'
+import {
+  consumeFreeUsage,
+  getFreeUsageStatus,
+  hasFreeUsageAvailable,
+} from '../lib/premium'
 import AdvancedOptions from './ui/AdvancedOptions'
 import MobileStickyCTA from './ui/MobileStickyCTA'
 import ResultPanel from './ui/ResultPanel'
@@ -178,6 +184,7 @@ export default function AutoDestructLink({
   })
   const [isDecrypting, setIsDecrypting] = useState(false)
   const generateResultRef = useRef<HTMLDivElement | null>(null)
+  const { isPremium, requestPremiumAccess } = usePremium()
 
   const selectedExpiration = useMemo(
     () => EXPIRATION_OPTIONS.find((option) => option.value === expiresIn) ?? EXPIRATION_OPTIONS[0],
@@ -257,6 +264,21 @@ export default function AutoDestructLink({
       return
     }
 
+    if (!isPremium && !hasFreeUsageAvailable('protected-link')) {
+      const usageStatus = getFreeUsageStatus('protected-link')
+
+      setGenerateStatus({
+        tone: 'error',
+        message: `Limite gratuito atingido: ${usageStatus.limit} links protegidos a cada 24 horas.`,
+      })
+      requestPremiumAccess({
+        title: 'Limite da Camada Comunitaria',
+        description:
+          'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
+      })
+      return
+    }
+
     setIsGeneratingLink(true)
     setGeneratedLink('')
 
@@ -268,11 +290,14 @@ export default function AutoDestructLink({
         maxViews: resolveMaxViews(maxViewsValue),
       })
       const link = buildAutoDestructLink(encodedPayload)
+      const usageStatus = isPremium ? null : consumeFreeUsage('protected-link')
 
       setGeneratedLink(link)
       setGenerateStatus({
         tone: 'success',
-        message: 'Link protegido gerado localmente. Agora você pode copiar ou abrir a mensagem protegida.',
+        message: isPremium
+          ? 'Link protegido gerado localmente. Uso ilimitado de apoiador ativo.'
+          : `Link protegido gerado localmente. Restam ${usageStatus?.remaining ?? 0} geracao(oes) gratuitas neste ciclo.`,
       })
     } catch (error) {
       setGenerateStatus({

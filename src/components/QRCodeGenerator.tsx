@@ -24,6 +24,12 @@ import {
   serializeEncryptedTextPayload,
 } from '../lib/secret-text-payload'
 import { useSecretQrCode } from '../hooks/useSecretQrCode'
+import { usePremium } from '../context/premium'
+import {
+  consumeFreeUsage,
+  getFreeUsageStatus,
+  hasFreeUsageAvailable,
+} from '../lib/premium'
 import MobileStickyCTA from './ui/MobileStickyCTA'
 import ResultPanel from './ui/ResultPanel'
 import SegmentedMode from './ui/SegmentedMode'
@@ -115,6 +121,7 @@ export default function QRCodeGenerator({
     margin: 1,
     downloadFileName: 'qr-protegido.png',
   })
+  const { isPremium, requestPremiumAccess } = usePremium()
 
   useEffect(() => {
     if (!qrCodeDataUrl) {
@@ -170,6 +177,21 @@ export default function QRCodeGenerator({
       return
     }
 
+    if (!isPremium && !hasFreeUsageAvailable('qr-code')) {
+      const usageStatus = getFreeUsageStatus('qr-code')
+
+      setGenerateStatus({
+        tone: 'error',
+        message: `Limite gratuito atingido: ${usageStatus.limit} QRs protegidos a cada 24 horas.`,
+      })
+      requestPremiumAccess({
+        title: 'Limite da Camada Comunitaria',
+        description:
+          'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
+      })
+      return
+    }
+
     setIsSubmittingGenerate(true)
     clearQrCode()
 
@@ -180,11 +202,14 @@ export default function QRCodeGenerator({
       setReadPassword((currentPassword) => currentPassword || generatePassword)
 
       const generated = await generateQrCode(qrUrl)
+      const usageStatus = generated && !isPremium ? consumeFreeUsage('qr-code') : null
 
       setGenerateStatus({
         tone: generated ? 'success' : 'error',
         message: generated
-          ? 'QR protegido gerado localmente. Ao escanear, o site abre com a mensagem pronta para pedir a senha.'
+          ? isPremium
+            ? 'QR protegido gerado localmente. Uso ilimitado de apoiador ativo.'
+            : `QR protegido gerado localmente. Restam ${usageStatus?.remaining ?? 0} geracao(oes) gratuitas neste ciclo.`
           : 'Não foi possível gerar o QR protegido com a mensagem informada.',
       })
     } catch (error) {

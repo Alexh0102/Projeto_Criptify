@@ -25,6 +25,12 @@ import {
   parseEncryptedTextPayload,
   serializeEncryptedTextPayload,
 } from '../lib/secret-text-payload'
+import { usePremium } from '../context/premium'
+import {
+  consumeFreeUsage,
+  getFreeUsageStatus,
+  hasFreeUsageAvailable,
+} from '../lib/premium'
 import {
   MAX_STEG_IMAGE_SIZE_BYTES,
   SteganographyError,
@@ -107,6 +113,7 @@ export default function SteganographyPanel({ compact = false }: Props) {
   const secretImageUrlRef = useRef<string | null>(null)
   const hideResultRef = useRef<HTMLDivElement | null>(null)
   const revealResultRef = useRef<HTMLDivElement | null>(null)
+  const { isPremium, requestPremiumAccess } = usePremium()
 
   useEffect(() => {
     return () => {
@@ -207,6 +214,21 @@ export default function SteganographyPanel({ compact = false }: Props) {
       return
     }
 
+    if (!isPremium && !hasFreeUsageAvailable('hidden-message')) {
+      const usageStatus = getFreeUsageStatus('hidden-message')
+
+      setHideStatus({
+        tone: 'error',
+        message: `Limite gratuito atingido: ${usageStatus.limit} imagens secretas a cada 24 horas.`,
+      })
+      requestPremiumAccess({
+        title: 'Limite da Camada Comunitaria',
+        description:
+          'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
+      })
+      return
+    }
+
     setIsEmbedding(true)
     setSecretImageBlob(null)
     updateSecretImagePreview(null)
@@ -215,12 +237,15 @@ export default function SteganographyPanel({ compact = false }: Props) {
       const encrypted = await encryptText(plainText, hidePassword)
       const serialized = serializeEncryptedTextPayload(encrypted)
       const secretBlob = await hideMessageInImage(coverImage, serialized)
+      const usageStatus = isPremium ? null : consumeFreeUsage('hidden-message')
 
       setSecretImageBlob(secretBlob)
       updateSecretImagePreview(secretBlob)
       setHideStatus({
         tone: 'success',
-        message: 'Imagem secreta gerada com sucesso. Agora você pode baixar o PNG protegido.',
+        message: isPremium
+          ? 'Imagem secreta gerada com sucesso. Uso ilimitado de apoiador ativo.'
+          : `Imagem secreta gerada com sucesso. Restam ${usageStatus?.remaining ?? 0} geracao(oes) gratuitas neste ciclo.`,
       })
     } catch (error) {
       setHideStatus({

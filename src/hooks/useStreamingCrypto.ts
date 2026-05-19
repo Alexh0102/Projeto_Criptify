@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react'
 import {
   decryptFile,
   encryptFile,
+  type FileSizeGuardOptions,
   type ProcessResult,
 } from '../lib/criptoveu'
 
@@ -26,16 +27,22 @@ export function useStreamingCrypto() {
       file: File,
       password: string,
       onProgress?: (value: number, label: string) => void,
+      options?: FileSizeGuardOptions,
     ): Promise<ProcessResult> => {
       const operation = mode === 'encrypt' ? encryptFile : decryptFile
 
       setIsProcessing(true)
 
       try {
-        return await operation(file, password, (value, label) => {
-          setProgress({ value, label })
-          onProgress?.(value, label)
-        })
+        return await operation(
+          file,
+          password,
+          (value, label) => {
+            setProgress({ value, label })
+            onProgress?.(value, label)
+          },
+          options,
+        )
       } finally {
         setIsProcessing(false)
       }

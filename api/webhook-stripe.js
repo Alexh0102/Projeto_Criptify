@@ -10,7 +10,7 @@ export const config = {
 }
 
 const EMAIL_FROM = 'CriptoVéu <onboarding@resend.dev>'
-const EMAIL_SUBJECT = 'Sua Licença Vitalícia do CriptoVéu Chegou!'
+const EMAIL_SUBJECT = 'Sua Chave de Ativação Vitalícia do CriptoVéu Chegou!'
 const LICENSE_SCOPE = 'criptoveu:lifetime:v1'
 const MAX_WEBHOOK_BYTES = 2 * 1024 * 1024
 const PROCESSED_EVENT_TTL_MS = 10 * 60 * 1000
@@ -138,17 +138,17 @@ function buildLicenseEmailHtml({ email, licenseKey }) {
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;border:1px solid rgba(94,234,212,.24);border-radius:28px;background:rgba(9,19,23,.92);box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;">
             <tr>
               <td style="padding:34px 26px 18px;text-align:center;">
-                <p style="margin:0 0 10px;font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:#7dd3fc;">CriptoVéu Premium</p>
-                <h1 style="margin:0;font-size:30px;line-height:1.15;color:#ffffff;">Sua licença vitalícia chegou.</h1>
+                <p style="margin:0 0 10px;font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:#7dd3fc;">Apoio ao CriptoVéu</p>
+                <h1 style="margin:0;font-size:30px;line-height:1.15;color:#ffffff;">Sua chave vitalícia chegou.</h1>
                 <p style="margin:16px auto 0;max-width:480px;font-size:15px;line-height:1.7;color:#b9c8c6;">
-                  Obrigado por apoiar o CriptoVéu. Use a chave abaixo para ativar os recursos premium no site.
+                  Obrigado por apoiar o CriptoVéu. Use a chave abaixo para liberar o uso ilimitado no site.
                 </p>
               </td>
             </tr>
             <tr>
               <td style="padding:14px 26px;">
                 <div style="border-radius:22px;border:1px solid rgba(34,211,238,.34);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(14,227,141,.12));padding:22px;text-align:center;">
-                  <p style="margin:0 0 10px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#a7f3d0;">License Key</p>
+                  <p style="margin:0 0 10px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#a7f3d0;">Chave de Ativação Vitalícia</p>
                   <code style="display:block;word-break:break-word;font-family:SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:22px;font-weight:800;letter-spacing:.08em;color:#ffffff;">${safeLicenseKey}</code>
                 </div>
               </td>
@@ -159,12 +159,12 @@ function buildLicenseEmailHtml({ email, licenseKey }) {
                   <h2 style="margin:0 0 12px;font-size:16px;color:#ffffff;">Como ativar</h2>
                   <ol style="margin:0;padding-left:20px;color:#c8d4d2;font-size:14px;line-height:1.8;">
                     <li>Acesse o site do CriptoVéu.</li>
-                    <li>Abra a área de ativação premium.</li>
+                    <li>Abra a área de ativação de chave.</li>
                     <li>Cole a chave exatamente como aparece acima e confirme.</li>
                   </ol>
                 </div>
                 <p style="margin:18px 0 0;text-align:center;font-size:12px;line-height:1.6;color:#7f918e;">
-                  Esta licença foi emitida para ${safeEmail}. Guarde este e-mail em um local seguro.
+                  Esta chave foi emitida para ${safeEmail}. Guarde este e-mail em um local seguro.
                 </p>
               </td>
             </tr>
@@ -178,16 +178,16 @@ function buildLicenseEmailHtml({ email, licenseKey }) {
 
 function buildLicenseEmailText({ email, licenseKey }) {
   return [
-    'Sua Licença Vitalícia do CriptoVéu Chegou!',
+    'Sua Chave de Ativação Vitalícia do CriptoVéu Chegou!',
     '',
-    `License Key: ${licenseKey}`,
+    `Chave de Ativação: ${licenseKey}`,
     '',
     'Como ativar:',
     '1. Acesse o site do CriptoVéu.',
-    '2. Abra a área de ativação premium.',
+    '2. Abra a área de ativação de chave.',
     '3. Cole a chave exatamente como aparece acima e confirme.',
     '',
-    `Esta licença foi emitida para ${email}. Guarde este e-mail em um local seguro.`,
+    `Esta chave foi emitida para ${email}. Guarde este e-mail em um local seguro.`,
   ].join('\n')
 }
 
