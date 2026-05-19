@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
 import AboutPage from './pages/AboutPage'
+import { PremiumProvider } from './context/premium'
 import { ThemeProvider } from './context/theme'
 import TermsModal from './components/TermsModal'
 import FilesPage from './pages/FilesPage'
@@ -31,23 +32,25 @@ function LegacyHashRedirect() {
 export default function App() {
   return (
     <ThemeProvider>
-      <TermsModal />
-      <LegacyHashRedirect />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/arquivos" element={<FilesPage />} />
-        <Route path="/qr-secreto" element={<QrSecretPage />} />
-        <Route path="/link-secreto" element={<LinkSecretPage />} />
-        <Route path="/esteganografia" element={<SteganographyPage />} />
-        <Route path="/veu-notes" element={<VeuNotesPage />} />
-        <Route path="/privacidade" element={<PrivacyPage />} />
-        <Route path="/seguranca" element={<SecurityPage />} />
-        <Route path="/detalhes-tecnicos" element={<TechnicalDetailsPage />} />
-        <Route path="/termos" element={<TermsPage />} />
-        <Route path="/termos-de-uso" element={<TermsPage />} />
-        <Route path="/sobre" element={<AboutPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <PremiumProvider>
+        <TermsModal />
+        <LegacyHashRedirect />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/arquivos" element={<FilesPage />} />
+          <Route path="/qr-secreto" element={<QrSecretPage />} />
+          <Route path="/link-secreto" element={<LinkSecretPage />} />
+          <Route path="/esteganografia" element={<SteganographyPage />} />
+          <Route path="/veu-notes" element={<VeuNotesPage />} />
+          <Route path="/privacidade" element={<PrivacyPage />} />
+          <Route path="/seguranca" element={<SecurityPage />} />
+          <Route path="/detalhes-tecnicos" element={<TechnicalDetailsPage />} />
+          <Route path="/termos" element={<TermsPage />} />
+          <Route path="/termos-de-uso" element={<TermsPage />} />
+          <Route path="/sobre" element={<AboutPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </PremiumProvider>
     </ThemeProvider>
   )
 }

@@ -13,6 +13,10 @@ export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024 * 1024
 
 type ProgressCallback = (value: number, label: string) => void
 
+export type FileSizeGuardOptions = {
+  maxFileSizeBytes?: number | null
+}
+
 type PasswordStrength = {
   level: number
   label: string
@@ -236,11 +240,18 @@ function inferMimeTypeFromName(fileName: string) {
   return mimeByExtension[extension] ?? ''
 }
 
-export function assertSupportedFileSize(file: File) {
-  if (file.size > MAX_FILE_SIZE_BYTES) {
+export function assertSupportedFileSize(
+  file: File,
+  { maxFileSizeBytes = MAX_FILE_SIZE_BYTES }: FileSizeGuardOptions = {},
+) {
+  if (maxFileSizeBytes === null) {
+    return
+  }
+
+  if (file.size > maxFileSizeBytes) {
     throw new CriptoveuError(
       'FILE_TOO_LARGE',
-      `Arquivo excede o limite suportado de ${formatFileSize(MAX_FILE_SIZE_BYTES)}.`,
+      `Arquivo excede o limite suportado de ${formatFileSize(maxFileSizeBytes)}.`,
     )
   }
 }
@@ -249,8 +260,9 @@ export async function encryptFile(
   file: File,
   password: string,
   onProgress?: ProgressCallback,
+  options?: FileSizeGuardOptions,
 ): Promise<ProcessResult> {
-  assertSupportedFileSize(file)
+  assertSupportedFileSize(file, options)
   await reportProgress(onProgress, 8, 'Preparando leitura por blocos')
   const salt = randomBytes(SALT_LENGTH_BYTES)
   const key = await deriveAesKey(password, salt, 'encrypt')
@@ -548,8 +560,9 @@ export async function decryptFile(
   file: File,
   password: string,
   onProgress?: ProgressCallback,
+  options?: FileSizeGuardOptions,
 ): Promise<ProcessResult> {
-  assertSupportedFileSize(file)
+  assertSupportedFileSize(file, options)
   const header = await file.slice(0, CHUNKED_FILE_HEADER_BYTES.length).text()
 
   if (

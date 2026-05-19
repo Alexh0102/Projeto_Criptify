@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BriefcaseBusiness,
   CheckCircle2,
+  Crown,
   ExternalLink,
   FileArchive,
   Github,
@@ -21,6 +22,7 @@ import ToolPageLayout from '../components/layout/ToolPageLayout'
 import BrandLogo from '../components/ui/BrandLogo'
 import HelpAccordion from '../components/ui/HelpAccordion'
 import { toolDefinitions } from '../config/tools'
+import { usePremium } from '../context/premium'
 
 const iconByPath = {
   '/arquivos': FileArchive,
@@ -195,7 +197,23 @@ const socialLinks = [
   },
 ] as const
 
+const freePlanItems = [
+  'Criptografia local AES-256 / RSA.',
+  'Limite de tamanho: arquivos ate 500MB.',
+  'Ate 5 geracoes a cada 24h para Links Protegidos, QR Codes e Mensagens Ocultas.',
+  'VeuNotes: totalmente ILIMITADO, sem restricoes.',
+]
+
+const supportPlanItems = [
+  'Remocao de todas as travas, com arquivos de tamanho ilimitado.',
+  'Geracoes diarias infinitas de links, QR codes e mensagens ocultas.',
+  'Acesso vitalicio atrelado a sua chave matematica.',
+  'Recibo e fatura em PDF enviados pela Stripe.',
+]
+
 export default function HomePage() {
+  const { isPremium, tier, requestPremiumAccess, openLicenseActivation } = usePremium()
+
   return (
     <ToolPageLayout showToolsDock>
       <section className="space-y-5 sm:space-y-6">
@@ -227,6 +245,9 @@ export default function HomePage() {
             </Link>
             <a href="#ferramentas" className="btn-secondary">
               Ver ferramentas
+            </a>
+            <a href="#apoie" className="btn-secondary">
+              Apoiar o Projeto
             </a>
           </div>
 
@@ -311,6 +332,102 @@ export default function HomePage() {
                 </Link>
               )
             })}
+          </div>
+        </section>
+
+        <section id="apoie" className="scroll-mt-36 surface-secondary rounded-[32px] p-4 sm:scroll-mt-32 sm:p-5">
+          <div className="rounded-[26px] border border-emerald-400/30 bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(34,197,94,0.08))] p-4 shadow-[0_18px_48px_rgba(16,185,129,0.10)] motion-safe:animate-pulse sm:p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.32em] text-emerald-50">Donationware</p>
+                <h2 className="mt-2 text-xl font-semibold text-white sm:text-[1.8rem]">
+                  Apoie o CriptoVeu: contribua com o projeto e libere processamento ilimitado
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  requestPremiumAccess({
+                    title: 'Apoiar o Projeto',
+                    description:
+                      'Insira o e-mail onde voce deseja receber a sua Chave de Ativacao Vitalicia.',
+                  })
+                }
+                className="btn-primary shrink-0"
+              >
+                <Crown className="h-4 w-4" />
+                Apoiar com R$ 10
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+            <article className="surface-technical rounded-[28px] p-5">
+              <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">Uso Comunitario</p>
+              <h3 className="mt-3 text-2xl font-semibold text-white">Uso Comunitario (Gratuito)</h3>
+              <p className="mt-3 text-sm leading-7 text-zinc-400">
+                Focado em uso casual para protecao essencial de arquivos do dia a dia.
+              </p>
+              <div className="mt-5 grid gap-3">
+                {freePlanItems.map((item) => (
+                  <div key={item} className="flex items-start gap-3 text-sm leading-6 text-zinc-300">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-100" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="surface-primary rounded-[28px] border-emerald-400/30 p-5 shadow-[0_24px_70px_rgba(16,185,129,0.10)]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.32em] text-emerald-50">Doacao unica</p>
+                  <h3 className="mt-3 text-2xl font-semibold text-white">Apoio ao Projeto (R$ 10,00)</h3>
+                </div>
+                <div className="icon-chip">
+                  <Crown className="h-5 w-5" />
+                </div>
+              </div>
+
+              <p className="mt-3 text-sm leading-7 text-zinc-300">
+                Uma microdoacao unica para ajudar a manter o software open-source ativo, livre de anuncios e independente.
+              </p>
+
+              <div className="mt-5 grid gap-3">
+                {supportPlanItems.map((item) => (
+                  <div key={item} className="flex items-start gap-3 text-sm leading-6 text-zinc-200">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-100" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    requestPremiumAccess({
+                      title: 'Apoiar o Projeto',
+                      description:
+                        'Insira o e-mail onde voce deseja receber a sua Chave de Ativacao Vitalicia.',
+                    })
+                  }
+                  className="btn-primary"
+                >
+                  <Crown className="h-4 w-4" />
+                  Apoiar com R$ 10 (PIX ou Cartao)
+                </button>
+                <button type="button" onClick={openLicenseActivation} className="btn-secondary">
+                  Ja tenho uma chave
+                </button>
+              </div>
+
+              {isPremium ? (
+                <p className="mt-4 rounded-[20px] border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm text-emerald-50">
+                  {tier === 'admin' ? 'Acesso Admin ativo neste navegador.' : 'Apoiador Vitalicio ativo neste navegador.'}
+                </p>
+              ) : null}
+            </article>
           </div>
         </section>
 

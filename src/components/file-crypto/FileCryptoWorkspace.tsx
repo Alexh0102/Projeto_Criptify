@@ -19,6 +19,7 @@ import MobileStickyCTA from '../ui/MobileStickyCTA'
 import ResultPanel from '../ui/ResultPanel'
 import SegmentedMode from '../ui/SegmentedMode'
 import UniversalPreview from './UniversalPreview'
+import { usePremium } from '../../context/premium'
 import {
   getUniversalPreviewMetadata,
   type PreviewMetadata,
@@ -26,13 +27,13 @@ import {
 import { useInactivity } from '../../hooks/useInactivity'
 import { useStreamingCrypto } from '../../hooks/useStreamingCrypto'
 import {
-  MAX_FILE_SIZE_BYTES,
   STREAMING_CHUNK_SIZE_BYTES,
   CriptoveuError,
   formatFileSize,
   generateWhatsappStyleKey,
   getPasswordStrength,
 } from '../../lib/criptoveu'
+import { FREE_FILE_SIZE_BYTES } from '../../lib/premium'
 
 type Mode = 'encrypt' | 'decrypt'
 type StatusTone = 'info' | 'success' | 'error'
@@ -116,6 +117,7 @@ export default function FileCryptoWorkspace() {
   const resultPanelRef = useRef<HTMLDivElement | null>(null)
   const isInactive = useInactivity({ disabled: results.length === 0 && !isPreviewOpen })
   const streamingCrypto = useStreamingCrypto()
+  const { isPremium, tier, requestPremiumAccess } = usePremium()
   const canUseSecureProcessing =
     window.isSecureContext && typeof window.crypto?.subtle !== 'undefined'
   const hasClipboardSupport = typeof navigator.clipboard?.writeText === 'function'
@@ -123,6 +125,8 @@ export default function FileCryptoWorkspace() {
   const strength = getPasswordStrength(password)
   const currentMode = MODE_COPY[mode]
   const totalSelectedSize = files.reduce((sum, currentFile) => sum + currentFile.size, 0)
+  const activeFileLimit = isPremium ? null : FREE_FILE_SIZE_BYTES
+  const fileLimitLabel = activeFileLimit === null ? 'Ilimitado para apoiadores' : formatFileSize(activeFileLimit)
   const resultUrl = previewItem?.url ?? results[0]?.url ?? null
   const resultName = previewItem?.name ?? results[0]?.name ?? ''
   const activePreviewItem = previewItem ?? results[0] ?? null
@@ -133,8 +137,12 @@ export default function FileCryptoWorkspace() {
       value: mode === 'encrypt' ? 'Qualquer arquivo' : 'Arquivos .criptoveu',
     },
     {
-      label: 'Limite recomendado',
-      value: formatFileSize(MAX_FILE_SIZE_BYTES),
+      label: 'Limite do plano',
+      value: fileLimitLabel,
+    },
+    {
+      label: 'Camada ativa',
+      value: isPremium ? (tier === 'admin' ? 'Admin' : 'Apoiador') : 'Comunitaria',
     },
     {
       label: 'Processamento',
@@ -243,15 +251,26 @@ export default function FileCryptoWorkspace() {
       return
     }
 
-    const validFiles = nextFiles.filter((selectedFile) => selectedFile.size <= MAX_FILE_SIZE_BYTES)
-    const rejectedFiles = nextFiles.filter((selectedFile) => selectedFile.size > MAX_FILE_SIZE_BYTES)
+    const validFiles =
+      activeFileLimit === null
+        ? nextFiles
+        : nextFiles.filter((selectedFile) => selectedFile.size <= activeFileLimit)
+    const rejectedFiles =
+      activeFileLimit === null
+        ? []
+        : nextFiles.filter((selectedFile) => selectedFile.size > activeFileLimit)
 
     if (validFiles.length === 0) {
       setFiles([])
       clearResults()
       setStatus({
         tone: 'error',
-        message: `Todos os arquivos estão acima do limite de ${formatFileSize(MAX_FILE_SIZE_BYTES)}.`,
+        message: `Todos os arquivos estao acima do limite gratuito de ${formatFileSize(FREE_FILE_SIZE_BYTES)}.`,
+      })
+      requestPremiumAccess({
+        title: 'Limite da Camada Comunitaria',
+        description:
+          'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
       })
       return
     }
@@ -265,9 +284,16 @@ export default function FileCryptoWorkspace() {
       tone: rejectedFiles.length > 0 ? 'error' : 'info',
       message:
         rejectedFiles.length > 0
-          ? `${validFiles.length} arquivo(s) carregado(s). ${rejectedFiles.length} foram ignorado(s) por exceder o limite.`
+          ? `${validFiles.length} arquivo(s) carregado(s). ${rejectedFiles.length} foram ignorado(s) por exceder o limite gratuito.`
           : `${validFiles.length} arquivo(s) carregado(s) com sucesso. Tudo continua 100% no navegador.`,
     })
+    if (rejectedFiles.length > 0) {
+      requestPremiumAccess({
+        title: 'Limite da Camada Comunitaria',
+        description:
+          'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
+      })
+    }
     clearResults()
   }
 
@@ -394,6 +420,23 @@ export default function FileCryptoWorkspace() {
       return
     }
 
+    const oversizedFreeFiles = isPremium
+      ? []
+      : files.filter((selectedFile) => selectedFile.size > FREE_FILE_SIZE_BYTES)
+
+    if (oversizedFreeFiles.length > 0) {
+      setStatus({
+        tone: 'error',
+        message: `Arquivo acima de ${formatFileSize(FREE_FILE_SIZE_BYTES)} na Camada Comunitaria.`,
+      })
+      requestPremiumAccess({
+        title: 'Limite da Camada Comunitaria',
+        description:
+          'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
+      })
+      return
+    }
+
     setIsProcessing(true)
     setProgress(4)
     setProgressLabel('Preparando ambiente seguro')
@@ -427,6 +470,9 @@ export default function FileCryptoWorkspace() {
               setProgressLabel(
                 files.length === 1 ? label : `Arquivo ${currentStep}/${files.length} - ${label}`,
               )
+            },
+            {
+              maxFileSizeBytes: isPremium ? null : FREE_FILE_SIZE_BYTES,
             },
           )
 
@@ -623,7 +669,7 @@ export default function FileCryptoWorkspace() {
                           : 'Nenhum arquivo carregado'}
                       </p>
                       <p className="mt-1 text-xs text-zinc-500">
-                        Limite recomendado: {formatFileSize(MAX_FILE_SIZE_BYTES)}
+                        Limite do plano: {fileLimitLabel}
                       </p>
 
                       {files.length > 0 ? (
