@@ -1,4 +1,4 @@
-import {
+﻿import {
   AlertCircle,
   CheckCircle2,
   Download,
@@ -185,7 +185,7 @@ export default function QRCodeGenerator({
         message: `Limite gratuito atingido: ${usageStatus.limit} QRs protegidos a cada 24 horas.`,
       })
       requestPremiumAccess({
-        title: 'Limite da Camada Comunitaria',
+        title: 'Limite da Camada Comunitária',
         description:
           'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
       })
@@ -209,7 +209,7 @@ export default function QRCodeGenerator({
         message: generated
           ? isPremium
             ? 'QR protegido gerado localmente. Uso ilimitado de apoiador ativo.'
-            : `QR protegido gerado localmente. Restam ${usageStatus?.remaining ?? 0} geracao(oes) gratuitas neste ciclo.`
+            : `QR protegido gerado localmente. Restam ${usageStatus?.remaining ?? 0} geração(ões) gratuitas neste ciclo.`
           : 'Não foi possível gerar o QR protegido com a mensagem informada.',
       })
     } catch (error) {

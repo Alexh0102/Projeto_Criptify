@@ -1,4 +1,4 @@
-import {
+﻿import {
   AlertCircle,
   CheckCircle2,
   Copy,
@@ -272,7 +272,7 @@ export default function AutoDestructLink({
         message: `Limite gratuito atingido: ${usageStatus.limit} links protegidos a cada 24 horas.`,
       })
       requestPremiumAccess({
-        title: 'Limite da Camada Comunitaria',
+        title: 'Limite da Camada Comunitária',
         description:
           'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
       })
@@ -297,7 +297,7 @@ export default function AutoDestructLink({
         tone: 'success',
         message: isPremium
           ? 'Link protegido gerado localmente. Uso ilimitado de apoiador ativo.'
-          : `Link protegido gerado localmente. Restam ${usageStatus?.remaining ?? 0} geracao(oes) gratuitas neste ciclo.`,
+          : `Link protegido gerado localmente. Restam ${usageStatus?.remaining ?? 0} geração(ões) gratuitas neste ciclo.`,
       })
     } catch (error) {
       setGenerateStatus({

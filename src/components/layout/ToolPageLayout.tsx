@@ -1,4 +1,4 @@
-import { Crown, Grid2x2, MoonStar, SunMedium, X } from 'lucide-react'
+﻿import { Crown, Grid2x2, MoonStar, SunMedium, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
@@ -69,7 +69,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
               </button>
 
               <Link
-                to="/#apoie"
+                to="/apoiar"
                 className="hidden btn-secondary justify-center px-3 sm:inline-flex"
                 aria-label="Apoiar o projeto CriptoVéu"
               >
@@ -166,12 +166,12 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
               </NavLink>
 
               <Link
-                to="/#apoie"
+                to="/apoiar"
                 onClick={() => setIsDrawerOpen(false)}
                 className="surface-secondary rounded-[24px] px-3 py-3 text-left transition sm:px-4 sm:py-4"
               >
                 <p className="text-sm font-medium text-white">Apoiar o Projeto</p>
-                <p className="mt-0.5 text-xs sm:text-sm text-zinc-400">Contribuir com a doacao incentivada.</p>
+                <p className="mt-0.5 text-xs sm:text-sm text-zinc-400">Contribuir com a doação incentivada.</p>
               </Link>
 
               {toolDefinitions.map((tool) => (

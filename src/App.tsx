@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+﻿import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
 import AboutPage from './pages/AboutPage'
@@ -12,6 +12,7 @@ import PrivacyPage from './pages/PrivacyPage'
 import QrSecretPage from './pages/QrSecretPage'
 import SecurityPage from './pages/SecurityPage'
 import SteganographyPage from './pages/SteganographyPage'
+import SupportPage from './pages/SupportPage'
 import TechnicalDetailsPage from './pages/TechnicalDetailsPage'
 import TermsPage from './pages/TermsPage'
 import VeuNotesPage from './pages/VeuNotesPage'
@@ -42,6 +43,8 @@ export default function App() {
           <Route path="/link-secreto" element={<LinkSecretPage />} />
           <Route path="/esteganografia" element={<SteganographyPage />} />
           <Route path="/veu-notes" element={<VeuNotesPage />} />
+          <Route path="/apoiar" element={<SupportPage />} />
+          <Route path="/doacao" element={<SupportPage />} />
           <Route path="/privacidade" element={<PrivacyPage />} />
           <Route path="/seguranca" element={<SecurityPage />} />
           <Route path="/detalhes-tecnicos" element={<TechnicalDetailsPage />} />

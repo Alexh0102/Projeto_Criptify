@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+﻿/* eslint-disable react-refresh/only-export-components */
 import {
   AlertCircle,
   CheckCircle2,
@@ -62,9 +62,9 @@ type CheckoutResponse = {
 }
 
 const LICENSE_STORAGE_KEY = 'criptoveu-premium-license-v1'
-const DEFAULT_MODAL_TITLE = 'Apoie o CriptoVeu'
+const DEFAULT_MODAL_TITLE = 'Apoie o CriptoVéu'
 const DEFAULT_MODAL_DESCRIPTION =
-  'Insira o e-mail onde voce deseja receber a sua Chave de Ativacao Vitalicia.'
+  'Insira o e-mail onde você deseja receber a sua Chave de Ativação Vitalícia.'
 
 const PremiumContext = createContext<PremiumContextValue | null>(null)
 
@@ -125,11 +125,11 @@ async function readJsonResponse<T>(response: Response): Promise<T> {
 }
 
 function getCheckoutErrorMessage(response: CheckoutResponse) {
-  return response.error || 'Nao foi possivel iniciar o checkout agora. Tente novamente.'
+  return response.error || 'Não foi possível iniciar o checkout agora. Tente novamente.'
 }
 
 function getVerifyErrorMessage(response: VerifyLicenseResponse) {
-  return response.error || 'Chave nao reconhecida. Confira o e-mail e a chave de ativacao.'
+  return response.error || 'Chave não reconhecida. Confira o e-mail e a chave de ativação.'
 }
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
@@ -192,7 +192,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
           verifiedAt: Date.now(),
         })
       } catch {
-        // Se a rede falhar, mantemos a experiencia e tentamos novamente no proximo carregamento.
+        // Se a rede falhar, mantemos a experiência e tentamos novamente no próximo carregamento.
       } finally {
         setIsVerifyingLicense(false)
       }
@@ -223,7 +223,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     setModalMode('activate')
     setModalTitle('Pagamento recebido')
     setModalDescription(
-      'Quando o e-mail da chave chegar, cole a Chave de Ativacao Vitalicia aqui para liberar o uso ilimitado neste navegador.',
+      'Quando o e-mail da chave chegar, cole a Chave de Ativação Vitalícia aqui para liberar o uso ilimitado neste navegador.',
     )
     setActivationMessage('Confira sua caixa de entrada. O envio pode levar alguns instantes.')
     currentUrl.searchParams.delete('success')
@@ -278,7 +278,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
       window.location.assign(payload.url)
     } catch {
-      setCheckoutError('Nao foi possivel conectar ao checkout. Verifique sua conexao.')
+      setCheckoutError('Não foi possível conectar ao checkout. Verifique sua conexão.')
       setCheckoutMessage('')
     } finally {
       setIsCreatingCheckout(false)
@@ -290,13 +290,13 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     const normalizedKey = activationKey.trim()
 
     if (!normalizedKey) {
-      setActivationError('Cole sua Chave de Ativacao Vitalicia antes de ativar.')
+      setActivationError('Cole sua Chave de Ativação Vitalícia antes de ativar.')
       return
     }
 
     setIsActivatingLicense(true)
     setActivationError('')
-    setActivationMessage('Validando licenca em ambiente seguro...')
+    setActivationMessage('Validando licença em ambiente seguro...')
 
     try {
       const response = await fetch('/api/verify-license', {
@@ -330,7 +330,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       )
       setActivationError('')
     } catch {
-      setActivationError('Nao foi possivel validar a licenca agora. Tente novamente.')
+      setActivationError('Não foi possível validar a licença agora. Tente novamente.')
       setActivationMessage('')
     } finally {
       setIsActivatingLicense(false)
@@ -374,7 +374,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
               <div className="min-w-0">
                 <div className="hero-badge">
                   <Crown className="h-4 w-4" />
-                  Apoio vitalicio
+                  Apoio vitalício
                 </div>
                 <h2 className="mt-4 text-2xl font-semibold leading-tight text-white sm:text-3xl">
                   {modalTitle}
@@ -399,7 +399,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
                 className={(modalMode === 'checkout' ? 'surface-primary' : 'surface-secondary') + ' rounded-[22px] px-4 py-3 text-left transition'}
               >
                 <p className="text-sm font-semibold text-white">Apoiar o projeto</p>
-                <p className="mt-1 text-xs leading-5 text-zinc-400">Doacao unica com e-mail travado na Stripe.</p>
+                <p className="mt-1 text-xs leading-5 text-zinc-400">Doação única com e-mail travado na Stripe.</p>
               </button>
               <button
                 type="button"
@@ -417,9 +417,9 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
                   <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
                   <div>
                     <p className="font-semibold">
-                      {storedLicense.tier === 'admin' ? 'Acesso Admin ativo' : 'Apoiador Vitalicio ativo'}
+                      {storedLicense.tier === 'admin' ? 'Acesso Admin ativo' : 'Apoiador Vitalício ativo'}
                     </p>
-                    <p className="mt-1 leading-6">Os limites comunitarios estao desativados neste navegador.</p>
+                    <p className="mt-1 leading-6">Os limites comunitários estão desativados neste navegador.</p>
                     <button type="button" className="btn-secondary mt-3" onClick={clearPremiumLicense}>
                     Remover chave deste navegador
                     </button>
@@ -431,7 +431,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
             {modalMode === 'checkout' ? (
               <div className="mt-5 surface-primary rounded-[26px] p-4 sm:p-5">
                 <label className="text-sm font-medium text-white" htmlFor="premium-checkout-email">
-                  Insira o e-mail onde voce deseja receber a sua Chave de Ativacao Vitalicia
+                  Insira o e-mail onde você deseja receber a sua Chave de Ativação Vitalícia
                 </label>
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row">
                   <div className="relative min-w-0 flex-1">
@@ -441,7 +441,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
                       type="email"
                       value={checkoutEmail}
                       onChange={(event) => setCheckoutEmail(event.target.value)}
-                      placeholder="voce@empresa.com"
+                      placeholder="email@empresa.com"
                       className="tool-input pl-11"
                       autoComplete="email"
                     />
@@ -453,7 +453,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
                     className="btn-primary shrink-0"
                   >
                     {isCreatingCheckout ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
-                    Apoiar com R$ 10 (PIX ou Cartao)
+                    Apoiar com R$ 10 (PIX ou Cartão)
                   </button>
                 </div>
 
@@ -483,13 +483,13 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
                     type="email"
                     value={activationEmail}
                     onChange={(event) => setActivationEmail(event.target.value)}
-                    placeholder="voce@empresa.com"
+                    placeholder="email@empresa.com"
                     className="tool-input"
                     autoComplete="email"
                   />
 
                   <label className="text-sm font-medium text-white" htmlFor="premium-activation-key">
-                    Chave de Ativacao Vitalicia
+                    Chave de Ativação Vitalícia
                   </label>
                   <div className="relative">
                     <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
