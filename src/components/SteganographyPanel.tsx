@@ -222,7 +222,7 @@ export default function SteganographyPanel({ compact = false }: Props) {
         message: `Limite gratuito atingido: ${usageStatus.limit} imagens secretas a cada 24 horas.`,
       })
       requestPremiumAccess({
-        title: 'Limite da Camada Comunitaria',
+        title: 'Limite da Camada Comunitária',
         description:
           'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
       })
@@ -245,7 +245,7 @@ export default function SteganographyPanel({ compact = false }: Props) {
         tone: 'success',
         message: isPremium
           ? 'Imagem secreta gerada com sucesso. Uso ilimitado de apoiador ativo.'
-          : `Imagem secreta gerada com sucesso. Restam ${usageStatus?.remaining ?? 0} geracao(oes) gratuitas neste ciclo.`,
+          : `Imagem secreta gerada com sucesso. Restam ${usageStatus?.remaining ?? 0} geração(ões) gratuitas neste ciclo.`,
       })
     } catch (error) {
       setHideStatus({

@@ -139,6 +139,14 @@
       "destination": "/index.html"
     },
     {
+      "source": "/apoiar",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/doacao",
+      "destination": "/index.html"
+    },
+    {
       "source": "/privacidade",
       "destination": "/index.html"
     },

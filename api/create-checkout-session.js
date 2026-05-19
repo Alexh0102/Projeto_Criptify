@@ -47,7 +47,7 @@ function validateEmail(email) {
   if (!EMAIL_PATTERN.test(normalizedEmail)) {
     return {
       valid: false,
-      error: 'Informe um e-mail valido para receber sua chave de ativacao.',
+      error: 'Informe um e-mail válido para receber sua chave de ativação.',
     }
   }
 
@@ -131,7 +131,7 @@ export default async function handler(req, res) {
   try {
     body = await readJsonBody(req)
   } catch {
-    return res.status(400).json({ error: 'JSON invalido.' })
+    return res.status(400).json({ error: 'JSON inválido.' })
   }
 
   const emailValidation = validateEmail(body?.email)
@@ -158,8 +158,8 @@ export default async function handler(req, res) {
             currency: 'brl',
             unit_amount: CHECKOUT_PRICE_CENTS,
             product_data: {
-              name: 'Apoio ao Projeto CriptoVeu',
-              description: 'Microdoacao unica para manter o CriptoVeu open-source, independente e sem anuncios.',
+              name: 'Apoio ao Projeto CriptoVéu',
+              description: 'Microdoação única para manter o CriptoVéu open-source, independente e sem anúncios.',
             },
           },
         },
@@ -168,13 +168,13 @@ export default async function handler(req, res) {
         product: 'criptoveu-donationware-lifetime',
         license_email: emailValidation.normalizedEmail,
       },
-      success_url: `${origin}/?success=true#apoie`,
-      cancel_url: `${origin}/#apoie`,
+      success_url: `${origin}/apoiar?success=true`,
+      cancel_url: `${origin}/apoiar`,
     })
 
     if (!session.url) {
       console.error('[create-checkout-session] Stripe did not return a checkout URL')
-      return res.status(502).json({ error: 'Nao foi possivel criar a sessao de checkout.' })
+      return res.status(502).json({ error: 'Não foi possível criar a sessão de checkout.' })
     }
 
     return res.status(200).json({ url: session.url })

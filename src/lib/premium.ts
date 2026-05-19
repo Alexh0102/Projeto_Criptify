@@ -78,7 +78,7 @@ export function validateLicenseEmail(email: string): EmailValidationResult {
   if (!EMAIL_PATTERN.test(normalizedEmail)) {
     return {
       valid: false,
-      message: 'Informe um e-mail valido para receber sua chave de ativacao.',
+      message: 'Informe um e-mail válido para receber sua chave de ativação.',
     }
   }
 

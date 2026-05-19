@@ -105,7 +105,7 @@ export default async function handler(req, res) {
   try {
     body = await readJsonBody(req)
   } catch {
-    return res.status(400).json({ valid: false, error: 'JSON invalido.' })
+    return res.status(400).json({ valid: false, error: 'JSON inválido.' })
   }
 
   const rawLicenseKey = String(body?.licenseKey ?? '').trim()
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
   const adminMasterKey = process.env.ADMIN_MASTER_KEY
 
   if (!rawLicenseKey) {
-    return res.status(400).json({ valid: false, error: 'Informe a chave de licenca.' })
+    return res.status(400).json({ valid: false, error: 'Informe a chave de licença.' })
   }
 
   if (adminMasterKey && rawLicenseKey === adminMasterKey) {
@@ -129,7 +129,7 @@ export default async function handler(req, res) {
   const expectedLicenseKey = buildLifetimeLicenseKey(normalizedEmail, internalLicenseSecret)
 
   if (!timingSafeEqualText(normalizedLicenseKey, expectedLicenseKey)) {
-    return res.status(401).json({ valid: false, error: 'Licenca invalida para este e-mail.' })
+    return res.status(401).json({ valid: false, error: 'Licença inválida para este e-mail.' })
   }
 
   return res.status(200).json({ valid: true, tier: 'premium' })

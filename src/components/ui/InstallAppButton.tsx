@@ -110,9 +110,9 @@ export default function InstallAppButton() {
       return {
         eyebrow: 'Pronto',
         title: 'Aplicativo instalado',
-        description: 'O CriptoVeu ja pode abrir como app na sua tela inicial.',
+        description: 'O CriptoVéu já pode abrir como app na sua tela inicial.',
         steps: [
-          'Abra o icone salvo no celular para entrar direto no modo app.',
+          'Abra o ícone salvo no celular para entrar direto no modo app.',
           'Se quiser atualizar o atalho, remova o antigo e instale novamente.',
         ],
       }
@@ -123,23 +123,23 @@ export default function InstallAppButton() {
         return {
           eyebrow: 'iPhone e iPad',
           title: 'Instale pelo Safari',
-          description: 'No iPhone, a instalacao do app fica mais confiavel quando voce abre este site no Safari.',
+          description: 'No iPhone, a instalação do app fica mais confiável quando você abre este site no Safari.',
           steps: [
             'Abra o site no Safari.',
             'Toque em Compartilhar.',
-            'Escolha Adicionar a Tela de Inicio.',
+            'Escolha Adicionar à Tela de Início.',
           ],
         }
       }
 
       return {
         eyebrow: 'iPhone e iPad',
-        title: 'Adicionar a Tela de Inicio',
-        description: 'No iPhone, a instalacao acontece pelo menu de compartilhamento do Safari.',
+        title: 'Adicionar à Tela de Início',
+        description: 'No iPhone, a instalação acontece pelo menu de compartilhamento do Safari.',
         steps: [
           'Toque em Compartilhar na barra do Safari.',
-          'Role as opcoes e escolha Adicionar a Tela de Inicio.',
-          'Confirme para abrir o CriptoVeu em modo app.',
+          'Role as opções e escolha Adicionar à Tela de Início.',
+          'Confirme para abrir o CriptoVéu em modo app.',
         ],
       }
     }
@@ -149,18 +149,18 @@ export default function InstallAppButton() {
         eyebrow: 'Android',
         title: deferredPrompt ? 'Instale com um toque' : 'Baixar aplicativo',
         description: deferredPrompt
-          ? 'Seu navegador ja permite instalar o CriptoVeu como aplicativo.'
-          : 'Se o aviso automatico nao aparecer, voce ainda pode instalar pelo menu do navegador.',
+          ? 'Seu navegador já permite instalar o CriptoVéu como aplicativo.'
+          : 'Se o aviso automático não aparecer, você ainda pode instalar pelo menu do navegador.',
         steps: deferredPrompt
           ? [
               'Toque em Instalar agora.',
-              'Confirme a instalacao no navegador.',
+              'Confirme a instalação no navegador.',
               'Abra o app pela tela inicial do celular.',
             ]
           : [
               'Abra o menu do navegador.',
-              'Toque em Instalar app ou Adicionar a tela inicial.',
-              'Confirme para salvar o CriptoVeu como aplicativo.',
+              'Toque em Instalar app ou Adicionar à tela inicial.',
+              'Confirme para salvar o CriptoVéu como aplicativo.',
             ],
       }
     }
@@ -168,10 +168,10 @@ export default function InstallAppButton() {
     return {
       eyebrow: 'Navegador',
       title: 'Baixar aplicativo',
-      description: 'Em celulares compativeis, voce pode instalar o CriptoVeu para abrir mais rapido e sem barra do navegador.',
+      description: 'Em celulares compatíveis, você pode instalar o CriptoVéu para abrir mais rápido e sem barra do navegador.',
       steps: [
         'No celular, abra o menu do navegador.',
-        'Procure por Instalar app ou Adicionar a tela inicial.',
+        'Procure por Instalar app ou Adicionar à tela inicial.',
         'Se estiver no iPhone, use o Safari e toque em Compartilhar.',
       ],
     }
@@ -229,7 +229,7 @@ export default function InstallAppButton() {
           <button
             type="button"
             className="absolute inset-0 bg-black/65"
-            aria-label="Fechar ajuda de instalacao"
+            aria-label="Fechar ajuda de instalação"
             onClick={() => setIsInstallSheetOpen(false)}
           />
 

@@ -142,7 +142,7 @@ export default function FileCryptoWorkspace() {
     },
     {
       label: 'Camada ativa',
-      value: isPremium ? (tier === 'admin' ? 'Admin' : 'Apoiador') : 'Comunitaria',
+      value: isPremium ? (tier === 'admin' ? 'Admin' : 'Apoiador') : 'Comunitária',
     },
     {
       label: 'Processamento',
@@ -265,10 +265,10 @@ export default function FileCryptoWorkspace() {
       clearResults()
       setStatus({
         tone: 'error',
-        message: `Todos os arquivos estao acima do limite gratuito de ${formatFileSize(FREE_FILE_SIZE_BYTES)}.`,
+        message: `Todos os arquivos estão acima do limite gratuito de ${formatFileSize(FREE_FILE_SIZE_BYTES)}.`,
       })
       requestPremiumAccess({
-        title: 'Limite da Camada Comunitaria',
+        title: 'Limite da Camada Comunitária',
         description:
           'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
       })
@@ -289,7 +289,7 @@ export default function FileCryptoWorkspace() {
     })
     if (rejectedFiles.length > 0) {
       requestPremiumAccess({
-        title: 'Limite da Camada Comunitaria',
+        title: 'Limite da Camada Comunitária',
         description:
           'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
       })
@@ -427,10 +427,10 @@ export default function FileCryptoWorkspace() {
     if (oversizedFreeFiles.length > 0) {
       setStatus({
         tone: 'error',
-        message: `Arquivo acima de ${formatFileSize(FREE_FILE_SIZE_BYTES)} na Camada Comunitaria.`,
+        message: `Arquivo acima de ${formatFileSize(FREE_FILE_SIZE_BYTES)} na Camada Comunitária.`,
       })
       requestPremiumAccess({
-        title: 'Limite da Camada Comunitaria',
+        title: 'Limite da Camada Comunitária',
         description:
           'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
       })
