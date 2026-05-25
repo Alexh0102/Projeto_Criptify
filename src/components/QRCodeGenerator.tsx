@@ -30,6 +30,7 @@ import {
   getFreeUsageStatus,
   hasFreeUsageAvailable,
 } from '../lib/premium'
+import FreeUsageCounter from './ui/FreeUsageCounter'
 import MobileStickyCTA from './ui/MobileStickyCTA'
 import ResultPanel from './ui/ResultPanel'
 import SegmentedMode from './ui/SegmentedMode'
@@ -345,6 +346,8 @@ export default function QRCodeGenerator({
                 <p className="mt-2 text-sm leading-7 text-zinc-400">
                   Escreva a mensagem, defina a senha e gere o QR em um clique.
                 </p>
+
+                <FreeUsageCounter feature="qr-code" />
 
                 <textarea
                   value={plainText}

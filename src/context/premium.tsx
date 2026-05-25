@@ -453,9 +453,12 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
                     className="btn-primary shrink-0"
                   >
                     {isCreatingCheckout ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
-                    Apoiar com R$ 10 (PIX ou Cartão)
+                    Apoiar com R$ 10
                   </button>
                 </div>
+                <p className="mt-3 text-xs leading-6 text-zinc-400">
+                  Meios de pagamento aceitos: cartão de crédito, cartão de débito, Google Pay e boleto.
+                </p>
 
                 {checkoutError ? (
                   <div className="mt-4 rounded-[20px] border border-rose-500/25 bg-rose-500/10 p-3 text-sm text-rose-100">

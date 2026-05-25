@@ -37,6 +37,7 @@ import {
   extractMessageFromImage,
   hideMessageInImage,
 } from '../lib/steganography'
+import FreeUsageCounter from './ui/FreeUsageCounter'
 import MobileStickyCTA from './ui/MobileStickyCTA'
 import ResultPanel from './ui/ResultPanel'
 import SegmentedMode from './ui/SegmentedMode'
@@ -345,6 +346,8 @@ export default function SteganographyPanel({ compact = false }: Props) {
                     </p>
                   </div>
                 </div>
+
+                <FreeUsageCounter feature="hidden-message" />
 
                 <textarea
                   value={plainText}
