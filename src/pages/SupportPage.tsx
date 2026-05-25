@@ -10,8 +10,7 @@ const activationEmailPrompt =
   'Insira o e-mail onde você deseja receber a sua Chave de Ativação Vitalícia.'
 
 const freePlanItems = [
-  'Criptografia local AES-256 / RSA.',
-  'Limite de tamanho: arquivos até 500MB.',
+  'Criptografia e recuperação de arquivos sem limite de usos; arquivos de até 500MB.',
   'Até 10 gerações a cada 24h para Links Protegidos, QR Codes e Mensagens Ocultas.',
   'VéuNotes: totalmente ilimitado, sem restrições.',
 ]
@@ -37,7 +36,12 @@ const faqItems = [
   {
     title: 'O uso gratuito continua existindo?',
     content:
-      'Sim. A Camada Comunitária continua disponível para uso casual, com limites locais nas ferramentas mais pesadas.',
+      'Sim. A criptografia e a recuperação de arquivos não têm limite de quantidade de usos, respeitando apenas o limite gratuito de tamanho. Links Protegidos, QR Codes e Mensagens Ocultas oferecem 10 gerações a cada 24 horas.',
+  },
+  {
+    title: 'Por que há limite em algumas ferramentas?',
+    content:
+      'O processamento acontece localmente no seu dispositivo. O limite de geração existe para incentivar o apoio voluntário ao desenvolvimento e à manutenção do CriptoVéu, não por cobrança de processamento em servidor.',
   },
 ]
 
@@ -98,6 +102,11 @@ export default function SupportPage() {
                   </div>
                 ))}
               </div>
+              <p className="mt-5 rounded-[20px] border border-cyan-400/15 bg-cyan-400/[0.05] p-3 text-xs leading-6 text-zinc-400">
+                Transparência: o processamento é local. A cota de links, QRs e mensagens ocultas
+                incentiva o apoio voluntário à manutenção do projeto; ela não bloqueia a
+                criptografia ou a recuperação de arquivos por quantidade de usos.
+              </p>
             </article>
 
             <article className="surface-primary rounded-[28px] border-emerald-400/30 p-5 shadow-[0_24px_70px_rgba(16,185,129,0.10)]">
