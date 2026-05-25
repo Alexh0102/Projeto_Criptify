@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react'
 import {
   decryptFile,
   encryptFile,
-  type FileSizeGuardOptions,
+  type FileEncryptionOptions,
   type ProcessResult,
 } from '../lib/criptoveu'
 
@@ -27,7 +27,7 @@ export function useStreamingCrypto() {
       file: File,
       password: string,
       onProgress?: (value: number, label: string) => void,
-      options?: FileSizeGuardOptions,
+      options?: FileEncryptionOptions,
     ): Promise<ProcessResult> => {
       const operation = mode === 'encrypt' ? encryptFile : decryptFile
 

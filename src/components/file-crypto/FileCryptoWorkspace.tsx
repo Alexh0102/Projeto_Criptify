@@ -15,6 +15,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 
 import FieldBlock from '../ui/FieldBlock'
+import AdvancedOptions from '../ui/AdvancedOptions'
 import MobileStickyCTA from '../ui/MobileStickyCTA'
 import ResultPanel from '../ui/ResultPanel'
 import SegmentedMode from '../ui/SegmentedMode'
@@ -27,11 +28,15 @@ import {
 import { useInactivity } from '../../hooks/useInactivity'
 import { useStreamingCrypto } from '../../hooks/useStreamingCrypto'
 import {
+  ARGON2_FILE_ITERATIONS,
+  DEFAULT_FILE_SECURITY_PROFILE_ID,
+  FILE_SECURITY_PROFILES,
   STREAMING_CHUNK_SIZE_BYTES,
   CriptoveuError,
   formatFileSize,
   generateWhatsappStyleKey,
   getPasswordStrength,
+  type FileSecurityProfileId,
 } from '../../lib/criptoveu'
 import { FREE_FILE_SIZE_BYTES } from '../../lib/premium'
 
@@ -85,6 +90,20 @@ const STATUS_STYLES: Record<StatusTone, string> = {
 }
 
 const STRENGTH_SLOTS = [1, 2, 3, 4, 5]
+const FILE_SECURITY_PROFILE_STORAGE_KEY = 'criptoveu-file-security-profile-v3'
+
+function loadSecurityProfileId(): FileSecurityProfileId {
+  try {
+    const storedValue = window.localStorage.getItem(FILE_SECURITY_PROFILE_STORAGE_KEY)
+    const selectedProfile = FILE_SECURITY_PROFILES.find(
+      (profile) => profile.id === storedValue,
+    )
+
+    return selectedProfile?.id ?? DEFAULT_FILE_SECURITY_PROFILE_ID
+  } catch {
+    return DEFAULT_FILE_SECURITY_PROFILE_ID
+  }
+}
 
 function downloadBlobUrl(url: string, fileName: string) {
   const anchor = document.createElement('a')
@@ -111,6 +130,8 @@ export default function FileCryptoWorkspace() {
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [securityProfileId, setSecurityProfileId] =
+    useState<FileSecurityProfileId>(loadSecurityProfileId)
   const fileInputId = useId()
   const passwordInputId = useId()
   const resultUrlRef = useRef<string[]>([])
@@ -121,6 +142,9 @@ export default function FileCryptoWorkspace() {
   const canUseSecureProcessing =
     window.isSecureContext && typeof window.crypto?.subtle !== 'undefined'
   const hasClipboardSupport = typeof navigator.clipboard?.writeText === 'function'
+  const securityProfile =
+    FILE_SECURITY_PROFILES.find((profile) => profile.id === securityProfileId) ??
+    FILE_SECURITY_PROFILES[1]
 
   const strength = getPasswordStrength(password)
   const currentMode = MODE_COPY[mode]
@@ -149,6 +173,13 @@ export default function FileCryptoWorkspace() {
       value: `Blocos de ${formatFileSize(STREAMING_CHUNK_SIZE_BYTES)}`,
     },
     {
+      label: 'Derivação',
+      value:
+        mode === 'encrypt'
+          ? `Argon2id / ${securityProfile.memoryMb} MB`
+          : 'Parâmetros do pacote',
+    },
+    {
       label: 'Envio',
       value: 'Sem envio ao servidor',
     },
@@ -163,6 +194,14 @@ export default function FileCryptoWorkspace() {
       })
     }
   }, [canUseSecureProcessing])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(FILE_SECURITY_PROFILE_STORAGE_KEY, securityProfileId)
+    } catch {
+      // A seleção em memória continua válida quando o armazenamento é bloqueado.
+    }
+  }, [securityProfileId])
 
   useEffect(() => {
     if (!copied) {
@@ -473,6 +512,10 @@ export default function FileCryptoWorkspace() {
             },
             {
               maxFileSizeBytes: isPremium ? null : FREE_FILE_SIZE_BYTES,
+              argon2MemoryMb:
+                mode === 'encrypt' ? securityProfile.memoryMb : undefined,
+              argon2Iterations:
+                mode === 'encrypt' ? ARGON2_FILE_ITERATIONS : undefined,
             },
           )
 
@@ -769,6 +812,57 @@ export default function FileCryptoWorkspace() {
                 </div>
               </div>
             </div>
+
+            {mode === 'encrypt' ? (
+              <AdvancedOptions
+                title="Configurações Avançadas"
+                helper={`Argon2id: ${securityProfile.memoryMb} MB de RAM, ${ARGON2_FILE_ITERATIONS} passes`}
+              >
+                <fieldset className="space-y-3">
+                  <legend className="sr-only">Consumo de memória do Argon2id</legend>
+
+                  {FILE_SECURITY_PROFILES.map((profile) => (
+                    <label
+                      key={profile.id}
+                      className={`block cursor-pointer rounded-2xl border p-4 transition ${
+                        securityProfileId === profile.id
+                          ? 'border-cyan-400/45 bg-cyan-400/10'
+                          : 'border-white/10 bg-white/[0.025] hover:border-white/20'
+                      }`}
+                    >
+                      <span className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name="file-security-profile"
+                          value={profile.id}
+                          checked={securityProfileId === profile.id}
+                          disabled={isProcessing}
+                          onChange={() => setSecurityProfileId(profile.id)}
+                          className="mt-1 accent-cyan-400"
+                        />
+
+                        <span>
+                          <span className="block text-sm font-medium text-white">
+                            {profile.label}
+                          </span>
+                          <span className="mt-1 block font-mono text-xs uppercase tracking-[0.2em] text-cyan-200/80">
+                            {profile.memoryMb} MB RAM
+                          </span>
+                          <span className="mt-2 block text-xs leading-6 text-zinc-400">
+                            {profile.description}
+                          </span>
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+
+                  <p className="pt-2 text-xs leading-6 text-zinc-500">
+                    A seleção afeta apenas novos pacotes. Ao recuperar, a RAM e os
+                    passes são lidos diretamente do cabeçalho do arquivo.
+                  </p>
+                </fieldset>
+              </AdvancedOptions>
+            ) : null}
 
             <div className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">

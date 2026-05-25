@@ -6,7 +6,7 @@ Site em produção: `https://www.xn--criptovu-h1a.com/`
 
 ## Resumo
 
-O objetivo do CriptoVéu é oferecer ferramentas simples para criptografia, recuperação e compartilhamento seguro de conteúdo em um ambiente 100% client-side. A aplicação usa a Web Crypto API nativa do navegador para realizar criptografia autenticada com AES-GCM e derivação de chave por PBKDF2.
+O objetivo do CriptoVéu é oferecer ferramentas simples para criptografia, recuperação e compartilhamento seguro de conteúdo em um ambiente 100% client-side. A aplicação usa a Web Crypto API nativa do navegador para realizar criptografia autenticada com AES-GCM. Novos pacotes de arquivos usam Argon2id em WebAssembly dentro de um Web Worker; formatos anteriores, mensagens e notas preservam PBKDF2 para compatibilidade.
 
 Principais recursos:
 
@@ -40,6 +40,7 @@ Principais recursos:
 - Tailwind CSS e PostCSS para estilização.
 - `lucide-react` para ícones.
 - Web Crypto API nativa do navegador.
+- `hash-wasm` para Argon2id em WebAssembly, executado em Web Worker.
 - `qrcode` para geração de QR Code.
 - `jsqr` para leitura de QR Code em imagens.
 - Service Worker e Web App Manifest para experiência PWA.
@@ -54,18 +55,20 @@ A ferramenta de arquivos aceita múltiplos arquivos no modo de proteção e gera
 Formato atual do pacote:
 
 ```text
-CRIPTOVEU2 + salt + [iv + tamanho_do_bloco + ciphertext]...
+CRIPTOVEU3 + ram_mb_ascii + passes_ascii + salt + iv_inicial
+  + [tamanho_ciphertext + ciphertext]...
 ```
 
 Detalhes técnicos:
 
 - Algoritmo: AES-256-GCM.
-- Derivação de chave: PBKDF2 com SHA-256.
-- Iterações para arquivos e mensagens: 600.000.
-- `salt`: 16 bytes aleatórios por arquivo ou mensagem.
-- `iv`: 12 bytes aleatórios por bloco.
-- Dados autenticados adicionais por bloco para dificultar alteração ou reordenação indevida.
-- Compatibilidade de leitura com pacotes antigos `.cryptify`.
+- Derivação de chave para novos arquivos: Argon2id v1.3 via WASM em um Web Worker (`t=2`, `p=1`).
+- Perfis de memória Argon2id: 64 MB, 256 MB (padrão) ou 512 MB; a seleção fica em cache apenas para criar arquivos novos.
+- Cabeçalho V3: assinatura `CRIPTOVEU3` (10 bytes), RAM em MB (4 bytes ASCII), passes (4 bytes ASCII), `salt` (16 bytes) e IV inicial (12 bytes).
+- A recuperação V3 lê RAM e passes diretamente do cabeçalho; não depende de `localStorage`.
+- Cada bloco tem até 2 MB. Seu tamanho, sua ordem e a marca do bloco final entram no AAD, junto com o cabeçalho fixo, para rejeitar alterações e truncamentos.
+- O primeiro bloco usa o IV armazenado; os seguintes usam IVs exclusivos derivados do IV inicial e do índice do bloco.
+- Compatibilidade de leitura com pacotes `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1`, que continuam usando PBKDF2.
 - Limite recomendado de arquivo: 2 GB.
 
 ### Mensagens, QR Code e links protegidos
@@ -73,6 +76,8 @@ Detalhes técnicos:
 Mensagens são criptografadas localmente com AES-GCM e serializadas em payloads próprios do CriptoVéu. O QR protegido aponta para a rota `/qr-secreto` usando o hash da URL, e o link protegido usa a rota `/link-secreto` também com dados no hash.
 
 Importante: o hash da URL não é enviado ao servidor em requisições HTTP tradicionais. Ainda assim, quem recebe o link ou o QR tem acesso ao payload criptografado; a proteção real depende da senha usada para abrir a mensagem.
+
+Os formatos atuais de mensagens, QR Codes e links continuam derivados com PBKDF2/SHA-256 (600.000 iterações), para que payloads já compartilhados permaneçam legíveis.
 
 ### Esteganografia
 
@@ -110,6 +115,7 @@ Medidas implementadas:
 - Processamento 100% local para arquivos, mensagens e notas.
 - Senhas não são armazenadas pela aplicação.
 - Chaves criptográficas são derivadas no navegador.
+- Novos pacotes de arquivos usam Argon2id com custo de memória explícito no próprio cabeçalho.
 - AES-GCM fornece confidencialidade e autenticação do conteúdo.
 - `salt` e `iv` são gerados com `crypto.getRandomValues`.
 - Bloqueio de processamento fora de contexto seguro, como páginas sem HTTPS.
@@ -144,6 +150,8 @@ Hardening de build:
 Nenhuma aplicação web client-side consegue esconder totalmente o próprio código, porque o navegador precisa receber JavaScript executável. Por isso, o projeto evita depender de segredo embutido no frontend.
 
 O CriptoVéu não deve ser entendido como substituto para auditoria criptográfica formal. Ele usa primitivas sólidas do navegador, mas a proteção final ainda depende da senha, do dispositivo, do navegador e da integridade do deploy.
+
+Argon2id dificulta ataques de força bruta paralela ao exigir memória por tentativa. AES-256 é considerado uma escolha prudente diante de modelos quânticos conhecidos, mas o projeto não afirma resistência quântica absoluta; senhas com pouca entropia continuam vulneráveis a adivinhação.
 
 Também é importante lembrar:
 

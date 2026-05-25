@@ -1,13 +1,36 @@
 ﻿const LEGACY_FILE_HEADER_TEXT = 'CRIPTIFY1'
+import argon2WorkerUrl from '../workers/argon2.worker.ts?worker&url'
+
 const LEGACY_CHUNKED_FILE_HEADER_TEXT = 'CRIPTIFY2'
-const CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU2'
+const PBKDF2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU2'
+const ARGON2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU3'
 const LEGACY_FILE_HEADER_BYTES = new TextEncoder().encode(LEGACY_FILE_HEADER_TEXT)
-const CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(CHUNKED_FILE_HEADER_TEXT)
+const LEGACY_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
+  LEGACY_CHUNKED_FILE_HEADER_TEXT,
+)
+const PBKDF2_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
+  PBKDF2_CHUNKED_FILE_HEADER_TEXT,
+)
+const ARGON2_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
+  ARGON2_CHUNKED_FILE_HEADER_TEXT,
+)
 const SALT_LENGTH_BYTES = 16
 const IV_LENGTH_BYTES = 12
 const PBKDF2_ITERATIONS = 600_000
 const BASE64_CHUNK_SIZE_BYTES = 0x8000
 const CHUNK_RECORD_LENGTH_BYTES = 4
+const ARGON2_PARAMETER_LENGTH_BYTES = 4
+const ARGON2_MIN_MEMORY_MB = 8
+const ARGON2_MAX_MEMORY_MB = 512
+const ARGON2_MIN_ITERATIONS = 1
+const ARGON2_MAX_ITERATIONS = 10
+const AES_GCM_TAG_LENGTH_BYTES = 16
+const ARGON2_HEADER_LENGTH_BYTES =
+  ARGON2_CHUNKED_FILE_HEADER_BYTES.length +
+  ARGON2_PARAMETER_LENGTH_BYTES * 2 +
+  SALT_LENGTH_BYTES +
+  IV_LENGTH_BYTES
+export const ARGON2_FILE_ITERATIONS = 2
 export const STREAMING_CHUNK_SIZE_BYTES = 2 * 1024 * 1024
 export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024 * 1024
 
@@ -15,6 +38,45 @@ type ProgressCallback = (value: number, label: string) => void
 
 export type FileSizeGuardOptions = {
   maxFileSizeBytes?: number | null
+}
+
+export const FILE_SECURITY_PROFILES = [
+  {
+    id: 'seguranca_basica',
+    memoryMb: 64,
+    label: 'Nível de Segurança Básica',
+    description:
+      'Ideal para celulares básicos. Processamento muito rápido. Oferece excelente proteção para o dia a dia, mas possui menor resistência contra ataques físicos de força bruta focados em hardware.',
+  },
+  {
+    id: 'seguranca_media',
+    memoryMb: 256,
+    label: 'Nível de Segurança Média (Recomendado)',
+    description:
+      'O ponto de equilíbrio. Roda na maioria dos smartphones modernos e computadores e aumenta bastante o custo de tentativas paralelas.',
+  },
+  {
+    id: 'seguranca_alta',
+    memoryMb: 512,
+    label: 'Nível de Segurança Alta',
+    description:
+      'Exige muita memória e é recomendado para computadores. Pode falhar ou causar lentidão em celulares.',
+  },
+] as const
+
+export type FileSecurityProfileId = (typeof FILE_SECURITY_PROFILES)[number]['id']
+
+export const DEFAULT_FILE_SECURITY_PROFILE_ID: FileSecurityProfileId =
+  'seguranca_media'
+
+export type FileEncryptionOptions = FileSizeGuardOptions & {
+  argon2MemoryMb?: number
+  argon2Iterations?: number
+}
+
+type Argon2Parameters = {
+  memoryMb: number
+  iterations: number
 }
 
 type PasswordStrength = {
@@ -42,10 +104,18 @@ export type TextDecryptionInput = {
 }
 
 export class CriptoveuError extends Error {
-  code: 'FILE_TOO_LARGE' | 'INVALID_FILE' | 'INVALID_PASSWORD_OR_FILE'
+  code:
+    | 'FILE_TOO_LARGE'
+    | 'INVALID_FILE'
+    | 'INVALID_PASSWORD_OR_FILE'
+    | 'KEY_DERIVATION_FAILED'
 
   constructor(
-    code: 'FILE_TOO_LARGE' | 'INVALID_FILE' | 'INVALID_PASSWORD_OR_FILE',
+    code:
+      | 'FILE_TOO_LARGE'
+      | 'INVALID_FILE'
+      | 'INVALID_PASSWORD_OR_FILE'
+      | 'KEY_DERIVATION_FAILED',
     message: string,
   ) {
     super(message)
@@ -72,9 +142,30 @@ function randomBytes(length: number): Uint8Array<ArrayBuffer> {
 
 function buildChunkAdditionalData(
   chunkIndex: number,
-  headerText = CHUNKED_FILE_HEADER_TEXT,
+  headerText = PBKDF2_CHUNKED_FILE_HEADER_TEXT,
 ) {
   return new TextEncoder().encode(`${headerText}:${chunkIndex}`)
+}
+
+function buildArgon2ChunkAdditionalData(
+  fixedHeader: Uint8Array,
+  chunkIndex: number,
+  ciphertextLength: number,
+  isFinalChunk: boolean,
+) {
+  const additionalData = new Uint8Array(
+    fixedHeader.length + CHUNK_RECORD_LENGTH_BYTES * 2 + 1,
+  )
+  additionalData.set(fixedHeader)
+  const view = new DataView(additionalData.buffer)
+  view.setUint32(fixedHeader.length, chunkIndex, false)
+  view.setUint32(
+    fixedHeader.length + CHUNK_RECORD_LENGTH_BYTES,
+    ciphertextLength,
+    false,
+  )
+  additionalData[additionalData.length - 1] = isFinalChunk ? 1 : 0
+  return additionalData
 }
 
 function createLengthPrefix(value: number) {
@@ -86,6 +177,116 @@ function createLengthPrefix(value: number) {
 function readLengthPrefix(bytes: Uint8Array) {
   return new DataView(bytes.buffer, bytes.byteOffset, CHUNK_RECORD_LENGTH_BYTES)
     .getUint32(0, false)
+}
+
+function assertChunkCiphertextLength(
+  ciphertextLength: number,
+  maximumLength: number | null = STREAMING_CHUNK_SIZE_BYTES + AES_GCM_TAG_LENGTH_BYTES,
+) {
+  if (
+    ciphertextLength < AES_GCM_TAG_LENGTH_BYTES ||
+    (maximumLength !== null && ciphertextLength > maximumLength)
+  ) {
+    throw new CriptoveuError('INVALID_FILE', 'Arquivo inválido ou incompleto.')
+  }
+}
+
+function createAsciiParameter(value: number) {
+  const encoded = new TextEncoder().encode(
+    value.toString().padStart(ARGON2_PARAMETER_LENGTH_BYTES, '0'),
+  )
+
+  if (encoded.length !== ARGON2_PARAMETER_LENGTH_BYTES) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'Parâmetros Argon2id fora do intervalo suportado.',
+    )
+  }
+
+  return encoded
+}
+
+function readAsciiParameter(bytes: Uint8Array) {
+  const text = new TextDecoder().decode(bytes)
+
+  if (!/^\d{4}$/.test(text)) {
+    throw new CriptoveuError('INVALID_FILE', 'Cabeçalho Argon2id inválido.')
+  }
+
+  return Number(text)
+}
+
+function validateArgon2Parameters(parameters: Argon2Parameters) {
+  if (
+    !Number.isInteger(parameters.memoryMb) ||
+    parameters.memoryMb < ARGON2_MIN_MEMORY_MB ||
+    parameters.memoryMb > ARGON2_MAX_MEMORY_MB ||
+    !Number.isInteger(parameters.iterations) ||
+    parameters.iterations < ARGON2_MIN_ITERATIONS ||
+    parameters.iterations > ARGON2_MAX_ITERATIONS
+  ) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'Parâmetros Argon2id fora do intervalo suportado.',
+    )
+  }
+
+  return parameters
+}
+
+function buildArgon2Header(
+  parameters: Argon2Parameters,
+  salt: Uint8Array,
+  firstIv: Uint8Array,
+) {
+  validateArgon2Parameters(parameters)
+  const header = new Uint8Array(ARGON2_HEADER_LENGTH_BYTES)
+  let offset = 0
+
+  header.set(ARGON2_CHUNKED_FILE_HEADER_BYTES, offset)
+  offset += ARGON2_CHUNKED_FILE_HEADER_BYTES.length
+  header.set(createAsciiParameter(parameters.memoryMb), offset)
+  offset += ARGON2_PARAMETER_LENGTH_BYTES
+  header.set(createAsciiParameter(parameters.iterations), offset)
+  offset += ARGON2_PARAMETER_LENGTH_BYTES
+  header.set(salt, offset)
+  offset += SALT_LENGTH_BYTES
+  header.set(firstIv, offset)
+
+  return header
+}
+
+function readArgon2Header(header: Uint8Array) {
+  const parametersStart = ARGON2_CHUNKED_FILE_HEADER_BYTES.length
+  const iterationsStart = parametersStart + ARGON2_PARAMETER_LENGTH_BYTES
+  const saltStart = iterationsStart + ARGON2_PARAMETER_LENGTH_BYTES
+  const ivStart = saltStart + SALT_LENGTH_BYTES
+
+  const parameters = validateArgon2Parameters({
+    memoryMb: readAsciiParameter(
+      header.slice(parametersStart, iterationsStart),
+    ),
+    iterations: readAsciiParameter(header.slice(iterationsStart, saltStart)),
+  })
+
+  return {
+    parameters,
+    salt: header.slice(saltStart, ivStart),
+    firstIv: header.slice(ivStart, ivStart + IV_LENGTH_BYTES),
+  }
+}
+
+function deriveChunkIv(firstIv: Uint8Array, chunkIndex: number) {
+  if (!Number.isSafeInteger(chunkIndex) || chunkIndex < 0 || chunkIndex > 0xffffffff) {
+    throw new CriptoveuError('INVALID_FILE', 'Número de blocos inválido.')
+  }
+
+  const iv = cloneBytes(firstIv)
+  const view = new DataView(iv.buffer)
+  const counterOffset = IV_LENGTH_BYTES - CHUNK_RECORD_LENGTH_BYTES
+  const initialCounter = view.getUint32(counterOffset, false)
+  view.setUint32(counterOffset, initialCounter ^ chunkIndex, false)
+  return iv
 }
 
 function concatBytes(
@@ -160,7 +361,102 @@ async function reportProgress(
   await waitForPaint()
 }
 
-async function deriveAesKey(password: string, salt: Uint8Array, usage: KeyUsage) {
+type Argon2WorkerResponse =
+  | {
+      id: number
+      keyBytes: ArrayBuffer
+    }
+  | {
+      id: number
+      error: string
+    }
+
+let argon2RequestId = 0
+let trustedArgon2WorkerUrl: string | null = null
+
+type TrustedTypesFactory = {
+  createPolicy: (
+    policyName: string,
+    rules: { createScriptURL: (url: string) => string },
+  ) => {
+    createScriptURL: (url: string) => string
+  }
+}
+
+function createArgon2Worker() {
+  const trustedTypes = (
+    globalThis as typeof globalThis & { trustedTypes?: TrustedTypesFactory }
+  ).trustedTypes
+
+  if (trustedTypes && trustedArgon2WorkerUrl === null) {
+    const policy = trustedTypes.createPolicy('criptoveu-argon2-worker', {
+      createScriptURL: (url) => url,
+    })
+    trustedArgon2WorkerUrl = policy.createScriptURL(argon2WorkerUrl)
+  }
+
+  return new Worker(trustedArgon2WorkerUrl ?? argon2WorkerUrl, {
+    type: 'module',
+  })
+}
+
+async function deriveArgon2AesKey(
+  password: string,
+  salt: Uint8Array,
+  parameters: Argon2Parameters,
+  usage: KeyUsage,
+) {
+  validateArgon2Parameters(parameters)
+  const requestId = (argon2RequestId += 1)
+  const keyBytes = await new Promise<ArrayBuffer>((resolve, reject) => {
+    const worker = createArgon2Worker()
+
+    worker.onmessage = (event: MessageEvent<Argon2WorkerResponse>) => {
+      if (event.data.id !== requestId) {
+        return
+      }
+
+      worker.terminate()
+
+      if ('error' in event.data) {
+        reject(new Error(event.data.error))
+        return
+      }
+
+      resolve(event.data.keyBytes)
+    }
+
+    worker.onerror = () => {
+      worker.terminate()
+      reject(new Error('Falha ao carregar o motor Argon2id.'))
+    }
+
+    worker.postMessage({
+      id: requestId,
+      password,
+      salt: cloneBytes(salt).buffer,
+      memorySizeKiB: parameters.memoryMb * 1024,
+      iterations: parameters.iterations,
+    })
+  }).catch(() => {
+    throw new CriptoveuError(
+      'KEY_DERIVATION_FAILED',
+      'Este dispositivo não conseguiu executar o nível Argon2id exigido pelo arquivo.',
+    )
+  })
+
+  try {
+    return await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, [usage])
+  } finally {
+    new Uint8Array(keyBytes).fill(0)
+  }
+}
+
+async function derivePbkdf2AesKey(
+  password: string,
+  salt: Uint8Array,
+  usage: KeyUsage,
+) {
   const passwordBytes = new TextEncoder().encode(password)
   const normalizedSalt = cloneBytes(salt)
   const keyMaterial = await crypto.subtle.importKey(
@@ -260,32 +556,50 @@ export async function encryptFile(
   file: File,
   password: string,
   onProgress?: ProgressCallback,
-  options?: FileSizeGuardOptions,
+  options?: FileEncryptionOptions,
 ): Promise<ProcessResult> {
   assertSupportedFileSize(file, options)
   await reportProgress(onProgress, 8, 'Preparando leitura por blocos')
   const salt = randomBytes(SALT_LENGTH_BYTES)
-  const key = await deriveAesKey(password, salt, 'encrypt')
-  const encryptedParts: BlobPart[] = [CHUNKED_FILE_HEADER_BYTES, salt]
+  const firstIv = randomBytes(IV_LENGTH_BYTES)
+  const parameters = validateArgon2Parameters({
+    memoryMb: options?.argon2MemoryMb ?? 256,
+    iterations: options?.argon2Iterations ?? ARGON2_FILE_ITERATIONS,
+  })
+  const fixedHeader = buildArgon2Header(parameters, salt, firstIv)
+  await reportProgress(
+    onProgress,
+    12,
+    `Derivando chave Argon2id (${parameters.memoryMb} MB)`,
+  )
+  const key = await deriveArgon2AesKey(password, salt, parameters, 'encrypt')
+  const encryptedParts: BlobPart[] = [fixedHeader]
   let processedBytes = 0
   let chunkIndex = 0
 
-  await reportProgress(onProgress, 16, 'Derivando chave AES-GCM')
+  await reportProgress(onProgress, 16, 'Chave AES-GCM preparada')
 
   async function encryptChunk(plainChunk: Uint8Array) {
-    const iv = randomBytes(IV_LENGTH_BYTES)
+    const iv = deriveChunkIv(firstIv, chunkIndex)
+    const ciphertextLength = plainChunk.byteLength + AES_GCM_TAG_LENGTH_BYTES
+    const isFinalChunk = processedBytes + plainChunk.byteLength === file.size
     const encrypted = await crypto.subtle.encrypt(
       {
         name: 'AES-GCM',
         iv,
-        additionalData: buildChunkAdditionalData(chunkIndex),
+        additionalData: buildArgon2ChunkAdditionalData(
+          fixedHeader,
+          chunkIndex,
+          ciphertextLength,
+          isFinalChunk,
+        ),
       },
       key,
       cloneBytes(plainChunk),
     )
     const ciphertext = new Uint8Array(encrypted)
 
-    encryptedParts.push(iv, createLengthPrefix(ciphertext.byteLength), ciphertext)
+    encryptedParts.push(createLengthPrefix(ciphertext.byteLength), ciphertext)
     processedBytes += plainChunk.byteLength
     chunkIndex += 1
 
@@ -337,7 +651,7 @@ export async function encryptText(
 
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH_BYTES))
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES))
-  const key = await deriveAesKey(password, salt, 'encrypt')
+  const key = await derivePbkdf2AesKey(password, salt, 'encrypt')
   const source = new TextEncoder().encode(normalizedText)
   const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, source)
 
@@ -353,7 +667,7 @@ export async function decryptText(
   password: string,
 ): Promise<string> {
   try {
-    const key = await deriveAesKey(password, encryptedInput.salt, 'decrypt')
+    const key = await derivePbkdf2AesKey(password, encryptedInput.salt, 'decrypt')
     const decrypted = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: cloneBytes(encryptedInput.iv) },
       key,
@@ -412,7 +726,7 @@ async function decryptLegacyFile(
   )
 
   await reportProgress(onProgress, 36, 'Preparando recuperação')
-  const key = await deriveAesKey(password, new Uint8Array(salt), 'decrypt')
+  const key = await derivePbkdf2AesKey(password, new Uint8Array(salt), 'decrypt')
 
   await reportProgress(onProgress, 76, 'Abrindo conteúdo protegido')
 
@@ -441,20 +755,21 @@ async function decryptLegacyFile(
   }
 }
 
-async function decryptChunkedFile(
+async function decryptPbkdf2ChunkedFile(
   file: File,
   password: string,
+  headerText: string,
+  headerBytes: Uint8Array,
   onProgress?: ProgressCallback,
 ): Promise<ProcessResult> {
   await reportProgress(onProgress, 8, 'Lendo cabeçalho protegido')
   const reader = file.stream().getReader()
   let pendingBytes = new Uint8Array(0)
   let key: CryptoKey | null = null
-  let chunkHeaderText = CHUNKED_FILE_HEADER_TEXT
   let chunkIndex = 0
   let consumedBytes = 0
   const decryptedParts: BlobPart[] = []
-  const minimumHeaderLength = CHUNKED_FILE_HEADER_BYTES.length + SALT_LENGTH_BYTES
+  const minimumHeaderLength = headerBytes.length + SALT_LENGTH_BYTES
 
   try {
     while (true) {
@@ -468,25 +783,18 @@ async function decryptChunkedFile(
 
       if (!key && pendingBytes.length >= minimumHeaderLength) {
         const incomingHeader = new TextDecoder().decode(
-          pendingBytes.slice(0, CHUNKED_FILE_HEADER_BYTES.length),
+          pendingBytes.slice(0, headerBytes.length),
         )
 
-        if (
-          incomingHeader !== CHUNKED_FILE_HEADER_TEXT &&
-          incomingHeader !== LEGACY_CHUNKED_FILE_HEADER_TEXT
-        ) {
+        if (incomingHeader !== headerText) {
           throw new CriptoveuError(
             'INVALID_FILE',
             'Arquivo inválido. Não foi possível reconhecer este pacote protegido.',
           )
         }
 
-        chunkHeaderText = incomingHeader
-        const salt = pendingBytes.slice(
-          CHUNKED_FILE_HEADER_BYTES.length,
-          minimumHeaderLength,
-        )
-        key = await deriveAesKey(password, salt, 'decrypt')
+        const salt = pendingBytes.slice(headerBytes.length, minimumHeaderLength)
+        key = await derivePbkdf2AesKey(password, salt, 'decrypt')
         pendingBytes = pendingBytes.slice(minimumHeaderLength)
         consumedBytes = minimumHeaderLength
         await reportProgress(onProgress, 18, 'Chave AES-GCM preparada')
@@ -498,6 +806,7 @@ async function decryptChunkedFile(
         const ciphertextLength = readLengthPrefix(
           pendingBytes.slice(lengthStart, lengthEnd),
         )
+        assertChunkCiphertextLength(ciphertextLength, null)
         const recordLength =
           IV_LENGTH_BYTES + CHUNK_RECORD_LENGTH_BYTES + ciphertextLength
 
@@ -513,7 +822,7 @@ async function decryptChunkedFile(
             {
               name: 'AES-GCM',
               iv,
-              additionalData: buildChunkAdditionalData(chunkIndex, chunkHeaderText),
+              additionalData: buildChunkAdditionalData(chunkIndex, headerText),
             },
             key,
             ciphertext,
@@ -556,6 +865,149 @@ async function decryptChunkedFile(
   }
 }
 
+async function decryptArgon2ChunkedFile(
+  file: File,
+  password: string,
+  onProgress?: ProgressCallback,
+): Promise<ProcessResult> {
+  await reportProgress(onProgress, 8, 'Lendo cabeçalho Argon2id')
+  const reader = file.stream().getReader()
+  let pendingBytes = new Uint8Array(0)
+  let fixedHeader: Uint8Array<ArrayBuffer> | null = null
+  let firstIv: Uint8Array<ArrayBuffer> | null = null
+  let key: CryptoKey | null = null
+  let chunkIndex = 0
+  let consumedBytes = 0
+  let bufferedCiphertext: Uint8Array<ArrayBuffer> | null = null
+  let bufferedCiphertextLength = 0
+  const decryptedParts: BlobPart[] = []
+
+  async function decryptChunk(
+    ciphertext: Uint8Array<ArrayBuffer>,
+    ciphertextLength: number,
+    isFinalChunk: boolean,
+  ) {
+    if (!key || !fixedHeader || !firstIv) {
+      throw new CriptoveuError('INVALID_FILE', 'Arquivo inválido ou incompleto.')
+    }
+
+    try {
+      const decrypted = await crypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: deriveChunkIv(firstIv, chunkIndex),
+          additionalData: buildArgon2ChunkAdditionalData(
+            fixedHeader,
+            chunkIndex,
+            ciphertextLength,
+            isFinalChunk,
+          ),
+        },
+        key,
+        ciphertext,
+      )
+      decryptedParts.push(new Uint8Array(decrypted))
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'OperationError') {
+        throw new CriptoveuError(
+          'INVALID_PASSWORD_OR_FILE',
+          'Senha incorreta ou arquivo inválido. Verifique a chave e tente novamente.',
+        )
+      }
+
+      throw error
+    }
+
+    chunkIndex += 1
+    await reportProgress(
+      onProgress,
+      Math.min(96, 18 + Math.round((consumedBytes / file.size) * 78)),
+      `Abrindo bloco ${chunkIndex}`,
+    )
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) {
+        break
+      }
+
+      pendingBytes = concatBytes(pendingBytes, value)
+
+      if (!key && pendingBytes.length >= ARGON2_HEADER_LENGTH_BYTES) {
+        fixedHeader = cloneBytes(pendingBytes.slice(0, ARGON2_HEADER_LENGTH_BYTES))
+        const incomingHeader = new TextDecoder().decode(
+          fixedHeader.slice(0, ARGON2_CHUNKED_FILE_HEADER_BYTES.length),
+        )
+
+        if (incomingHeader !== ARGON2_CHUNKED_FILE_HEADER_TEXT) {
+          throw new CriptoveuError(
+            'INVALID_FILE',
+            'Arquivo inválido. Não foi possível reconhecer este pacote protegido.',
+          )
+        }
+
+        const parsedHeader = readArgon2Header(fixedHeader)
+        firstIv = cloneBytes(parsedHeader.firstIv)
+        await reportProgress(
+          onProgress,
+          12,
+          `Derivando chave Argon2id (${parsedHeader.parameters.memoryMb} MB)`,
+        )
+        key = await deriveArgon2AesKey(
+          password,
+          parsedHeader.salt,
+          parsedHeader.parameters,
+          'decrypt',
+        )
+        pendingBytes = pendingBytes.slice(ARGON2_HEADER_LENGTH_BYTES)
+        consumedBytes = ARGON2_HEADER_LENGTH_BYTES
+        await reportProgress(onProgress, 18, 'Chave AES-GCM preparada')
+      }
+
+      while (key && fixedHeader && firstIv && pendingBytes.length >= CHUNK_RECORD_LENGTH_BYTES) {
+        const ciphertextLength = readLengthPrefix(
+          pendingBytes.slice(0, CHUNK_RECORD_LENGTH_BYTES),
+        )
+        assertChunkCiphertextLength(ciphertextLength)
+        const recordLength = CHUNK_RECORD_LENGTH_BYTES + ciphertextLength
+
+        if (pendingBytes.length < recordLength) {
+          break
+        }
+
+        if (bufferedCiphertext) {
+          await decryptChunk(bufferedCiphertext, bufferedCiphertextLength, false)
+        }
+
+        bufferedCiphertext = cloneBytes(
+          pendingBytes.slice(CHUNK_RECORD_LENGTH_BYTES, recordLength),
+        )
+        bufferedCiphertextLength = ciphertextLength
+        pendingBytes = pendingBytes.slice(recordLength)
+        consumedBytes += recordLength
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  if (!key || pendingBytes.length > 0 || !bufferedCiphertext) {
+    throw new CriptoveuError('INVALID_FILE', 'Arquivo inválido ou incompleto.')
+  }
+
+  await decryptChunk(bufferedCiphertext, bufferedCiphertextLength, true)
+
+  const downloadName = buildDownloadName('decrypt', file.name)
+
+  return {
+    blob: new Blob(decryptedParts, { type: inferMimeTypeFromName(downloadName) }),
+    downloadName,
+  }
+}
+
 export async function decryptFile(
   file: File,
   password: string,
@@ -563,13 +1015,36 @@ export async function decryptFile(
   options?: FileSizeGuardOptions,
 ): Promise<ProcessResult> {
   assertSupportedFileSize(file, options)
-  const header = await file.slice(0, CHUNKED_FILE_HEADER_BYTES.length).text()
+  const modernHeader = await file
+    .slice(0, ARGON2_CHUNKED_FILE_HEADER_BYTES.length)
+    .text()
 
-  if (
-    header === CHUNKED_FILE_HEADER_TEXT ||
-    header === LEGACY_CHUNKED_FILE_HEADER_TEXT
-  ) {
-    return decryptChunkedFile(file, password, onProgress)
+  if (modernHeader === ARGON2_CHUNKED_FILE_HEADER_TEXT) {
+    return decryptArgon2ChunkedFile(file, password, onProgress)
+  }
+
+  if (modernHeader === PBKDF2_CHUNKED_FILE_HEADER_TEXT) {
+    return decryptPbkdf2ChunkedFile(
+      file,
+      password,
+      PBKDF2_CHUNKED_FILE_HEADER_TEXT,
+      PBKDF2_CHUNKED_FILE_HEADER_BYTES,
+      onProgress,
+    )
+  }
+
+  const legacyChunkedHeader = await file
+    .slice(0, LEGACY_CHUNKED_FILE_HEADER_BYTES.length)
+    .text()
+
+  if (legacyChunkedHeader === LEGACY_CHUNKED_FILE_HEADER_TEXT) {
+    return decryptPbkdf2ChunkedFile(
+      file,
+      password,
+      LEGACY_CHUNKED_FILE_HEADER_TEXT,
+      LEGACY_CHUNKED_FILE_HEADER_BYTES,
+      onProgress,
+    )
   }
 
   return decryptLegacyFile(file, password, onProgress)
