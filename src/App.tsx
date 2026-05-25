@@ -1,21 +1,31 @@
 ﻿import { useEffect } from 'react'
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
 import AboutPage from './pages/AboutPage'
 import { PremiumProvider } from './context/premium'
 import { ThemeProvider } from './context/theme'
 import TermsModal from './components/TermsModal'
-import FilesPage from './pages/FilesPage'
 import HomePage from './pages/HomePage'
-import LinkSecretPage from './pages/LinkSecretPage'
 import PrivacyPage from './pages/PrivacyPage'
-import QrSecretPage from './pages/QrSecretPage'
 import SecurityPage from './pages/SecurityPage'
-import SteganographyPage from './pages/SteganographyPage'
 import SupportPage from './pages/SupportPage'
 import TechnicalDetailsPage from './pages/TechnicalDetailsPage'
 import TermsPage from './pages/TermsPage'
-import VeuNotesPage from './pages/VeuNotesPage'
+
+const FilesPage = lazy(() => import('./pages/FilesPage'))
+const LinkSecretPage = lazy(() => import('./pages/LinkSecretPage'))
+const QrSecretPage = lazy(() => import('./pages/QrSecretPage'))
+const SteganographyPage = lazy(() => import('./pages/SteganographyPage'))
+const VeuNotesPage = lazy(() => import('./pages/VeuNotesPage'))
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center text-sm text-zinc-400">
+      Carregando ferramenta...
+    </div>
+  )
+}
 
 function LegacyHashRedirect() {
   const location = useLocation()
@@ -36,23 +46,25 @@ export default function App() {
       <PremiumProvider>
         <TermsModal />
         <LegacyHashRedirect />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/arquivos" element={<FilesPage />} />
-          <Route path="/qr-secreto" element={<QrSecretPage />} />
-          <Route path="/link-secreto" element={<LinkSecretPage />} />
-          <Route path="/esteganografia" element={<SteganographyPage />} />
-          <Route path="/veu-notes" element={<VeuNotesPage />} />
-          <Route path="/apoiar" element={<SupportPage />} />
-          <Route path="/doacao" element={<SupportPage />} />
-          <Route path="/privacidade" element={<PrivacyPage />} />
-          <Route path="/seguranca" element={<SecurityPage />} />
-          <Route path="/detalhes-tecnicos" element={<TechnicalDetailsPage />} />
-          <Route path="/termos" element={<TermsPage />} />
-          <Route path="/termos-de-uso" element={<TermsPage />} />
-          <Route path="/sobre" element={<AboutPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/arquivos" element={<FilesPage />} />
+            <Route path="/qr-secreto" element={<QrSecretPage />} />
+            <Route path="/link-secreto" element={<LinkSecretPage />} />
+            <Route path="/esteganografia" element={<SteganographyPage />} />
+            <Route path="/veu-notes" element={<VeuNotesPage />} />
+            <Route path="/apoiar" element={<SupportPage />} />
+            <Route path="/doacao" element={<SupportPage />} />
+            <Route path="/privacidade" element={<PrivacyPage />} />
+            <Route path="/seguranca" element={<SecurityPage />} />
+            <Route path="/detalhes-tecnicos" element={<TechnicalDetailsPage />} />
+            <Route path="/termos" element={<TermsPage />} />
+            <Route path="/termos-de-uso" element={<TermsPage />} />
+            <Route path="/sobre" element={<AboutPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </PremiumProvider>
     </ThemeProvider>
   )
