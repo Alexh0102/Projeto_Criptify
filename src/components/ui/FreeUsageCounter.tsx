@@ -1,5 +1,6 @@
-import { Clock3 } from 'lucide-react'
+import { Clock3, Info } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { usePremium } from '../../context/premium'
 import {
@@ -58,16 +59,27 @@ export default function FreeUsageCounter({ feature }: Props) {
   }
 
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-2 text-xs text-zinc-300">
-      <span className="font-medium text-cyan-50">
-        {status.remaining} de {status.limit} usos restantes
-      </span>
-      <span className="inline-flex items-center gap-1.5 text-zinc-400">
-        <Clock3 className="h-3.5 w-3.5" />
-        {status.resetAt === null
-          ? 'Renovação inicia após o primeiro uso'
-          : `Próxima renovação em ${formatCountdown(status.resetAt, now)}`}
-      </span>
+    <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-2 text-xs text-zinc-300">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="font-medium text-cyan-50">
+          {status.remaining} de {status.limit} usos restantes
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-zinc-400">
+          <Clock3 className="h-3.5 w-3.5" />
+          {status.resetAt === null
+            ? 'Renovação inicia após o primeiro uso'
+            : `Próxima renovação em ${formatCountdown(status.resetAt, now)}`}
+        </span>
+      </div>
+      <p className="mt-2 flex items-start gap-1.5 border-t border-cyan-400/10 pt-2 text-[11px] leading-5 text-zinc-400">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-100/80" />
+        <span>
+          Limite comunitário para incentivar apoio voluntário. Arquivos não têm limite de usos.{' '}
+          <Link to="/apoiar" className="text-cyan-100 transition hover:text-white">
+            Saiba mais.
+          </Link>
+        </span>
+      </p>
     </div>
   )
 }
