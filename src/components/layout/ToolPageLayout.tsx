@@ -165,15 +165,6 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                 <p className="mt-0.5 text-xs sm:text-sm text-zinc-400">Voltar para a visão geral do CriptoVéu.</p>
               </NavLink>
 
-              <Link
-                to="/apoiar"
-                onClick={() => setIsDrawerOpen(false)}
-                className="surface-secondary rounded-[24px] px-3 py-3 text-left transition sm:px-4 sm:py-4"
-              >
-                <p className="text-sm font-medium text-white">Apoiar o Projeto</p>
-                <p className="mt-0.5 text-xs sm:text-sm text-zinc-400">Contribuir com a doação incentivada.</p>
-              </Link>
-
               {toolDefinitions.map((tool) => (
                 <NavLink
                   key={tool.path}

@@ -31,6 +31,7 @@ import {
   hasFreeUsageAvailable,
 } from '../lib/premium'
 import AdvancedOptions from './ui/AdvancedOptions'
+import FreeUsageCounter from './ui/FreeUsageCounter'
 import MobileStickyCTA from './ui/MobileStickyCTA'
 import ResultPanel from './ui/ResultPanel'
 import SegmentedMode from './ui/SegmentedMode'
@@ -464,6 +465,8 @@ export default function AutoDestructLink({
                     </p>
                   </div>
                 </div>
+
+                <FreeUsageCounter feature="protected-link" />
 
                 <textarea
                   value={plainText}

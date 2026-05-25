@@ -12,7 +12,7 @@ const activationEmailPrompt =
 const freePlanItems = [
   'Criptografia local AES-256 / RSA.',
   'Limite de tamanho: arquivos até 500MB.',
-  'Até 5 gerações a cada 24h para Links Protegidos, QR Codes e Mensagens Ocultas.',
+  'Até 10 gerações a cada 24h para Links Protegidos, QR Codes e Mensagens Ocultas.',
   'VéuNotes: totalmente ilimitado, sem restrições.',
 ]
 
@@ -114,6 +114,9 @@ export default function SupportPage() {
               <p className="mt-3 text-sm leading-7 text-zinc-300">
                 Uma microdoação única para ajudar a manter o software open-source ativo, livre de anúncios e independente.
               </p>
+              <p className="mt-3 text-xs leading-6 text-zinc-400">
+                Meios de pagamento aceitos: cartão de crédito, cartão de débito, Google Pay e boleto.
+              </p>
 
               <div className="mt-5 grid gap-3">
                 {supportPlanItems.map((item) => (
@@ -127,7 +130,7 @@ export default function SupportPage() {
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button type="button" onClick={handleSupportClick} className="btn-primary">
                   <Crown className="h-4 w-4" />
-                  Apoiar com R$ 10 (PIX ou Cartão)
+                  Apoiar com R$ 10
                 </button>
                 <button type="button" onClick={openLicenseActivation} className="btn-secondary">
                   Já tenho uma chave
