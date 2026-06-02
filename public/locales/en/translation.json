@@ -1,0 +1,404 @@
+{
+  "brand": {
+    "name": "CriptoVéu",
+    "tagline": "Local privacy for files, messages, links, and images.",
+    "logoAlt": "CriptoVéu logo"
+  },
+  "common": {
+    "mode": "Mode",
+    "result": "Result",
+    "download": "Download",
+    "downloadAll": "Download all",
+    "preview": "Preview",
+    "expand": "Expand",
+    "close": "Close",
+    "file": "File",
+    "copied": "Copied",
+    "localBadge": "100% local"
+  },
+  "language": {
+    "selectLabel": "Select language",
+    "changeTo": "Change language to {{language}}",
+    "names": {
+      "pt-BR": "Portuguese",
+      "en": "English",
+      "es": "Spanish"
+    }
+  },
+  "layout": {
+    "header": {
+      "homeAria": "Open the CriptoVéu home",
+      "openToolsAria": "Open tools list",
+      "tools": "Tools",
+      "supportAria": "Support the CriptoVéu project",
+      "support": "Support",
+      "theme": "Theme",
+      "enableLightTheme": "Enable light theme",
+      "enableDarkTheme": "Enable dark theme"
+    },
+    "footer": {
+      "summary": "Local privacy for files, messages, QR codes, and images.",
+      "meta": "Local tools • Direct flow • In-browser use"
+    },
+    "drawer": {
+      "title": "Tools",
+      "description": "Choose the right tool for your task.",
+      "home": "Home",
+      "homeHelper": "Go back to the CriptoVéu overview.",
+      "closeToolsAria": "Close tools menu",
+      "closeDrawerAria": "Close drawer"
+    }
+  },
+  "premium": {
+    "communityLimitTitle": "Community tier limit",
+    "communityLimitDescription": "You reached the Community tier limit. Consider making a R$ 10 donation to support CriptoVéu and unlock unlimited use."
+  },
+  "home": {
+    "hero": {
+      "badge": "Local tools",
+      "eyebrow": "Practical privacy",
+      "title": "Protect files, messages, and images without leaving the browser.",
+      "description": "Use local tools to encrypt, share, and hide sensitive content with more control and less exposure.",
+      "filesCta": "Start with files",
+      "toolsCta": "View tools",
+      "supportCta": "Support the project",
+      "note": "Everything is processed locally on your device."
+    },
+    "trust": {
+      "eyebrow": "Built for sensitive tasks",
+      "title": "Clarity, focus, and local processing in one experience.",
+      "items": {
+        "local": { "title": "100% local", "description": "Your content is processed in the browser while you use it." },
+        "focusedFlow": { "title": "No confusing flow", "description": "Each tool opens in its own screen, focused on the task." },
+        "ready": { "title": "Ready to use", "description": "Pick the tool, fill the fields, and get the result right away." }
+      }
+    },
+    "useCases": {
+      "eyebrow": "Use cases",
+      "title": "Where CriptoVéu helps",
+      "description": "Protect sensitive content before sending, sharing, or storing it.",
+      "items": {
+        "file": { "title": "Send a password-protected file", "description": "Protect documents before sharing." },
+        "qr": { "title": "Create a QR with a protected message", "description": "Generate a QR and reopen it later with the same password." },
+        "link": { "title": "Share a temporary link", "description": "Create a protected message to open at the right moment." },
+        "image": { "title": "Hide a message inside an image", "description": "Conceal sensitive content inside a picture." },
+        "carefulTasks": { "title": "Handle sensitive tasks more carefully", "description": "Separate tasks to reduce mistakes and exposure." }
+      }
+    },
+    "tools": {
+      "eyebrow": "Tools",
+      "title": "Choose the task and go straight to the right tool.",
+      "open": "Open tool"
+    },
+    "support": {
+      "eyebrow": "Donation prompt",
+      "title": "Help keep CriptoVéu open, independent, and ad-free.",
+      "description": "The support page explains the Community tier and the one-time R$ 10 contribution to unlock unlimited use."
+    },
+    "local": {
+      "eyebrow": "Local processing",
+      "title": "Why use local processing",
+      "items": {
+        "control": { "title": "More control", "description": "Files, messages, and images stay on your device while you use the tool." },
+        "lessExposure": { "title": "Less exposure", "description": "You reduce reliance on risky flows for sensitive tasks." },
+        "simplicity": { "title": "More simplicity", "description": "Each tool solves one specific task without extra visible steps." }
+      }
+    },
+    "audience": {
+      "eyebrow": "Usage profile",
+      "title": "Who CriptoVéu is for",
+      "items": {
+        "freelancers": { "title": "Independent professionals", "description": "For people who need to protect files, messages, or images day to day." },
+        "smallOffices": { "title": "Small offices", "description": "For teams dealing with sensitive content that want more control when sending it." },
+        "adminOps": { "title": "Administrative operations", "description": "For tasks involving documents, instructions, or restricted data." },
+        "privacyPeople": { "title": "Privacy-first people", "description": "For anyone who wants to handle sensitive tasks directly in the browser." }
+      }
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Frequently asked questions",
+      "items": {
+        "account": { "title": "Do I need an account?", "content": "No. You can start using the tools directly in the browser." },
+        "server": { "title": "Is my content sent to a server?", "content": "The main processing happens locally in the browser while you use the tool." },
+        "mobile": { "title": "Does it work on mobile?", "content": "Yes. The screens were organized for mobile use with a direct flow." },
+        "contentTypes": { "title": "Can I use it for files, messages, and images?", "content": "Yes. Each tool was built for a specific task." },
+        "firstTool": { "title": "Which tool should I use first?", "content": "If you want to protect a document, start with files. For short messages, use protected QR or protected link." },
+        "steganography": { "title": "Is steganography the same as encryption?", "content": "No. In steganography, the protected message is hidden inside an image. In encryption, the content is protected directly." }
+      }
+    },
+    "social": {
+      "eyebrow": "Social and contact",
+      "title": "Learn more about CriptoVéu",
+      "description": "To follow site updates, learn more about the project owner, and inspect the source code, use the links below.",
+      "items": {
+        "instagram": { "eyebrow": "@criptoveu", "title": "CriptoVéu on Instagram", "description": "Follow news, visuals, and project updates.", "cta": "Open Instagram" },
+        "linkedin": { "eyebrow": "Alex Silva", "title": "LinkedIn profile", "description": "See the professional profile linked to the project and learn more about the initiative.", "cta": "Open LinkedIn" },
+        "github": { "eyebrow": "GitHub", "title": "Source code", "description": "Browse the public repository, follow changes, and see how CriptoVéu works under the hood.", "cta": "Open GitHub" }
+      }
+    },
+    "transparency": {
+      "eyebrow": "Transparency",
+      "title": "Transparency and security",
+      "description": "CriptoVéu was designed for sensitive tasks with local processing in the browser. To better understand how each tool works, check the privacy, security, and technical details pages.",
+      "featuredBadge": "Featured",
+      "items": {
+        "privacy": { "title": "Privacy", "description": "What is processed locally and what the limits are." },
+        "security": { "title": "Security", "description": "Best practices, password care, and responsible use." },
+        "technical": { "title": "Technical details", "description": "Overview of routes, flow, and interface decisions." },
+        "about": { "title": "About the project", "description": "CriptoVéu's purpose, product context, and platform direction." }
+      }
+    }
+  },
+  "tools": {
+    "files": {
+      "title": "File encryption",
+      "description": "Preview and protect local video, image, PDF, and document files with a password, without sending anything to servers.",
+      "helper": "Preview locally, set the password, and generate the result instantly.",
+      "eyebrow": "Local protection",
+      "cardTitle": "Files"
+    },
+    "qr": {
+      "title": "Protected QR",
+      "description": "Create or read a QR with a password-protected message.",
+      "helper": "Write the message, set the password, and generate the QR on its own screen.",
+      "eyebrow": "Protected message",
+      "cardTitle": "Protected QR"
+    },
+    "link": {
+      "title": "Protected link",
+      "description": "Generate a link with a protected message to open later.",
+      "helper": "Share a protected message with expiration and read limits.",
+      "eyebrow": "Temporary link",
+      "cardTitle": "Protected link"
+    },
+    "steganography": {
+      "title": "Hidden message in image",
+      "description": "Hide a protected message inside an image.",
+      "helper": "Upload the image, set the password, and generate the new file.",
+      "eyebrow": "Image with a secret",
+      "cardTitle": "Hidden message",
+      "technicalLabel": "Steganography"
+    },
+    "notes": {
+      "title": "VéuNotes",
+      "description": "Keep an encrypted note with a master password, only in this browser.",
+      "helper": "Create, unlock, edit, export, and import a single local text vault.",
+      "eyebrow": "Local vault",
+      "cardTitle": "Note vault",
+      "technicalLabel": "AES-GCM"
+    }
+  },
+  "files": {
+    "page": {
+      "eyebrow": "File encryption",
+      "title": "Protect or recover files without leaving the browser.",
+      "description": "Preview local videos, photos, PDFs, and documents before protecting or recovering files with a password, no upload required.",
+      "help": {
+        "how": { "title": "How it works", "content": "You choose the files, set the password, and processing happens locally in the browser." },
+        "privacy": { "title": "Privacy", "content": "Your files never leave the device. The result is generated locally for download." }
+      }
+    },
+    "previewKinds": {
+      "image": "Image",
+      "video": "Video",
+      "audio": "Audio",
+      "pdf": "PDF",
+      "text": "Text",
+      "none": "File"
+    },
+    "preview": {
+      "safePreview": "Safe preview - {{label}}",
+      "localPreviewNote": "Local preview: this file is being shown directly from your device. You can scrub the video or read the document without uploading anything to a server.",
+      "hiddenByInactivity": "Preview hidden due to inactivity.",
+      "unsupported": "This format has no safe browser preview. Download the file to open it in the right app.",
+      "imageAlt": "Preview of {{fileName}}",
+      "videoAria": "Video preview of {{fileName}}",
+      "audioAria": "Audio preview of {{fileName}}",
+      "pdfTitle": "PDF preview of {{fileName}}",
+      "noCaptions": "No embedded captions",
+      "expandedAria": "Expanded view of the recovered file",
+      "closeExpandedAria": "Close expanded view"
+    },
+    "workspace": {
+      "modes": {
+        "encrypt": { "action": "files.workspace.actions.encrypt", "title": "files.workspace.titles.encrypt", "description": "files.workspace.descriptions.encrypt", "hint": "files.workspace.hints.encrypt" },
+        "decrypt": { "action": "files.workspace.actions.decrypt", "title": "files.workspace.titles.decrypt", "description": "files.workspace.descriptions.decrypt", "hint": "files.workspace.hints.decrypt" }
+      },
+      "actions": {
+        "encrypt": "Encrypt files",
+        "decrypt": "Recover files"
+      },
+      "titles": {
+        "encrypt": "Protect your files locally",
+        "decrypt": "Recover the original content"
+      },
+      "descriptions": {
+        "encrypt": "Choose the files, set the password, and generate protected packages in the browser.",
+        "decrypt": "Upload a .criptoveu file and use the same password to recover the content."
+      },
+      "hints": {
+        "encrypt": "Accepts any file format.",
+        "decrypt": "Also accepts older .cryptify packages."
+      },
+      "activeEyebrow": {
+        "encrypt": "Active operation",
+        "decrypt": "Active recovery"
+      },
+      "status": {
+        "ready": "Ready to process",
+        "initial": "Select the files, set the password, and get started.",
+        "secureContextRequired": "Open the site over HTTPS or localhost to use this tool.",
+        "secureContextShort": "This feature only works on HTTPS or localhost.",
+        "mode": {
+          "encrypt": "Protection mode active. The file will be converted to .criptoveu.",
+          "decrypt": "Recovery mode active. Select the .criptoveu file and use the same password."
+        },
+        "allFilesTooLarge": "All files are above the free limit of {{size}}.",
+        "filesReady_one": "File ready for processing",
+        "filesReady_other": "Files ready for processing",
+        "filesLoaded": "Content loaded successfully. Everything stays 100% in the browser.",
+        "filesLoadedWithRejected": "{{valid}} file(s) loaded. {{rejected}} were skipped for exceeding the free limit.",
+        "copyNeedsPassword": "Type or generate a key before trying to copy.",
+        "clipboardUnavailable": "Clipboard API is not available in this browser.",
+        "copied": "Password or key copied to the clipboard.",
+        "clipboardDenied": "Could not access the clipboard.",
+        "keyGenerated": "Long key generated locally.",
+        "missingFilesOrPassword": "Select one or more files and enter a password to continue.",
+        "fileTooLargeForCommunity": "File above {{size}} in the Community tier.",
+        "preparingSecureEnvironment": "Preparing secure environment",
+        "processing": { "encrypt": "Protecting files locally...", "decrypt": "Recovering files locally..." },
+        "fileStep": "File {{current}}/{{total}} - {{label}}",
+        "unexpectedFileFailure": "Unexpected failure while processing this file.",
+        "processingFailed": "Processing failed",
+        "noSuccessfulFiles": "No file was processed successfully.",
+        "processCompleted_one": "Process completed",
+        "processCompleted_other": "{{count}} files completed",
+        "encryptedWithFailures": "{{processed}} file(s) protected successfully. {{failures}} failed.",
+        "encryptedSuccess": "{{count}} file(s) protected successfully. Downloads have started.",
+        "decryptedWithFailures": "{{processed}} file(s) recovered successfully. {{failures}} failed.",
+        "decryptedWithPreviews": "{{processed}} file(s) recovered successfully. {{previews}} safe preview(s) available.",
+        "decryptedSuccess": "{{count}} file(s) recovered successfully. Download the files to open them in the corresponding app.",
+        "unexpectedProcessingError": "An unexpected error occurred while processing the files."
+      },
+      "plan": {
+        "unlimited": "Unlimited for supporters",
+        "admin": "Admin",
+        "supporter": "Supporter",
+        "community": "Community"
+      },
+      "quickFacts": {
+        "formats": "Supported formats",
+        "anyFile": "Any file",
+        "criptoveuFiles": ".criptoveu files",
+        "planLimit": "Plan limit",
+        "activeTier": "Active tier",
+        "processing": "Processing",
+        "blocksOf": "Blocks of {{size}}",
+        "derivation": "Derivation",
+        "argon2": "Argon2id / {{memory}} MB",
+        "packageParams": "Package parameters",
+        "transfer": "Transfer",
+        "noUpload": "No server upload"
+      },
+      "localCopy": {
+        "primary": "Send your file only to your browser. CriptoVéu lets you preview videos, photos, PDFs, and documents locally before encryption.",
+        "secondary": "No file is sent to CriptoVéu servers - preview and protection happen only on your device."
+      },
+      "upload": {
+        "dropTitle": "Drag and drop one or more files here",
+        "choose": "Choose files",
+        "selectedTitle": "Selected files",
+        "filesReady_one": "1 file ready for processing",
+        "filesReady_other": "{{count}} files ready for processing",
+        "noFiles": "No file loaded",
+        "planLimit": "Plan limit: {{limit}}",
+        "additionalFiles": "+ {{count}} additional file(s)"
+      },
+      "password": {
+        "label": "Protection password",
+        "helper": "You can also generate a long key.",
+        "encryptPlaceholder": "Enter a password to protect the files",
+        "decryptPlaceholder": "Enter the password used to protect the files",
+        "generate": "Generate long key",
+        "copy": "Copy value",
+        "reuseHint": "Use the same password or key to recover the files later.",
+        "strength": "Password strength",
+        "keepPassword": "Keep the password: you will need it to recover the content."
+      },
+      "advanced": {
+        "title": "Advanced settings",
+        "helper": "Argon2id: {{memory}} MB RAM, {{iterations}} passes",
+        "legend": "Argon2id memory usage",
+        "note": "The selection only affects new packages. When recovering, RAM and passes are read directly from the file header."
+      },
+      "securityProfiles": {
+        "seguranca_basica": {
+          "label": "Basic security level",
+          "description": "Ideal for entry-level phones. Very fast processing. Offers excellent day-to-day protection, but lower resistance to hardware-focused brute-force attacks."
+        },
+        "seguranca_media": {
+          "label": "Medium security level (Recommended)",
+          "description": "The balance point. Runs on most modern smartphones and computers and significantly increases the cost of parallel attempts."
+        },
+        "seguranca_alta": {
+          "label": "High security level",
+          "description": "Requires a lot of memory and is recommended for computers. It may fail or slow down on phones."
+        }
+      },
+      "quickGuide": { "eyebrow": "Quick guide", "title": "Before processing" },
+      "progress": { "title": "Local processing", "aria": "Processing progress" },
+      "results": {
+        "title": "Results",
+        "description": "Your processed files appear here for download or review.",
+        "empty": "Processed files will appear here.",
+        "packageGenerated": "Package generated",
+        "readyToReview": "{{label}} ready to review",
+        "fileReady": "File ready",
+        "source": "Source: {{name}}",
+        "localPreview": "Local preview without server upload",
+        "downloadAllHint": "Use Download all to save everything at once.",
+        "downloadAllDisabledHint": "Download all becomes available after processing."
+      },
+      "preview": {
+        "expandedAria": "Expanded view of the recovered file",
+        "closeExpandedAria": "Close expanded view"
+      }
+    }
+  },
+  "qr": {
+    "page": {
+      "eyebrow": "Protected QR",
+      "title": "Create a QR with a password-protected message.",
+      "description": "Write the message, set the password, and generate the QR on a simple and direct screen.",
+      "invalidHashFallback": "Could not interpret the protected message present in the QR URL.",
+      "help": {
+        "how": {
+          "title": "How it works",
+          "content": "Write the message, set the password, and generate the QR. When a new QR is scanned, the site opens with the message already loaded and you only need to enter the password."
+        },
+        "compatibility": {
+          "title": "Compatibility",
+          "content": "New QRs open the site automatically. Older QRs with the protected text directly still work when you upload the image."
+        },
+        "privacy": {
+          "title": "Privacy",
+          "content": "Everything happens in the browser. No text or image leaves your device."
+        }
+      }
+    }
+  },
+  "notes": {
+    "page": {
+      "eyebrow": "VéuNotes",
+      "title": "Keep a note protected by a master password, only in this browser.",
+      "description": "Create a local text vault with AES-256-GCM, encrypted backup, and automatic lock without relying on a server.",
+      "badge": "100% client-side",
+      "help": {
+        "how": { "title": "How it works", "content": "On first use, you create a master password. After that, the note is decrypted only in memory when the vault is unlocked." },
+        "saved": { "title": "What stays saved in the browser", "content": "Only an encrypted JSON with version, salt, iterations, iv, and ciphertext. Plain text, password, and key are not persisted." },
+        "backup": { "title": "Backup and recovery", "content": "You can export an encrypted JSON file and import it later on the same or another device, as long as you use the same master password." },
+        "forgot": { "title": "If I forget the password", "content": "There is no recovery. Use a strong password and keep a backup of the vault in a safe place." }
+      }
+    }
+  }
+}

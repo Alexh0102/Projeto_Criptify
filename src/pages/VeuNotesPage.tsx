@@ -1,17 +1,21 @@
+import { useTranslation } from 'react-i18next'
+
 import VeuNotesVault from '../components/VeuNotesVault'
 import ToolPageLayout from '../components/layout/ToolPageLayout'
 import HelpAccordion from '../components/ui/HelpAccordion'
 import ToolHeroCompact from '../components/ui/ToolHeroCompact'
 
 export default function VeuNotesPage() {
+  const { t } = useTranslation()
+
   return (
     <ToolPageLayout>
       <div className="space-y-6">
         <ToolHeroCompact
-          eyebrow="VéuNotes"
-          title="Guarde uma nota protegida por senha mestre, só neste navegador."
-          description="Crie um cofre local de texto com AES-256-GCM, backup criptografado e bloqueio automático sem depender de servidor."
-          badge="100% client-side"
+          eyebrow={t('notes.page.eyebrow')}
+          title={t('notes.page.title')}
+          description={t('notes.page.description')}
+          badge={t('notes.page.badge')}
         />
 
         <VeuNotesVault />
@@ -19,24 +23,20 @@ export default function VeuNotesPage() {
         <HelpAccordion
           items={[
             {
-              title: 'Como funciona',
-              content:
-                'No primeiro uso, você cria uma senha mestre. Depois disso, a nota é descriptografada apenas em memória quando o cofre é destrancado.',
+              title: t('notes.page.help.how.title'),
+              content: t('notes.page.help.how.content'),
             },
             {
-              title: 'O que fica salvo no navegador',
-              content:
-                'Apenas um JSON criptografado com version, salt, iterations, iv e ciphertext. Texto puro, senha e chave não são persistidos.',
+              title: t('notes.page.help.saved.title'),
+              content: t('notes.page.help.saved.content'),
             },
             {
-              title: 'Backup e recuperação',
-              content:
-                'Você pode exportar um arquivo JSON criptografado e importar depois no mesmo ou em outro dispositivo, desde que use a mesma senha mestre.',
+              title: t('notes.page.help.backup.title'),
+              content: t('notes.page.help.backup.content'),
             },
             {
-              title: 'Se eu esquecer a senha',
-              content:
-                'Não há recuperação. Por isso, use uma senha forte e guarde um backup do cofre em local seguro.',
+              title: t('notes.page.help.forgot.title'),
+              content: t('notes.page.help.forgot.content'),
             },
           ]}
         />

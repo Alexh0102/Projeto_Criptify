@@ -1,5 +1,6 @@
-﻿import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type Props = {
   eyebrow: string
@@ -13,14 +14,17 @@ export default function ToolHeroCompact({
   eyebrow,
   title,
   description,
-  badge = '100% local',
+  badge,
   actions,
 }: Props) {
+  const { t } = useTranslation()
+  const resolvedBadge = badge ?? t('common.localBadge')
+
   return (
     <section className="cv-hero cv-tool-hero space-y-4">
       <div className="hero-badge">
         <ShieldCheck className="h-4 w-4" />
-        {badge}
+        {resolvedBadge}
       </div>
 
       <div className="cv-tool-hero-grid grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">

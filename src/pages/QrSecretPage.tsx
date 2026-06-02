@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import QRCodeGenerator from '../components/QRCodeGenerator'
 import ToolPageLayout from '../components/layout/ToolPageLayout'
@@ -7,6 +8,7 @@ import ToolHeroCompact from '../components/ui/ToolHeroCompact'
 import { QR_SECRET_HASH_PREFIX, readSecretPayloadFromQrHash } from '../lib/qr-secret'
 
 export default function QrSecretPage() {
+  const { t } = useTranslation()
   const [incomingHashPayload, setIncomingHashPayload] = useState<string | null>(null)
   const [incomingHashError, setIncomingHashError] = useState<string | null>(null)
 
@@ -20,7 +22,7 @@ export default function QrSecretPage() {
         setIncomingHashError(
           error instanceof Error
             ? error.message
-            : 'Não foi possível interpretar a mensagem protegida presente na URL do QR.',
+            : t('qr.page.invalidHashFallback'),
         )
       }
     }
@@ -28,7 +30,7 @@ export default function QrSecretPage() {
     syncQrHash()
     window.addEventListener('hashchange', syncQrHash)
     return () => window.removeEventListener('hashchange', syncQrHash)
-  }, [])
+  }, [t])
 
   function handleClearIncomingHash() {
     if (window.location.hash.startsWith(QR_SECRET_HASH_PREFIX)) {
@@ -43,9 +45,9 @@ export default function QrSecretPage() {
     <ToolPageLayout>
       <div className="space-y-6">
         <ToolHeroCompact
-          eyebrow="QR protegido"
-          title="Crie um QR com mensagem protegida por senha."
-          description="Escreva a mensagem, defina a senha e gere o QR em uma tela simples e direta."
+          eyebrow={t('qr.page.eyebrow')}
+          title={t('qr.page.title')}
+          description={t('qr.page.description')}
         />
 
         <QRCodeGenerator
@@ -58,19 +60,16 @@ export default function QrSecretPage() {
         <HelpAccordion
           items={[
             {
-              title: 'Como funciona',
-              content:
-                'Escreva a mensagem, defina a senha e gere o QR. Ao escanear um QR novo, o site abre com a mensagem já carregada e basta digitar a senha.',
+              title: t('qr.page.help.how.title'),
+              content: t('qr.page.help.how.content'),
             },
             {
-              title: 'Compatibilidade',
-              content:
-                'QRs novos abrem o site automaticamente. QRs antigos com o texto protegido direto continuam funcionando ao enviar a imagem.',
+              title: t('qr.page.help.compatibility.title'),
+              content: t('qr.page.help.compatibility.content'),
             },
             {
-              title: 'Privacidade',
-              content:
-                'Tudo acontece no navegador. Nenhum texto ou imagem sai do seu dispositivo.',
+              title: t('qr.page.help.privacy.title'),
+              content: t('qr.page.help.privacy.content'),
             },
           ]}
         />

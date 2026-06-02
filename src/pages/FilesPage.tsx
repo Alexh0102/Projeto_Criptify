@@ -1,16 +1,20 @@
+import { useTranslation } from 'react-i18next'
+
 import FileCryptoWorkspace from '../components/file-crypto/FileCryptoWorkspace'
 import ToolPageLayout from '../components/layout/ToolPageLayout'
 import HelpAccordion from '../components/ui/HelpAccordion'
 import ToolHeroCompact from '../components/ui/ToolHeroCompact'
 
 export default function FilesPage() {
+  const { t } = useTranslation()
+
   return (
     <ToolPageLayout>
       <div className="space-y-5">
         <ToolHeroCompact
-          eyebrow="Criptografia de arquivos"
-          title="Proteja ou recupere arquivos sem sair do navegador."
-          description="Pré-visualize vídeos, fotos, PDFs e documentos locais antes de proteger ou recuperar arquivos com senha, sem upload."
+          eyebrow={t('files.page.eyebrow')}
+          title={t('files.page.title')}
+          description={t('files.page.description')}
         />
 
         <FileCryptoWorkspace />
@@ -18,14 +22,12 @@ export default function FilesPage() {
         <HelpAccordion
           items={[
             {
-              title: 'Como funciona',
-              content:
-                'Você escolhe os arquivos, define a senha e o processamento acontece localmente no navegador.',
+              title: t('files.page.help.how.title'),
+              content: t('files.page.help.how.content'),
             },
             {
-              title: 'Privacidade',
-              content:
-                'Seus arquivos não saem do dispositivo. O resultado é gerado localmente para download.',
+              title: t('files.page.help.privacy.title'),
+              content: t('files.page.help.privacy.content'),
             },
           ]}
         />
