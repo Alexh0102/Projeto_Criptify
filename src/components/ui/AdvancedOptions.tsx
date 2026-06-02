@@ -1,6 +1,7 @@
-﻿import { ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type Props = {
   title?: string
@@ -10,12 +11,14 @@ type Props = {
 }
 
 export default function AdvancedOptions({
-  title = 'Opções avançadas',
+  title,
   helper,
   defaultOpen = false,
   children,
 }: Props) {
+  const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(defaultOpen)
+  const resolvedTitle = title ?? t('common.advancedOptions')
 
   return (
     <section className="surface-technical rounded-[28px]">
@@ -25,7 +28,7 @@ export default function AdvancedOptions({
         className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
       >
         <div>
-          <p className="text-sm font-medium text-white">{title}</p>
+          <p className="text-sm font-medium text-white">{resolvedTitle}</p>
           {helper ? <p className="mt-1 text-sm text-zinc-400">{helper}</p> : null}
         </div>
 

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 type Props = {
   variant?: 'header' | 'hero'
   showTagline?: boolean
@@ -9,6 +11,7 @@ export default function BrandLogo({
   showTagline = false,
   className = '',
 }: Props) {
+  const { t } = useTranslation()
   const isHero = variant === 'hero'
   const frameClasses = isHero
     ? 'h-[76px] w-[76px] rounded-[26px] sm:h-[108px] sm:w-[108px]'
@@ -36,7 +39,7 @@ export default function BrandLogo({
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_58%),radial-gradient(circle_at_bottom_right,rgba(148,230,214,0.12),transparent_46%)]" />
           <img
             src="/brand/criptoveu-logo.png"
-            alt="Logo do CriptoVéu"
+            alt={t('brand.logoAlt')}
             className={`relative block h-full w-full object-contain ${isHero ? 'scale-[1.12]' : 'scale-[1.1]'}`}
             loading="eager"
             draggable={false}
@@ -46,16 +49,10 @@ export default function BrandLogo({
 
       {showTagline ? (
         <div className="min-w-0">
-          <p
-            className={`uppercase tracking-[0.32em] text-cyan-100/80 ${titleClasses}`}
-          >
-            CriptoVéu
+          <p className={`uppercase tracking-[0.32em] text-cyan-100/80 ${titleClasses}`}>
+            {t('brand.name')}
           </p>
-          <p
-            className={`text-zinc-400 ${taglineClasses}`}
-          >
-            Privacidade local para arquivos, mensagens, links e imagens.
-          </p>
+          <p className={`text-zinc-400 ${taglineClasses}`}>{t('brand.tagline')}</p>
         </div>
       ) : null}
     </div>

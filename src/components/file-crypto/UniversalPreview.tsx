@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { getUniversalPreviewMetadata } from './preview-metadata'
 
@@ -33,10 +34,12 @@ export default function UniversalPreview({
   onClose,
   onDownload,
 }: UniversalPreviewProps) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [textContent, setTextContent] = useState('')
   const metadata = getUniversalPreviewMetadata(blob.type)
   const canExpand = !expanded && metadata.kind !== 'none'
+  const previewKindLabel = t(`files.previewKinds.${metadata.kind}`)
 
   useEffect(() => {
     if (metadata.kind !== 'text') {
@@ -77,7 +80,7 @@ export default function UniversalPreview({
       return (
         <img
           src={url}
-          alt={`Prévia de ${fileName}`}
+          alt={t('files.preview.imageAlt', { fileName })}
           className={`w-full rounded-2xl object-contain ${
             expanded ? 'max-h-[76vh]' : 'max-h-[420px]'
           }`}
@@ -94,9 +97,9 @@ export default function UniversalPreview({
           className={`w-full rounded-2xl bg-black ${
             expanded ? 'max-h-[76vh]' : 'max-h-[420px]'
           }`}
-          aria-label={`Prévia em vídeo de ${fileName}`}
+          aria-label={t('files.preview.videoAria', { fileName })}
         >
-          <track kind="captions" label="Sem legendas embutidas" />
+          <track kind="captions" label={t('files.preview.noCaptions')} />
         </video>
       )
     }
@@ -108,7 +111,7 @@ export default function UniversalPreview({
             src={url}
             controls
             className="w-full"
-            aria-label={`Prévia em áudio de ${fileName}`}
+            aria-label={t('files.preview.audioAria', { fileName })}
           />
         </div>
       )
@@ -118,7 +121,7 @@ export default function UniversalPreview({
       return (
         <iframe
           src={url}
-          title={`Prévia PDF de ${fileName}`}
+          title={t('files.preview.pdfTitle', { fileName })}
           sandbox=""
           className={`w-full rounded-2xl border border-white/10 bg-white ${
             expanded ? 'h-[76vh]' : 'h-[420px]'
@@ -141,7 +144,7 @@ export default function UniversalPreview({
 
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm leading-7 text-zinc-400">
-        Este formato não tem pré-visualização segura no navegador. Baixe o arquivo para abrir no aplicativo adequado.
+        {t('files.preview.unsupported')}
       </div>
     )
   }
@@ -164,7 +167,7 @@ export default function UniversalPreview({
           </div>
           <div className="min-w-0">
             <p className="break-words text-xs uppercase tracking-[0.18em] text-cyan-100/80 sm:tracking-[0.28em]">
-              Prévia segura - {metadata.label}
+              {t('files.preview.safePreview', { label: previewKindLabel })}
             </p>
             <p className="mt-2 break-words text-sm font-semibold text-white">{fileName}</p>
           </div>
@@ -174,21 +177,21 @@ export default function UniversalPreview({
           {canExpand ? (
             <button type="button" onClick={onOpen} className="btn-secondary w-full">
               <Maximize2 className="h-4 w-4" />
-              Ampliar
+              {t('common.expand')}
             </button>
           ) : null}
 
           {onDownload ? (
             <button type="button" onClick={onDownload} className="btn-secondary w-full">
               <Download className="h-4 w-4" />
-              Baixar
+              {t('common.download')}
             </button>
           ) : null}
 
           {onClose ? (
             <button type="button" onClick={onClose} className="btn-secondary w-full">
               <X className="h-4 w-4" />
-              Fechar
+              {t('common.close')}
             </button>
           ) : null}
         </div>
@@ -197,15 +200,11 @@ export default function UniversalPreview({
       {isInactive ? (
         <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm text-cyan-50">
           <Pause className="h-4 w-4" />
-          Prévia ocultada por inatividade.
+          {t('files.preview.hiddenByInactivity')}
         </div>
       ) : null}
 
-      <p className="text-xs leading-6 text-zinc-500">
-        Pré-visualização local: este arquivo está sendo exibido diretamente do seu
-        dispositivo. Você pode navegar pelo vídeo ou documento sem fazer upload para
-        nenhum servidor.
-      </p>
+      <p className="text-xs leading-6 text-zinc-500">{t('files.preview.localPreviewNote')}</p>
 
       <div
         className="surface-technical min-w-0 overflow-hidden rounded-[24px] p-3 transition duration-300 sm:p-4"

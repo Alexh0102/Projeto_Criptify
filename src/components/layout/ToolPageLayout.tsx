@@ -1,12 +1,14 @@
 ﻿import { Crown, Grid2x2, MoonStar, SunMedium, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, NavLink } from 'react-router-dom'
 
 import { toolDefinitions } from '../../config/tools'
 import { useTheme } from '../../context/theme'
 import BrandLogo from '../ui/BrandLogo'
 import InstallAppButton from '../ui/InstallAppButton'
+import LanguageSwitcher from './LanguageSwitcher'
 
 type Props = {
   children: ReactNode
@@ -14,6 +16,7 @@ type Props = {
 }
 
 export default function ToolPageLayout({ children, showToolsDock = false }: Props) {
+  const { t } = useTranslation()
   const { theme, toggleTheme, shellStyle } = useTheme()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
@@ -52,7 +55,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
             <Link
               to="/"
               className="cv-shell-header-brand block min-w-0 flex-1 transition hover:opacity-95"
-              aria-label="Abrir a home do CriptoVéu"
+              aria-label={t('layout.header.homeAria')}
             >
               <BrandLogo variant="header" showTagline />
             </Link>
@@ -62,20 +65,22 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                 type="button"
                 onClick={() => setIsDrawerOpen(true)}
                 className="cv-tools-trigger hidden md:flex btn-secondary justify-center px-3 sm:w-auto"
-                aria-label="Abrir lista de ferramentas"
+                aria-label={t('layout.header.openToolsAria')}
               >
                 <Grid2x2 className="h-4 w-4" />
-                Ferramentas
+                {t('layout.header.tools')}
               </button>
 
               <Link
                 to="/apoiar"
                 className="hidden btn-secondary justify-center px-3 sm:inline-flex"
-                aria-label="Apoiar o projeto CriptoVéu"
+                aria-label={t('layout.header.supportAria')}
               >
                 <Crown className="h-4 w-4" />
-                Apoiar
+                {t('layout.header.support')}
               </Link>
+
+              <LanguageSwitcher />
 
               <div className="cv-header-install min-w-0">
                 <InstallAppButton />
@@ -85,17 +90,21 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                 type="button"
                 onClick={toggleTheme}
                 className="cv-header-theme btn-secondary h-11 w-11 shrink-0 justify-center rounded-full px-0 py-0 sm:h-auto sm:w-auto sm:rounded-[999px] sm:px-4 sm:py-3"
-                aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+                aria-label={
+                  theme === 'dark'
+                    ? t('layout.header.enableLightTheme')
+                    : t('layout.header.enableDarkTheme')
+                }
               >
                 {theme === 'dark' ? (
                   <>
                     <SunMedium className="h-4 w-4" />
-                    <span className="hidden sm:inline">Tema</span>
+                    <span className="hidden sm:inline">{t('layout.header.theme')}</span>
                   </>
                 ) : (
                   <>
                     <MoonStar className="h-4 w-4" />
-                    <span className="hidden sm:inline">Tema</span>
+                    <span className="hidden sm:inline">{t('layout.header.theme')}</span>
                   </>
                 )}
               </button>
@@ -106,9 +115,9 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
         <main className={`cv-shell-main flex-1 py-4 sm:py-7 ${showToolsDock ? 'pb-28 sm:pb-7' : ''}`}>{children}</main>
 
         <footer className="mt-auto flex flex-col gap-3 border-t border-white/10 pt-5 text-sm text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>Privacidade local para arquivos, mensagens, QR Codes e imagens.</p>
+          <p>{t('layout.footer.summary')}</p>
           <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-zinc-500">
-            Ferramentas locais • Fluxo direto • Uso no navegador
+            {t('layout.footer.meta')}
           </p>
         </footer>
       </div>
@@ -119,10 +128,10 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
             type="button"
             onClick={() => setIsDrawerOpen(true)}
             className="cv-tools-dock-button btn-primary w-full max-w-[360px] justify-center"
-            aria-label="Abrir ferramentas"
+            aria-label={t('layout.header.openToolsAria')}
           >
             <Grid2x2 className="h-4 w-4" />
-            Ferramentas
+            {t('layout.header.tools')}
           </button>
         </div>
       ) : null}
@@ -132,22 +141,26 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
           <button
             type="button"
             className="absolute inset-0 bg-black/60"
-            aria-label="Fechar menu de ferramentas"
+            aria-label={t('layout.drawer.closeToolsAria')}
             onClick={() => setIsDrawerOpen(false)}
           />
 
           <div className="absolute inset-x-0 bottom-0 rounded-t-[32px] border border-white/10 bg-zinc-950/95 p-4 backdrop-blur-xl sm:inset-y-4 sm:right-4 sm:left-auto sm:w-[420px] sm:rounded-[32px] sm:p-5">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
               <div className="min-w-0">
-                <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">Ferramentas</p>
-                <p className="mt-1 text-xs sm:text-sm text-zinc-400">Escolha a ferramenta certa para a sua tarefa.</p>
+                <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">
+                  {t('layout.drawer.title')}
+                </p>
+                <p className="mt-1 text-xs sm:text-sm text-zinc-400">
+                  {t('layout.drawer.description')}
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
                 className="btn-secondary h-10 w-10 shrink-0 rounded-full px-0 py-0 sm:h-11 sm:w-11"
-                aria-label="Fechar drawer"
+                aria-label={t('layout.drawer.closeDrawerAria')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -161,8 +174,10 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                   `${isActive ? 'surface-primary' : 'surface-secondary'} rounded-[24px] px-3 py-3 sm:px-4 sm:py-4 text-left transition`
                 }
               >
-                <p className="text-sm font-medium text-white">Home</p>
-                <p className="mt-0.5 text-xs sm:text-sm text-zinc-400">Voltar para a visão geral do CriptoVéu.</p>
+                <p className="text-sm font-medium text-white">{t('layout.drawer.home')}</p>
+                <p className="mt-0.5 text-xs sm:text-sm text-zinc-400">
+                  {t('layout.drawer.homeHelper')}
+                </p>
               </NavLink>
 
               {toolDefinitions.map((tool) => (
@@ -174,8 +189,12 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                     `${isActive ? 'surface-primary' : 'surface-secondary'} rounded-[24px] px-3 py-3 sm:px-4 sm:py-4 text-left transition`
                   }
                 >
-                  <p className="text-sm font-medium text-white">{tool.title}</p>
-                  <p className="mt-0.5 text-xs sm:text-sm text-zinc-400">{tool.helper}</p>
+                  <p className="text-sm font-medium text-white">
+                    {t(`tools.${tool.id}.title`)}
+                  </p>
+                  <p className="mt-0.5 text-xs sm:text-sm text-zinc-400">
+                    {t(`tools.${tool.id}.helper`)}
+                  </p>
                 </NavLink>
               ))}
             </div>

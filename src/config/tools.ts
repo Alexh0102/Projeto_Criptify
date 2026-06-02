@@ -1,58 +1,27 @@
 export type ToolDefinition = {
+  id: 'files' | 'qr' | 'link' | 'steganography' | 'notes'
   path: '/arquivos' | '/qr-secreto' | '/link-secreto' | '/esteganografia' | '/veu-notes'
-  title: string
-  shortTitle: string
-  description: string
-  helper: string
-  eyebrow: string
-  technicalLabel?: string
-  cardTitle?: string
 }
 
 export const toolDefinitions: ToolDefinition[] = [
   {
+    id: 'files',
     path: '/arquivos',
-    title: 'Criptografia de arquivos',
-    shortTitle: 'Arquivos',
-    description:
-      'Pré-visualize e proteja arquivos de vídeo, imagem, PDF e documentos locais com senha, sem enviar nada para servidores.',
-    helper: 'Visualize localmente, defina a senha e gere o resultado na hora.',
-    eyebrow: 'Proteção local',
   },
   {
+    id: 'qr',
     path: '/qr-secreto',
-    title: 'QR protegido',
-    shortTitle: 'QR protegido',
-    description: 'Crie ou leia um QR com mensagem protegida por senha.',
-    helper: 'Escreva a mensagem, defina a senha e gere o QR em uma tela própria.',
-    eyebrow: 'Mensagem protegida',
   },
   {
+    id: 'link',
     path: '/link-secreto',
-    title: 'Link protegido',
-    shortTitle: 'Link protegido',
-    description: 'Gere um link com mensagem protegida para abrir depois.',
-    helper: 'Compartilhe uma mensagem protegida com validade e limite de leituras.',
-    eyebrow: 'Link temporário',
   },
   {
+    id: 'steganography',
     path: '/esteganografia',
-    title: 'Mensagem oculta em imagem',
-    shortTitle: 'Mensagem em imagem',
-    cardTitle: 'Mensagem oculta',
-    description: 'Esconda uma mensagem protegida dentro de uma imagem.',
-    helper: 'Envie a imagem, defina a senha e gere o novo arquivo.',
-    eyebrow: 'Imagem com segredo',
-    technicalLabel: 'Esteganografia',
   },
   {
+    id: 'notes',
     path: '/veu-notes',
-    title: 'VéuNotes',
-    shortTitle: 'VéuNotes',
-    cardTitle: 'Cofre de notas',
-    description: 'Guarde uma nota criptografada com senha mestre, só neste navegador.',
-    helper: 'Crie, destranque, edite, exporte e importe um único cofre local de texto.',
-    eyebrow: 'Cofre local',
-    technicalLabel: 'AES-GCM',
   },
 ]

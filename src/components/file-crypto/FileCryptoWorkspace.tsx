@@ -13,6 +13,7 @@
 } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import FieldBlock from '../ui/FieldBlock'
 import AdvancedOptions from '../ui/AdvancedOptions'
@@ -68,18 +69,16 @@ const MODE_COPY: Record<
   }
 > = {
   encrypt: {
-    action: 'Proteger arquivos',
-    title: 'Proteja seus arquivos localmente',
-    description:
-      'Escolha os arquivos, defina a senha e gere os pacotes protegidos no navegador.',
-    hint: 'Aceita qualquer formato de arquivo.',
+    action: 'files.workspace.modes.encrypt.action',
+    title: 'files.workspace.modes.encrypt.title',
+    description: 'files.workspace.modes.encrypt.description',
+    hint: 'files.workspace.modes.encrypt.hint',
   },
   decrypt: {
-    action: 'Recuperar arquivos',
-    title: 'Recupere o conteúdo original',
-    description:
-      'Envie um arquivo .criptoveu e use a mesma senha para recuperar o conteúdo.',
-    hint: 'Também aceita pacotes antigos .cryptify.',
+    action: 'files.workspace.modes.decrypt.action',
+    title: 'files.workspace.modes.decrypt.title',
+    description: 'files.workspace.modes.decrypt.description',
+    hint: 'files.workspace.modes.decrypt.hint',
   },
 }
 
@@ -115,14 +114,15 @@ function downloadBlobUrl(url: string, fileName: string) {
 }
 
 export default function FileCryptoWorkspace() {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<Mode>('encrypt')
   const [files, setFiles] = useState<File[]>([])
   const [password, setPassword] = useState('')
   const [progress, setProgress] = useState(0)
-  const [progressLabel, setProgressLabel] = useState('Pronto para processar')
+  const [progressLabel, setProgressLabel] = useState(() => t('files.workspace.status.ready'))
   const [status, setStatus] = useState<StatusState>({
     tone: 'info',
-    message: 'Selecione os arquivos, defina a senha e comece.',
+    message: t('files.workspace.status.initial'),
   })
   const [results, setResults] = useState<ResultItem[]>([])
   const [previewItem, setPreviewItem] = useState<ResultItem | null>(null)
@@ -150,38 +150,50 @@ export default function FileCryptoWorkspace() {
   const currentMode = MODE_COPY[mode]
   const totalSelectedSize = files.reduce((sum, currentFile) => sum + currentFile.size, 0)
   const activeFileLimit = isPremium ? null : FREE_FILE_SIZE_BYTES
-  const fileLimitLabel = activeFileLimit === null ? 'Ilimitado para apoiadores' : formatFileSize(activeFileLimit)
+  const fileLimitLabel =
+    activeFileLimit === null
+      ? t('files.workspace.plan.unlimited')
+      : formatFileSize(activeFileLimit)
   const resultUrl = previewItem?.url ?? results[0]?.url ?? null
   const resultName = previewItem?.name ?? results[0]?.name ?? ''
   const activePreviewItem = previewItem ?? results[0] ?? null
-  const preview = activePreviewItem?.preview ?? { kind: 'none', label: 'Arquivo' }
+  const preview = activePreviewItem?.preview ?? { kind: 'none', label: t('common.file') }
   const quickFacts = [
     {
-      label: 'Formatos suportados',
-      value: mode === 'encrypt' ? 'Qualquer arquivo' : 'Arquivos .criptoveu',
+      label: t('files.workspace.quickFacts.formats'),
+      value:
+        mode === 'encrypt'
+          ? t('files.workspace.quickFacts.anyFile')
+          : t('files.workspace.quickFacts.criptoveuFiles'),
     },
     {
-      label: 'Limite do plano',
+      label: t('files.workspace.quickFacts.planLimit'),
       value: fileLimitLabel,
     },
     {
-      label: 'Camada ativa',
-      value: isPremium ? (tier === 'admin' ? 'Admin' : 'Apoiador') : 'Comunitária',
+      label: t('files.workspace.quickFacts.activeTier'),
+      value: isPremium
+        ? tier === 'admin'
+          ? t('files.workspace.plan.admin')
+          : t('files.workspace.plan.supporter')
+        : t('files.workspace.plan.community'),
     },
     {
-      label: 'Processamento',
-      value: `Blocos de ${formatFileSize(STREAMING_CHUNK_SIZE_BYTES)}`,
+      label: t('files.workspace.quickFacts.processing'),
+      value: t('files.workspace.quickFacts.blocksOf', {
+        size: formatFileSize(STREAMING_CHUNK_SIZE_BYTES),
+      }),
     },
     {
-      label: 'Derivação',
+      label: t('files.workspace.quickFacts.derivation'),
       value:
         mode === 'encrypt'
-          ? `Argon2id / ${securityProfile.memoryMb} MB`
-          : 'Parâmetros do pacote',
+          ? t('files.workspace.quickFacts.argon2', { memory: securityProfile.memoryMb })
+          : t('files.workspace.quickFacts.packageParams'),
     },
     {
-      label: 'Envio',
-      value: 'Sem envio ao servidor',
+      label: t('files.workspace.quickFacts.transfer'),
+      value: t('files.workspace.quickFacts.noUpload'),
     },
   ]
 
@@ -189,11 +201,10 @@ export default function FileCryptoWorkspace() {
     if (!canUseSecureProcessing) {
       setStatus({
         tone: 'error',
-        message:
-          'Abra o site em HTTPS ou localhost para usar esta ferramenta.',
+        message: t('files.workspace.status.secureContextRequired'),
       })
     }
-  }, [canUseSecureProcessing])
+  }, [canUseSecureProcessing, t])
 
   useEffect(() => {
     try {
@@ -271,13 +282,10 @@ export default function FileCryptoWorkspace() {
 
     setMode(resolvedMode)
     setProgress(0)
-    setProgressLabel('Pronto para processar')
+    setProgressLabel(t('files.workspace.status.ready'))
     setStatus({
       tone: 'info',
-      message:
-        resolvedMode === 'encrypt'
-          ? 'Modo de proteção ativo. O arquivo será convertido para .criptoveu.'
-          : 'Modo de recuperação ativo. Selecione o arquivo .criptoveu e use a mesma senha.',
+      message: t(`files.workspace.status.mode.${resolvedMode}`),
     })
     setFiles([])
     clearResults()
@@ -304,12 +312,13 @@ export default function FileCryptoWorkspace() {
       clearResults()
       setStatus({
         tone: 'error',
-        message: `Todos os arquivos estão acima do limite gratuito de ${formatFileSize(FREE_FILE_SIZE_BYTES)}.`,
+        message: t('files.workspace.status.allFilesTooLarge', {
+          size: formatFileSize(FREE_FILE_SIZE_BYTES),
+        }),
       })
       requestPremiumAccess({
-        title: 'Limite da Camada Comunitária',
-        description:
-          'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
+        title: t('premium.communityLimitTitle'),
+        description: t('premium.communityLimitDescription'),
       })
       return
     }
@@ -317,20 +326,24 @@ export default function FileCryptoWorkspace() {
     setFiles(validFiles)
     setProgress(0)
     setProgressLabel(
-      validFiles.length === 1 ? 'Arquivo pronto para processamento' : 'Arquivos prontos para processamento',
+      validFiles.length === 1
+        ? t('files.workspace.status.filesReady_one')
+        : t('files.workspace.status.filesReady_other'),
     )
     setStatus({
       tone: rejectedFiles.length > 0 ? 'error' : 'info',
       message:
         rejectedFiles.length > 0
-          ? `${validFiles.length} arquivo(s) carregado(s). ${rejectedFiles.length} foram ignorado(s) por exceder o limite gratuito.`
-          : `${validFiles.length} arquivo(s) carregado(s) com sucesso. Tudo continua 100% no navegador.`,
+          ? t('files.workspace.status.filesLoadedWithRejected', {
+              valid: validFiles.length,
+              rejected: rejectedFiles.length,
+            })
+          : t('files.workspace.status.filesLoaded', { count: validFiles.length }),
     })
     if (rejectedFiles.length > 0) {
       requestPremiumAccess({
-        title: 'Limite da Camada Comunitária',
-        description:
-          'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
+        title: t('premium.communityLimitTitle'),
+        description: t('premium.communityLimitDescription'),
       })
     }
     clearResults()
@@ -365,7 +378,7 @@ export default function FileCryptoWorkspace() {
     if (!password) {
       setStatus({
         tone: 'error',
-        message: 'Digite ou gere uma chave antes de tentar copiar.',
+        message: t('files.workspace.status.copyNeedsPassword'),
       })
       return
     }
@@ -373,7 +386,7 @@ export default function FileCryptoWorkspace() {
     if (!hasClipboardSupport) {
       setStatus({
         tone: 'error',
-        message: 'A API de clipboard não está disponível neste navegador.',
+        message: t('files.workspace.status.clipboardUnavailable'),
       })
       return
     }
@@ -383,12 +396,12 @@ export default function FileCryptoWorkspace() {
       setCopied(true)
       setStatus({
         tone: 'success',
-        message: 'Senha ou chave copiada para a área de transferência.',
+        message: t('files.workspace.status.copied'),
       })
     } catch {
       setStatus({
         tone: 'error',
-        message: 'Não foi possível acessar a área de transferência.',
+        message: t('files.workspace.status.clipboardDenied'),
       })
     }
   }
@@ -398,7 +411,7 @@ export default function FileCryptoWorkspace() {
     setCopied(false)
     setStatus({
       tone: 'info',
-      message: 'Chave longa gerada localmente.',
+      message: t('files.workspace.status.keyGenerated'),
     })
   }
 
@@ -446,7 +459,7 @@ export default function FileCryptoWorkspace() {
     if (!canUseSecureProcessing) {
       setStatus({
         tone: 'error',
-        message: 'Abra o site em HTTPS ou localhost para usar esta ferramenta.',
+        message: t('files.workspace.status.secureContextRequired'),
       })
       return
     }
@@ -454,7 +467,7 @@ export default function FileCryptoWorkspace() {
     if (files.length === 0 || !password) {
       setStatus({
         tone: 'error',
-        message: 'Selecione um ou mais arquivos e informe uma senha para continuar.',
+        message: t('files.workspace.status.missingFilesOrPassword'),
       })
       return
     }
@@ -466,25 +479,23 @@ export default function FileCryptoWorkspace() {
     if (oversizedFreeFiles.length > 0) {
       setStatus({
         tone: 'error',
-        message: `Arquivo acima de ${formatFileSize(FREE_FILE_SIZE_BYTES)} na Camada Comunitária.`,
+        message: t('files.workspace.status.fileTooLargeForCommunity', {
+          size: formatFileSize(FREE_FILE_SIZE_BYTES),
+        }),
       })
       requestPremiumAccess({
-        title: 'Limite da Camada Comunitária',
-        description:
-          'Você atingiu o limite da Camada Comunitária. Considere fazer uma doação de R$ 10 para apoiar o desenvolvimento do CriptoVéu e liberar o uso ilimitado.',
+        title: t('premium.communityLimitTitle'),
+        description: t('premium.communityLimitDescription'),
       })
       return
     }
 
     setIsProcessing(true)
     setProgress(4)
-    setProgressLabel('Preparando ambiente seguro')
+    setProgressLabel(t('files.workspace.status.preparingSecureEnvironment'))
     setStatus({
       tone: 'info',
-      message:
-        mode === 'encrypt'
-          ? 'Protegendo arquivos localmente...'
-          : 'Recuperando arquivos localmente...',
+      message: t(`files.workspace.status.processing.${mode}`),
     })
     clearResults()
 
@@ -507,7 +518,13 @@ export default function FileCryptoWorkspace() {
 
               setProgress(Math.round(aggregateProgress))
               setProgressLabel(
-                files.length === 1 ? label : `Arquivo ${currentStep}/${files.length} - ${label}`,
+                files.length === 1
+                  ? label
+                  : t('files.workspace.status.fileStep', {
+                      current: currentStep,
+                      total: files.length,
+                      label,
+                    }),
               )
             },
             {
@@ -523,7 +540,7 @@ export default function FileCryptoWorkspace() {
           const nextPreview =
             mode === 'decrypt'
               ? getUniversalPreviewMetadata(blob.type)
-              : ({ kind: 'none', label: 'Arquivo' } as PreviewMetadata)
+              : ({ kind: 'none', label: t('common.file') } as PreviewMetadata)
 
           processedResults.push({
             id: `${downloadName}-${index}-${blob.size}`,
@@ -543,7 +560,7 @@ export default function FileCryptoWorkspace() {
             `${currentFile.name}: ${
               error instanceof CriptoveuError
                 ? error.message
-                : 'Falha inesperada ao processar este arquivo.'
+                : t('files.workspace.status.unexpectedFileFailure')
             }`,
           )
           setProgress(Math.round(((index + 1) / files.length) * 100))
@@ -556,10 +573,10 @@ export default function FileCryptoWorkspace() {
 
       if (processedResults.length === 0) {
         setProgress(0)
-        setProgressLabel('Falha no processamento')
+        setProgressLabel(t('files.workspace.status.processingFailed'))
         setStatus({
           tone: 'error',
-          message: failures[0] ?? 'Nenhum arquivo foi processado com sucesso.',
+          message: failures[0] ?? t('files.workspace.status.noSuccessfulFiles'),
         })
         return
       }
@@ -570,30 +587,47 @@ export default function FileCryptoWorkspace() {
 
       setProgress(100)
       setProgressLabel(
-        processedResults.length === 1 ? 'Processo concluído' : `${processedResults.length} arquivos concluídos`,
+        processedResults.length === 1
+          ? t('files.workspace.status.processCompleted_one')
+          : t('files.workspace.status.processCompleted_other', {
+              count: processedResults.length,
+            }),
       )
       setStatus({
         tone: failures.length > 0 ? 'error' : 'success',
         message:
           mode === 'encrypt'
             ? failures.length > 0
-              ? `${processedResults.length} arquivo(s) protegido(s) com sucesso. ${failures.length} falhou(ram).`
-              : `${processedResults.length} arquivo(s) protegido(s) com sucesso. Os downloads foram iniciados.`
+              ? t('files.workspace.status.encryptedWithFailures', {
+                  processed: processedResults.length,
+                  failures: failures.length,
+                })
+              : t('files.workspace.status.encryptedSuccess', {
+                  count: processedResults.length,
+                })
             : failures.length > 0
-              ? `${processedResults.length} arquivo(s) recuperado(s) com sucesso. ${failures.length} falhou(ram).`
+              ? t('files.workspace.status.decryptedWithFailures', {
+                  processed: processedResults.length,
+                  failures: failures.length,
+                })
               : previewableResults.length > 0
-                ? `${processedResults.length} arquivo(s) recuperado(s) com sucesso. ${previewableResults.length} prévia(s) segura(s) disponível(is).`
-                : `${processedResults.length} arquivo(s) recuperado(s) com sucesso. Baixe os arquivos para abrir no aplicativo correspondente.`,
+                ? t('files.workspace.status.decryptedWithPreviews', {
+                    processed: processedResults.length,
+                    previews: previewableResults.length,
+                  })
+                : t('files.workspace.status.decryptedSuccess', {
+                    count: processedResults.length,
+                  }),
       })
     } catch (error) {
       setProgress(0)
-      setProgressLabel('Falha no processamento')
+      setProgressLabel(t('files.workspace.status.processingFailed'))
       setStatus({
         tone: 'error',
         message:
           error instanceof CriptoveuError
             ? error.message
-            : 'Ocorreu um erro inesperado ao processar os arquivos.',
+            : t('files.workspace.status.unexpectedProcessingError'),
       })
     } finally {
       setIsProcessing(false)
@@ -614,18 +648,18 @@ export default function FileCryptoWorkspace() {
         <section className="panel-surface min-w-0 rounded-[32px] p-5 sm:p-6">
           <div className="space-y-5">
             <SegmentedMode
-              label="Modo"
+              label={t('common.mode')}
               value={mode}
               onChange={handleModeChange}
               options={[
                 {
                   value: 'encrypt',
-                  label: 'Proteger',
+                  label: t('files.workspace.tabs.encrypt'),
                   icon: <Lock className="h-4 w-4" />,
                 },
                 {
                   value: 'decrypt',
-                  label: 'Recuperar',
+                  label: t('files.workspace.tabs.decrypt'),
                   icon: <Unlock className="h-4 w-4" />,
                 },
               ]}
@@ -635,10 +669,14 @@ export default function FileCryptoWorkspace() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/80">
-                    {mode === 'encrypt' ? 'Operação ativa' : 'Recuperação ativa'}
+                    {t(`files.workspace.activeEyebrow.${mode}`)}
                   </p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">{currentMode.title}</h2>
-                  <p className="mt-3 text-sm leading-7 text-zinc-300">{currentMode.description}</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-white">
+                    {t(currentMode.title)}
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-zinc-300">
+                    {t(currentMode.description)}
+                  </p>
                 </div>
                 <div className="icon-chip p-3">
                   {mode === 'encrypt' ? <Lock className="h-6 w-6" /> : <Unlock className="h-6 w-6" />}
@@ -647,15 +685,8 @@ export default function FileCryptoWorkspace() {
             </div>
 
             <div className="surface-technical rounded-[24px] p-4 text-sm leading-7 text-zinc-300">
-              <p>
-                Envie seu arquivo apenas para o seu navegador. O CriptoVéu permite
-                pré-visualizar vídeos, fotos, PDFs e documentos localmente antes da
-                criptografia.
-              </p>
-              <p className="mt-2 text-zinc-400">
-                Nenhum arquivo é enviado para servidores do CriptoVéu - a
-                visualização e a proteção acontecem apenas no seu dispositivo.
-              </p>
+              <p>{t('files.workspace.localCopy.primary')}</p>
+              <p className="mt-2 text-zinc-400">{t('files.workspace.localCopy.secondary')}</p>
             </div>
 
             <label
@@ -685,14 +716,14 @@ export default function FileCryptoWorkspace() {
                   </div>
                   <div>
                     <p className="text-base font-medium text-white">
-                      Arraste e solte um ou mais arquivos aqui
+                      {t('files.workspace.upload.dropTitle')}
                     </p>
-                    <p className="mt-1 text-sm text-zinc-400">{currentMode.hint}</p>
+                    <p className="mt-1 text-sm text-zinc-400">{t(currentMode.hint)}</p>
                   </div>
                 </div>
 
                 <span className="btn-secondary">
-                  Escolher arquivos
+                  {t('files.workspace.upload.choose')}
                 </span>
               </div>
 
@@ -704,15 +735,17 @@ export default function FileCryptoWorkspace() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">
-                        Arquivos selecionados
+                        {t('files.workspace.upload.selectedTitle')}
                       </p>
                       <p className="mt-2 text-sm font-medium text-white">
                         {files.length > 0
-                          ? `${files.length} arquivo(s) pronto(s) para processamento`
-                          : 'Nenhum arquivo carregado'}
+                          ? files.length === 1
+                            ? t('files.workspace.upload.filesReady_one')
+                            : t('files.workspace.upload.filesReady_other')
+                          : t('files.workspace.upload.noFiles')}
                       </p>
                       <p className="mt-1 text-xs text-zinc-500">
-                        Limite do plano: {fileLimitLabel}
+                        {t('files.workspace.upload.planLimit', { limit: fileLimitLabel })}
                       </p>
 
                       {files.length > 0 ? (
@@ -730,7 +763,11 @@ export default function FileCryptoWorkspace() {
                           ))}
 
                           {files.length > 4 ? (
-                            <p className="text-xs text-zinc-500">+ {files.length - 4} arquivo(s) adicional(is)</p>
+                            <p className="text-xs text-zinc-500">
+                              {t('files.workspace.upload.additionalFiles', {
+                                count: files.length - 4,
+                              })}
+                            </p>
                           ) : null}
                         </div>
                       ) : null}
@@ -746,9 +783,9 @@ export default function FileCryptoWorkspace() {
 
             <div className="surface-primary rounded-[28px] p-5">
               <FieldBlock
-                label="Senha de proteção"
+                label={t('files.workspace.password.label')}
                 htmlFor={passwordInputId}
-                helper="Você também pode gerar uma chave longa."
+                helper={t('files.workspace.password.helper')}
               >
                 <div className="space-y-3">
                   <input
@@ -760,8 +797,8 @@ export default function FileCryptoWorkspace() {
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder={
                       mode === 'encrypt'
-                        ? 'Digite uma senha para proteger os arquivos'
-                        : 'Digite a senha usada para proteger os arquivos'
+                        ? t('files.workspace.password.encryptPlaceholder')
+                        : t('files.workspace.password.decryptPlaceholder')
                     }
                     className="tool-input w-full"
                   />
@@ -774,7 +811,7 @@ export default function FileCryptoWorkspace() {
                       className="btn-accent"
                     >
                       <Sparkles className="h-4 w-4" />
-                      Gerar chave longa
+                      {t('files.workspace.password.generate')}
                     </button>
 
                     <button
@@ -784,19 +821,19 @@ export default function FileCryptoWorkspace() {
                       className="btn-secondary"
                     >
                       <Copy className="h-4 w-4" />
-                      {copied ? 'Copiado' : 'Copiar valor'}
+                      {copied ? t('common.copied') : t('files.workspace.password.copy')}
                     </button>
                   </div>
 
                   <p className="text-xs leading-6 text-zinc-500">
-                    Use a mesma senha ou chave para recuperar os arquivos depois.
+                    {t('files.workspace.password.reuseHint')}
                   </p>
                 </div>
               </FieldBlock>
 
               <div className="mt-5 surface-technical rounded-2xl p-4">
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-zinc-300">Segurança da senha</span>
+                  <span className="text-zinc-300">{t('files.workspace.password.strength')}</span>
                   <span className={strength.textClass}>{strength.label}</span>
                 </div>
 
@@ -815,11 +852,14 @@ export default function FileCryptoWorkspace() {
 
             {mode === 'encrypt' ? (
               <AdvancedOptions
-                title="Configurações Avançadas"
-                helper={`Argon2id: ${securityProfile.memoryMb} MB de RAM, ${ARGON2_FILE_ITERATIONS} passes`}
+                title={t('files.workspace.advanced.title')}
+                helper={t('files.workspace.advanced.helper', {
+                  memory: securityProfile.memoryMb,
+                  iterations: ARGON2_FILE_ITERATIONS,
+                })}
               >
                 <fieldset className="space-y-3">
-                  <legend className="sr-only">Consumo de memória do Argon2id</legend>
+                  <legend className="sr-only">{t('files.workspace.advanced.legend')}</legend>
 
                   {FILE_SECURITY_PROFILES.map((profile) => (
                     <label
@@ -843,13 +883,13 @@ export default function FileCryptoWorkspace() {
 
                         <span>
                           <span className="block text-sm font-medium text-white">
-                            {profile.label}
+                            {t(`files.workspace.securityProfiles.${profile.id}.label`)}
                           </span>
                           <span className="mt-1 block font-mono text-xs uppercase tracking-[0.2em] text-cyan-200/80">
                             {profile.memoryMb} MB RAM
                           </span>
                           <span className="mt-2 block text-xs leading-6 text-zinc-400">
-                            {profile.description}
+                            {t(`files.workspace.securityProfiles.${profile.id}.description`)}
                           </span>
                         </span>
                       </span>
@@ -857,8 +897,7 @@ export default function FileCryptoWorkspace() {
                   ))}
 
                   <p className="pt-2 text-xs leading-6 text-zinc-500">
-                    A seleção afeta apenas novos pacotes. Ao recuperar, a RAM e os
-                    passes são lidos diretamente do cabeçalho do arquivo.
+                    {t('files.workspace.advanced.note')}
                   </p>
                 </fieldset>
               </AdvancedOptions>
@@ -879,7 +918,7 @@ export default function FileCryptoWorkspace() {
                   ) : (
                     <Unlock className="h-4 w-4" />
                   )}
-                  {currentMode.action}
+                  {t(currentMode.action)}
                 </button>
 
                 <button
@@ -889,16 +928,16 @@ export default function FileCryptoWorkspace() {
                   className="btn-secondary"
                 >
                   <Download className="h-4 w-4" />
-                  Baixar todos
+                  {t('common.downloadAll')}
                 </button>
               </div>
 
               <div className="flex flex-col gap-2 text-xs leading-6 text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-                <p>Guarde a senha: você vai precisar dela para recuperar o conteúdo.</p>
+                <p>{t('files.workspace.password.keepPassword')}</p>
                 <p>
                   {results.length === 0
-                    ? 'Baixar todos fica disponível após o processamento.'
-                    : 'Use Baixar todos para salvar tudo de uma vez.'}
+                    ? t('files.workspace.results.downloadAllDisabledHint')
+                    : t('files.workspace.results.downloadAllHint')}
                 </p>
               </div>
             </div>
@@ -909,8 +948,12 @@ export default function FileCryptoWorkspace() {
           <section className="surface-secondary min-w-0 rounded-[28px] p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Guia rápido</p>
-                <p className="mt-2 text-sm font-medium text-white">Antes de processar</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
+                  {t('files.workspace.quickGuide.eyebrow')}
+                </p>
+                <p className="mt-2 text-sm font-medium text-white">
+                  {t('files.workspace.quickGuide.title')}
+                </p>
               </div>
               <div className="icon-chip p-2">
                 <Sparkles className="h-4 w-4" />
@@ -929,7 +972,7 @@ export default function FileCryptoWorkspace() {
 
           <section className="surface-primary min-w-0 overflow-hidden rounded-[28px] p-4 sm:p-5">
             <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-zinc-300">Processamento local</span>
+              <span className="text-zinc-300">{t('files.workspace.progress.title')}</span>
               <span className="font-mono text-xs uppercase tracking-[0.25em] text-zinc-400">
                 {progress}%
               </span>
@@ -939,7 +982,7 @@ export default function FileCryptoWorkspace() {
               className="criptoveu-progress mt-3"
               value={progress}
               max={100}
-              aria-label="Progresso do processamento"
+              aria-label={t('files.workspace.progress.aria')}
             />
 
             <p className="mt-3 text-xs uppercase tracking-[0.28em] text-zinc-500">{progressLabel}</p>
@@ -957,14 +1000,14 @@ export default function FileCryptoWorkspace() {
 
             {!canUseSecureProcessing ? (
               <div className="mt-4 rounded-[24px] border border-rose-500/25 bg-rose-500/10 p-4 text-sm text-rose-100">
-                Este recurso só funciona em HTTPS ou localhost.
+                {t('files.workspace.status.secureContextShort')}
               </div>
             ) : null}
           </section>
           <div ref={resultPanelRef} className="min-w-0 overflow-hidden">
             <ResultPanel
-            title="Resultados"
-            description="Seus arquivos processados aparecem aqui para baixar ou revisar."
+            title={t('files.workspace.results.title')}
+            description={t('files.workspace.results.description')}
             actions={
               results.length > 1 ? (
                 <button
@@ -973,14 +1016,14 @@ export default function FileCryptoWorkspace() {
                   className="btn-secondary w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4" />
-                  Baixar todos
+                  {t('common.downloadAll')}
                 </button>
               ) : null
             }
           >
             {results.length === 0 ? (
               <div className="surface-secondary rounded-[24px] p-5 text-sm leading-7 text-zinc-400">
-                Os arquivos processados vão aparecer aqui.
+                {t('files.workspace.results.empty')}
               </div>
             ) : null}
 
@@ -998,13 +1041,17 @@ export default function FileCryptoWorkspace() {
                       <div className="min-w-0">
                         <p className="break-words text-xs uppercase tracking-[0.2em] text-zinc-500 sm:tracking-[0.28em]">
                           {mode === 'encrypt'
-                            ? 'Pacote gerado'
+                            ? t('files.workspace.results.packageGenerated')
                             : result.preview.kind !== 'none'
-                              ? `${result.preview.label} pronto para revisar`
-                              : 'Arquivo pronto'}
+                              ? t('files.workspace.results.readyToReview', {
+                                  label: t(`files.previewKinds.${result.preview.kind}`),
+                                })
+                              : t('files.workspace.results.fileReady')}
                         </p>
                         <p className="mt-2 break-words text-sm font-semibold text-white">{result.name}</p>
-                        <p className="mt-1 break-words text-xs text-zinc-400">Origem: {result.sourceName}</p>
+                        <p className="mt-1 break-words text-xs text-zinc-400">
+                          {t('files.workspace.results.source', { name: result.sourceName })}
+                        </p>
                       </div>
 
                       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-none lg:auto-cols-max lg:grid-flow-col">
@@ -1015,7 +1062,7 @@ export default function FileCryptoWorkspace() {
                             className="btn-secondary w-full"
                           >
                             <Maximize2 className="h-4 w-4" />
-                            Visualizar
+                            {t('common.preview')}
                           </button>
                         ) : null}
 
@@ -1025,7 +1072,7 @@ export default function FileCryptoWorkspace() {
                           className="btn-secondary w-full"
                         >
                           <Download className="h-4 w-4" />
-                          Baixar
+                          {t('common.download')}
                         </button>
                       </div>
                     </div>
@@ -1033,7 +1080,7 @@ export default function FileCryptoWorkspace() {
                     <div className="mt-4 flex min-w-0 flex-col gap-2 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
                       <span>{formatFileSize(result.size)}</span>
                       {mode === 'decrypt' && result.preview.kind !== 'none' ? (
-                        <span>Prévia local sem envio para servidores</span>
+                        <span>{t('files.workspace.results.localPreview')}</span>
                       ) : null}
                     </div>
 
@@ -1059,7 +1106,7 @@ export default function FileCryptoWorkspace() {
       </div>
 
       <MobileStickyCTA
-        label={currentMode.action}
+        label={t(currentMode.action)}
         icon={mode === 'encrypt' ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
         onClick={handleProcess}
         disabled={files.length === 0 || !password || isProcessing || !canUseSecureProcessing}
@@ -1071,13 +1118,13 @@ export default function FileCryptoWorkspace() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
-          aria-label="Visualização ampliada do arquivo recuperado"
+          aria-label={t('files.workspace.preview.expandedAria')}
         >
           <button
             type="button"
             onClick={handleClosePreview}
             className="absolute inset-0"
-            aria-label="Fechar visualização ampliada"
+            aria-label={t('files.workspace.preview.closeExpandedAria')}
           />
 
           <div className="relative z-10 w-full max-w-6xl rounded-[32px] border border-white/10 bg-zinc-950/95 p-4 shadow-2xl shadow-black/40 sm:p-6">
