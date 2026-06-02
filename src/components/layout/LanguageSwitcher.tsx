@@ -98,7 +98,7 @@ export default function LanguageSwitcher() {
         <div
           role="menu"
           aria-label={t('language.selectLabel')}
-          className="absolute right-0 top-[calc(100%+0.5rem)] z-50 min-w-[200px] overflow-hidden rounded-[22px] border border-white/10 bg-zinc-950/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:min-w-[220px]"
+          className="fixed left-3 right-3 top-[88px] z-[70] overflow-hidden rounded-[22px] border border-white/10 bg-zinc-950/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:absolute sm:right-0 sm:left-auto sm:top-[calc(100%+0.5rem)] sm:min-w-[220px] sm:p-2"
         >
           <div className="px-3 pb-2 pt-1 text-[10px] uppercase tracking-[0.28em] text-zinc-500">
             {t('language.selectLabel')}
