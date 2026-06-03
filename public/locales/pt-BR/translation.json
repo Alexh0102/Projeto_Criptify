@@ -261,17 +261,21 @@
     "workspace": {
       "modes": {
         "encrypt": {
-          "action": "files.workspace.actions.encrypt",
-          "title": "files.workspace.titles.encrypt",
-          "description": "files.workspace.descriptions.encrypt",
-          "hint": "files.workspace.hints.encrypt"
+          "action": "Proteger arquivos",
+          "title": "Proteja seus arquivos localmente",
+          "description": "Escolha os arquivos, defina a senha e gere os pacotes protegidos no navegador.",
+          "hint": "Aceita qualquer formato de arquivo."
         },
         "decrypt": {
-          "action": "files.workspace.actions.decrypt",
-          "title": "files.workspace.titles.decrypt",
-          "description": "files.workspace.descriptions.decrypt",
-          "hint": "files.workspace.hints.decrypt"
+          "action": "Recuperar arquivos",
+          "title": "Recupere o conteúdo original",
+          "description": "Envie um arquivo .criptoveu e use a mesma senha para recuperar o conteúdo.",
+          "hint": "Também aceita pacotes antigos .cryptify."
         }
+      },
+      "tabs": {
+        "encrypt": "Proteger",
+        "decrypt": "Recuperar"
       },
       "actions": {
         "encrypt": "Proteger arquivos",
