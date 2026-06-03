@@ -667,18 +667,18 @@ export default function FileCryptoWorkspace() {
 
             <div className="surface-primary rounded-[28px] p-5">
               <div className="flex items-start justify-between gap-4">
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/80">
                     {t(`files.workspace.activeEyebrow.${mode}`)}
                   </p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">
+                  <h2 className="mt-2 break-words text-2xl font-semibold text-white">
                     {t(currentMode.title)}
                   </h2>
-                  <p className="mt-3 text-sm leading-7 text-zinc-300">
+                  <p className="mt-3 break-words text-sm leading-7 text-zinc-300">
                     {t(currentMode.description)}
                   </p>
                 </div>
-                <div className="icon-chip p-3">
+                <div className="icon-chip shrink-0 p-3">
                   {mode === 'encrypt' ? <Lock className="h-6 w-6" /> : <Unlock className="h-6 w-6" />}
                 </div>
               </div>

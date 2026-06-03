@@ -221,8 +221,12 @@
     },
     "workspace": {
       "modes": {
-        "encrypt": { "action": "files.workspace.actions.encrypt", "title": "files.workspace.titles.encrypt", "description": "files.workspace.descriptions.encrypt", "hint": "files.workspace.hints.encrypt" },
-        "decrypt": { "action": "files.workspace.actions.decrypt", "title": "files.workspace.titles.decrypt", "description": "files.workspace.descriptions.decrypt", "hint": "files.workspace.hints.decrypt" }
+        "encrypt": { "action": "Proteger archivos", "title": "Protege tus archivos localmente", "description": "Elige los archivos, define la contraseña y genera los paquetes protegidos en el navegador.", "hint": "Acepta cualquier formato de archivo." },
+        "decrypt": { "action": "Recuperar archivos", "title": "Recupera el contenido original", "description": "Sube un archivo .criptoveu y usa la misma contraseña para recuperar el contenido.", "hint": "También acepta paquetes antiguos .cryptify." }
+      },
+      "tabs": {
+        "encrypt": "Proteger",
+        "decrypt": "Recuperar"
       },
       "actions": {
         "encrypt": "Proteger archivos",
