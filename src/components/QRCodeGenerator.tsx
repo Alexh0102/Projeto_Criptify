@@ -103,7 +103,7 @@ export default function QRCodeGenerator({
   const [isReading, setIsReading] = useState(false)
   const [generateStatus, setGenerateStatus] = useState<StatusState>({
     tone: 'info',
-    message: 'Escreva a mensagem, defina a senha e gere o QR.',
+    message: 'A senha nunca entra no QR. Compartilhe-a separadamente.',
   })
   const [readStatus, setReadStatus] = useState<StatusState>({
     tone: 'info',
@@ -209,8 +209,8 @@ export default function QRCodeGenerator({
         tone: generated ? 'success' : 'error',
         message: generated
           ? isPremium
-            ? 'QR protegido gerado localmente. Uso ilimitado de apoiador ativo.'
-            : `QR protegido gerado localmente. Restam ${usageStatus?.remaining ?? 0} geração(ões) gratuitas neste ciclo.`
+            ? 'QR protegido gerado localmente, sem a senha. Uso ilimitado de apoiador ativo.'
+            : `QR protegido gerado localmente, sem a senha. Restam ${usageStatus?.remaining ?? 0} geração(ões) gratuitas neste ciclo.`
           : 'Não foi possível gerar o QR protegido com a mensagem informada.',
       })
     } catch (error) {
@@ -344,7 +344,7 @@ export default function QRCodeGenerator({
               <div className="surface-primary rounded-[24px] p-4 sm:p-5">
                 <p className="text-sm font-medium text-white">Criar QR protegido</p>
                 <p className="mt-2 text-sm leading-7 text-zinc-400">
-                  Escreva a mensagem, defina a senha e gere o QR em um clique.
+                  O QR leva apenas dados criptografados. Envie a senha por outro canal.
                 </p>
 
                 <FreeUsageCounter feature="qr-code" />
@@ -400,8 +400,8 @@ export default function QRCodeGenerator({
                 <ol className="mt-3 space-y-3 leading-7">
                   <li>1. Escreva a mensagem e defina a senha.</li>
                   <li>2. O navegador protege o conteúdo.</li>
-                  <li>3. O QR fica pronto para baixar e compartilhar.</li>
-                  <li>4. Quem receber usa a mesma senha para abrir.</li>
+                  <li>3. O QR recebe somente os dados criptografados, nunca a senha.</li>
+                  <li>4. Compartilhe a senha separadamente para que a pessoa possa abrir.</li>
                 </ol>
               </div>
             </div>
@@ -410,7 +410,7 @@ export default function QRCodeGenerator({
               {isGenerating || qrCodeDataUrl ? (
                 <ResultPanel
                   title="QR protegido pronto"
-                  description="Baixe o PNG ou escaneie a imagem para abrir o site com a mensagem já carregada."
+                  description="Baixe o PNG e compartilhe a senha separadamente. Ela não está contida no QR."
                   actions={
                     <button
                       type="button"

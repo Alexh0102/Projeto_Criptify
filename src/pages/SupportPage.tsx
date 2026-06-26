@@ -126,6 +126,10 @@ export default function SupportPage() {
               <p className="mt-3 text-xs leading-6 text-zinc-400">
                 Meios de pagamento aceitos: cartão de crédito, cartão de débito, Google Pay e boleto.
               </p>
+              <p className="mt-3 rounded-[20px] border border-cyan-400/15 bg-cyan-400/[0.05] p-3 text-xs leading-6 text-zinc-300">
+                Privacidade: a chave de apoio remove apenas os limites comunitários. Ela não
+                acessa arquivos, mensagens, senhas ou notas.
+              </p>
 
               <div className="mt-5 grid gap-3">
                 {supportPlanItems.map((item) => (

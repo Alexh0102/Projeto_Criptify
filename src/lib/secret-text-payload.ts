@@ -4,6 +4,12 @@ import {
   type TextDecryptionInput,
   type TextEncryptionResult,
 } from './criptoveu'
+import {
+  SHARE_PAYLOAD_FIELD_ALLOWLISTS,
+  assertAllowedPayloadFields,
+  assertNoSecretFields,
+  createAllowlistedPayload,
+} from './share-payload-security'
 
 export const SECRET_TEXT_PAYLOAD_PREFIX = 'CRIPTOVEU_SECRET_V1:'
 export const MAX_SECRET_TEXT_PAYLOAD_CHARS = 200_000
@@ -39,12 +45,12 @@ function resolvePayloadPrefix(payload: string) {
 }
 
 export function serializeEncryptedTextPayload(payload: TextEncryptionResult) {
-  const serialized: SerializedSecretTextPayload = {
+  const serialized = createAllowlistedPayload<SerializedSecretTextPayload, keyof SerializedSecretTextPayload>({
     version: 1,
     ciphertext: payload.ciphertext,
     iv: encodeBytesToBase64(payload.iv),
     salt: encodeBytesToBase64(payload.salt),
-  }
+  }, SHARE_PAYLOAD_FIELD_ALLOWLISTS.encryptedTextV1)
 
   return `${SECRET_TEXT_PAYLOAD_PREFIX}${JSON.stringify(serialized)}`
 }
@@ -73,6 +79,9 @@ export function parseEncryptedTextPayload(payload: string): TextDecryptionInput 
       'Os dados da mensagem estão corrompidos ou incompletos.',
     )
   }
+
+  assertAllowedPayloadFields(parsed, SHARE_PAYLOAD_FIELD_ALLOWLISTS.encryptedTextV1)
+  assertNoSecretFields(parsed)
 
   if (
     parsed.version !== 1 ||

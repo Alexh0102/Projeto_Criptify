@@ -120,6 +120,7 @@
       "items": {
         "account": { "title": "Do I need an account?", "content": "No. You can start using the tools directly in the browser." },
         "server": { "title": "Is my content sent to a server?", "content": "The main processing happens locally in the browser while you use the tool." },
+        "linkPassword": { "title": "Does the link contain my password?", "content": "No. Links and QR codes contain only encrypted data and the required public parameters. Share the password separately, preferably through another channel." },
         "mobile": { "title": "Does it work on mobile?", "content": "Yes. The screens were organized for mobile use with a direct flow." },
         "contentTypes": { "title": "Can I use it for files, messages, and images?", "content": "Yes. Each tool was built for a specific task." },
         "firstTool": { "title": "Which tool should I use first?", "content": "If you want to protect a document, start with files. For short messages, use protected QR or protected link." },
@@ -386,7 +387,7 @@
         },
         "privacy": {
           "title": "Privacy",
-          "content": "Everything happens in the browser. No text or image leaves your device."
+          "content": "Everything happens in the browser. No text or image leaves your device, and the password is never included in the QR code. Share it separately."
         }
       }
     }

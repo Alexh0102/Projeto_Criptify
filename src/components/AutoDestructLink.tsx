@@ -64,18 +64,18 @@ const EXPIRATION_OPTIONS: Array<{
 }> = [
   {
     value: '24h',
-    label: 'Expira em 24h',
-    helper: 'A mensagem fica disponível por 24 horas.',
+    label: 'Validade local de 24h',
+    helper: 'Cada navegador verifica o prazo; o link não é revogado globalmente.',
   },
   {
     value: '7d',
-    label: 'Expira em 7 dias',
-    helper: 'A mensagem fica disponível por 7 dias.',
+    label: 'Validade local de 7 dias',
+    helper: 'Cada navegador verifica o prazo; o link não é revogado globalmente.',
   },
   {
     value: 'never',
-    label: 'Nunca expira',
-    helper: 'Só o limite de visualizações continua valendo.',
+    label: 'Sem validade local',
+    helper: 'Nenhum prazo é verificado; a contagem local ainda pode ser aplicada.',
   },
 ]
 
@@ -87,22 +87,22 @@ const VIEW_LIMIT_OPTIONS: Array<{
   {
     value: '1',
     label: '1 visualização',
-    helper: 'Some após a primeira leitura.',
+    helper: 'Bloqueia novas aberturas somente neste navegador após a primeira leitura.',
   },
   {
     value: '3',
     label: '3 visualizações',
-    helper: 'Permite até três leituras.',
+    helper: 'Permite até três leituras registradas neste navegador.',
   },
   {
     value: '5',
     label: '5 visualizações',
-    helper: 'Boa opção para um grupo pequeno.',
+    helper: 'Permite até cinco leituras registradas neste navegador.',
   },
   {
     value: 'unlimited',
     label: 'Sem limite',
-    helper: 'Não bloqueia pela contagem de leituras locais.',
+    helper: 'Não aplica bloqueio pela contagem local de leituras.',
   },
 ]
 
@@ -172,7 +172,7 @@ export default function AutoDestructLink({
   const [isGeneratingLink, setIsGeneratingLink] = useState(false)
   const [generateStatus, setGenerateStatus] = useState<StatusState>({
     tone: 'info',
-    message: 'Escreva a mensagem, defina a senha e gere o link.',
+    message: 'A senha nunca entra no link. Compartilhe-a separadamente.',
   })
   const [readInput, setReadInput] = useState('')
   const [resolvedEncodedPayload, setResolvedEncodedPayload] = useState('')
@@ -297,8 +297,8 @@ export default function AutoDestructLink({
       setGenerateStatus({
         tone: 'success',
         message: isPremium
-          ? 'Link protegido gerado localmente. Uso ilimitado de apoiador ativo.'
-          : `Link protegido gerado localmente. Restam ${usageStatus?.remaining ?? 0} geração(ões) gratuitas neste ciclo.`,
+          ? 'Link protegido gerado localmente, sem a senha. Uso ilimitado de apoiador ativo.'
+          : `Link protegido gerado localmente, sem a senha. Restam ${usageStatus?.remaining ?? 0} geração(ões) gratuitas neste ciclo.`,
       })
     } catch (error) {
       setGenerateStatus({
@@ -461,7 +461,7 @@ export default function AutoDestructLink({
                   <div>
                     <p className="text-sm font-medium text-white">Criar link protegido</p>
                     <p className="mt-1 text-sm text-zinc-400">
-                      Escreva a mensagem, defina a senha e gere o link em um clique.
+                      O link leva apenas dados criptografados. Envie a senha por outro canal.
                     </p>
                   </div>
                 </div>
@@ -515,7 +515,7 @@ export default function AutoDestructLink({
               <div className="space-y-4">
                 <AdvancedOptions
                   title="Ajustes do link"
-                  helper="Defina validade e limite de visualizações."
+                  helper="Defina controles locais de validade e visualizações."
                 >
                   <div className="grid gap-4">
                     <div>
@@ -554,7 +554,7 @@ export default function AutoDestructLink({
                   {generatedLink ? (
                     <ResultPanel
                       title="Link protegido pronto"
-                      description="Copie o link e compartilhe quando quiser."
+                      description="O link não contém a senha. Compartilhe-a separadamente, de preferência por outro canal."
                       actions={
                         <button
                           type="button"
@@ -574,6 +574,10 @@ export default function AutoDestructLink({
 
                       <p className="mt-4 text-sm leading-7 text-zinc-300">
                         {selectedExpiration.label}. {selectedViewLimit.label}.
+                      </p>
+                      <p className="mt-2 text-xs leading-6 text-zinc-500">
+                        Validade e visualizações são verificadas localmente. Cópias abertas em
+                        outros navegadores mantêm contagens independentes.
                       </p>
 
                       <div className="mt-4 flex flex-wrap gap-3">
@@ -688,7 +692,8 @@ export default function AutoDestructLink({
             <div className="surface-secondary rounded-[28px] p-5">
               <p className="text-sm font-medium text-white">Status da mensagem</p>
               <p className="mt-2 text-sm leading-7 text-zinc-400">
-                Validade e leituras são verificadas neste navegador.
+                Validade e leituras são verificadas localmente. Não há revogação nem contagem
+                global por servidor.
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">

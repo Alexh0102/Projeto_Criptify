@@ -34,7 +34,15 @@ const iconByPath = {
 const trustItemKeys = ['local', 'focusedFlow', 'ready'] as const
 const useCaseKeys = ['file', 'qr', 'link', 'image', 'carefulTasks'] as const
 const localBenefitKeys = ['control', 'lessExposure', 'simplicity'] as const
-const faqKeys = ['account', 'server', 'mobile', 'contentTypes', 'firstTool', 'steganography'] as const
+const faqKeys = [
+  'account',
+  'server',
+  'linkPassword',
+  'mobile',
+  'contentTypes',
+  'firstTool',
+  'steganography',
+] as const
 
 const audienceItems = [
   {

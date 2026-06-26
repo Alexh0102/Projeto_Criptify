@@ -131,6 +131,7 @@ Importante:
 
 - O hash da URL não é enviado ao servidor em requisições HTTP tradicionais.
 - Quem recebe o link ou o QR Code tem acesso ao payload criptografado.
+- A senha ou chave nunca é incluída no link ou no QR Code e deve ser compartilhada separadamente.
 - A proteção real depende da senha usada para abrir a mensagem.
 - Os formatos atuais de mensagens, QR Codes e links continuam derivados com **PBKDF2/SHA-256 com 600.000 iterações**, para que payloads já compartilhados permaneçam legíveis.
 
