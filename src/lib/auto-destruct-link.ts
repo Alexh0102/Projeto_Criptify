@@ -4,6 +4,12 @@ import {
   type TextDecryptionInput,
   type TextEncryptionResult,
 } from './criptoveu'
+import {
+  SHARE_PAYLOAD_FIELD_ALLOWLISTS,
+  assertAllowedPayloadFields,
+  assertNoSecretFields,
+  createAllowlistedPayload,
+} from './share-payload-security'
 
 export const AUTO_DESTRUCT_APP_URL = 'https://www.xn--criptovu-h1a.com'
 const AUTO_DESTRUCT_APP_PATH = '/link-secreto'
@@ -126,7 +132,7 @@ export function serializeAutoDestructPayload(
     maxViews: number | null
   },
 ) {
-  const payload: AutoDestructPayload = {
+  const payload = createAllowlistedPayload<AutoDestructPayload, keyof AutoDestructPayload>({
     version: 1,
     ciphertext: encrypted.ciphertext,
     iv: encodeBytesToBase64(encrypted.iv),
@@ -134,13 +140,16 @@ export function serializeAutoDestructPayload(
     createdAt: options.createdAt ?? Date.now(),
     expiresIn: options.expiresIn,
     maxViews: options.maxViews,
-  }
+  }, SHARE_PAYLOAD_FIELD_ALLOWLISTS.autoDestructV1)
 
   return encodeJsonToBase64(payload)
 }
 
 export function parseAutoDestructPayload(encodedPayload: string): AutoDestructPayload {
   const parsed = decodeJsonFromBase64(encodedPayload) as Partial<AutoDestructPayload>
+
+  assertAllowedPayloadFields(parsed, SHARE_PAYLOAD_FIELD_ALLOWLISTS.autoDestructV1)
+  assertNoSecretFields(parsed)
 
   if (
     parsed.version !== 1 ||

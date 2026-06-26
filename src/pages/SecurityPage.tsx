@@ -20,6 +20,11 @@ export default function SecurityPage() {
               description:
                 'Quando possível, envie a senha por um canal diferente daquele usado para compartilhar o arquivo, o link ou a imagem.',
             },
+            {
+              title: 'Senha e chave não acompanham links ou QRs',
+              description:
+                'Links e QRs do CriptoVéu carregam apenas dados criptografados e parâmetros públicos. A senha ou chave deve ser entregue separadamente.',
+            },
           ],
         },
         {

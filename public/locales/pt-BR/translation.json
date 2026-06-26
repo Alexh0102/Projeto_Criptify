@@ -138,6 +138,7 @@
       "items": {
         "account": { "title": "Preciso criar conta para usar?", "content": "Não. O uso das ferramentas pode começar diretamente pelo navegador." },
         "server": { "title": "Meu conteúdo é enviado para um servidor?", "content": "O processamento principal acontece localmente no navegador durante o uso da ferramenta." },
+        "linkPassword": { "title": "O link contém minha senha?", "content": "Não. Links e QRs contêm apenas os dados criptografados e os parâmetros públicos necessários. Compartilhe a senha separadamente, de preferência por outro canal." },
         "mobile": { "title": "Funciona no celular?", "content": "Sim. As telas foram organizadas para uso mobile com foco em fluxo direto." },
         "contentTypes": { "title": "Posso usar para arquivos, mensagens e imagens?", "content": "Sim. Cada ferramenta foi criada para uma tarefa específica." },
         "firstTool": { "title": "Qual ferramenta devo usar primeiro?", "content": "Se você quer proteger um documento, comece por arquivos. Para mensagens curtas, use QR protegido ou link protegido." },
@@ -444,7 +445,7 @@
         },
         "privacy": {
           "title": "Privacidade",
-          "content": "Tudo acontece no navegador. Nenhum texto ou imagem sai do seu dispositivo."
+          "content": "Tudo acontece no navegador. Nenhum texto ou imagem sai do seu dispositivo, e a senha nunca é incluída no QR. Compartilhe-a separadamente."
         }
       }
     }

@@ -34,6 +34,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Test secret leakage protections
+        run: npm test
+
       - name: Build production bundle
         run: npm run build
 

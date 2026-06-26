@@ -65,7 +65,17 @@ export default function LinkSecretPage() {
             {
               title: 'Como funciona',
               content:
-                'Escreva a mensagem, defina a senha e gere o link. Para abrir, cole a URL ou use o hash recebido.',
+                'Escreva a mensagem, defina a senha e gere o link. Para abrir, cole a URL ou use o hash recebido e informe a senha separadamente.',
+            },
+            {
+              title: 'O link contém minha senha?',
+              content:
+                'Não. O link contém apenas o payload criptografado e os parâmetros necessários para abri-lo. Compartilhe a senha separadamente, de preferência por outro canal.',
+            },
+            {
+              title: 'Expiração e limite são globais?',
+              content:
+                'Não. O prazo é verificado pelo site e a contagem fica neste navegador. Outro navegador ou dispositivo mantém sua própria contagem, e o link não é revogado por um servidor.',
             },
             {
               title: 'Compatibilidade com links antigos',
