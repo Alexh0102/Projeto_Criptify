@@ -350,6 +350,36 @@
           "description": "Requiere mucha memoria y se recomienda para ordenadores. Puede fallar o ralentizarse en teléfonos."
         }
       },
+      "inspector": {
+        "title": "Diagnóstico del paquete",
+        "helper": "Comprobación estructural local, sin contraseña. \"Plausible\" no significa autenticado.",
+        "checking": "Verificando",
+        "reading": "Leyendo cabecera y registros...",
+        "unavailable": "Diagnóstico no disponible.",
+        "status": {
+          "plausible": "Estructura plausible",
+          "legacy": "Formato heredado",
+          "invalid": "Paquete inválido"
+        },
+        "format": "Formato: {{format}}",
+        "memory": "Argon2id: {{memory}} MB",
+        "blocks": "Bloques observados: {{count}}",
+        "manifestPresent": "Manifiesto presente",
+        "manifestAbsent": "Sin manifiesto"
+      },
+      "securityReport": {
+        "preparedTitle": "Escudo de Integridad preparado",
+        "verifiedTitle": "Escudo de Integridad verificado",
+        "legacyTitle": "Autenticación AES-GCM completada",
+        "preparedNote": "El manifiesto y los hashes se generaron localmente. Vuelve a abrir el paquete descargado para confirmar el archivo guardado.",
+        "verifiedNote": "Manifiesto y hashes confirmados tras la recuperación local del contenido.",
+        "legacyNote": "Formato autenticado por AES-GCM, pero sin el manifiesto SHA-256 de CRIPTOVEU4.",
+        "download": "Descargar informe JSON",
+        "format": "Formato: {{format}}",
+        "kdf": "KDF: {{kdf}}",
+        "blocks": "Bloques: {{count}}",
+        "upload": "Envío al servidor: no"
+      },
       "quickGuide": { "eyebrow": "Guía rápida", "title": "Antes de procesar" },
       "progress": { "title": "Procesamiento local", "aria": "Progreso del procesamiento" },
       "results": {

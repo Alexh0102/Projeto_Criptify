@@ -1,9 +1,20 @@
 ﻿const LEGACY_FILE_HEADER_TEXT = 'CRIPTIFY1'
 import argon2WorkerUrl from '../workers/argon2.worker.ts?worker&url'
+import {
+  FileIntegrityError,
+  MAX_FILE_INTEGRITY_MANIFEST_BYTES,
+  assertIntegrityHashes,
+  createFileIntegrityManifest,
+  hashBlobIntegrity,
+  parseFileIntegrityManifest,
+  serializeFileIntegrityManifest,
+  type FileIntegrityManifest,
+} from './file-integrity'
 
 const LEGACY_CHUNKED_FILE_HEADER_TEXT = 'CRIPTIFY2'
 const PBKDF2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU2'
 const ARGON2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU3'
+const INTEGRITY_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU4'
 const LEGACY_FILE_HEADER_BYTES = new TextEncoder().encode(LEGACY_FILE_HEADER_TEXT)
 const LEGACY_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
   LEGACY_CHUNKED_FILE_HEADER_TEXT,
@@ -14,11 +25,19 @@ const PBKDF2_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
 const ARGON2_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
   ARGON2_CHUNKED_FILE_HEADER_TEXT,
 )
+const INTEGRITY_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
+  INTEGRITY_CHUNKED_FILE_HEADER_TEXT,
+)
 const SALT_LENGTH_BYTES = 16
 const IV_LENGTH_BYTES = 12
 const PBKDF2_ITERATIONS = 600_000
 const BASE64_CHUNK_SIZE_BYTES = 0x8000
 const CHUNK_RECORD_LENGTH_BYTES = 4
+const INTEGRITY_RECORD_TYPE_BYTES = 1
+const INTEGRITY_RECORD_HEADER_BYTES =
+  INTEGRITY_RECORD_TYPE_BYTES + CHUNK_RECORD_LENGTH_BYTES
+const INTEGRITY_DATA_RECORD_TYPE = 1
+const INTEGRITY_MANIFEST_RECORD_TYPE = 2
 const ARGON2_PARAMETER_LENGTH_BYTES = 4
 const ARGON2_MIN_MEMORY_MB = 8
 const ARGON2_MAX_MEMORY_MB = 512
@@ -30,9 +49,16 @@ const ARGON2_HEADER_LENGTH_BYTES =
   ARGON2_PARAMETER_LENGTH_BYTES * 2 +
   SALT_LENGTH_BYTES +
   IV_LENGTH_BYTES
+const INTEGRITY_HEADER_LENGTH_BYTES =
+  INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length +
+  ARGON2_PARAMETER_LENGTH_BYTES * 2 +
+  SALT_LENGTH_BYTES +
+  IV_LENGTH_BYTES +
+  CHUNK_RECORD_LENGTH_BYTES * 2
 export const ARGON2_FILE_ITERATIONS = 2
 export const STREAMING_CHUNK_SIZE_BYTES = 2 * 1024 * 1024
 export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024 * 1024
+export const MAX_FILE_PACKAGE_OVERHEAD_BYTES = 2 * 1024 * 1024
 
 type ProgressCallback = (value: number, label: string) => void
 
@@ -99,6 +125,53 @@ type PasswordStrength = {
 export type ProcessResult = {
   blob: Blob
   downloadName: string
+  securityReport: FileSecurityReport
+}
+
+export type FilePackageFormat =
+  | 'CRIPTOVEU4'
+  | 'CRIPTOVEU3'
+  | 'CRIPTOVEU2'
+  | 'CRIPTIFY2'
+  | 'CRIPTIFY1'
+  | 'UNKNOWN'
+
+export type FilePackageInspection = {
+  status: 'plausible' | 'legacy' | 'invalid'
+  format: FilePackageFormat
+  packageSize: number
+  message: string
+  memoryMb: number | null
+  iterations: number | null
+  chunkSize: number | null
+  declaredChunkCount: number | null
+  observedChunkCount: number | null
+  manifestPresent: boolean | null
+}
+
+export type FileSecurityReport = {
+  operation: 'encrypt' | 'decrypt'
+  format: Exclude<FilePackageFormat, 'UNKNOWN'>
+  encryption: 'AES-256-GCM' | 'AES-GCM'
+  kdf: 'Argon2id' | 'PBKDF2/SHA-256'
+  memoryMb: number | null
+  iterations: number
+  parallelism: number | null
+  chunkSize: number | null
+  chunkCount: number | null
+  integrity: {
+    aesGcmAuthenticated: boolean
+    manifestVerified: boolean
+    sha256Verified: boolean
+    status: 'prepared' | 'verified' | 'aead-only'
+  }
+  fileHashSha256: string | null
+  manifestId: string | null
+  createdAt: number
+  originalName: string
+  originalSize: number
+  uploadToServer: false
+  note: string
 }
 
 export type TextEncryptionResult = {
@@ -119,13 +192,15 @@ export class CriptoveuError extends Error {
     | 'INVALID_FILE'
     | 'INVALID_PASSWORD_OR_FILE'
     | 'KEY_DERIVATION_FAILED'
+    | 'INTEGRITY_FAILED'
 
   constructor(
     code:
       | 'FILE_TOO_LARGE'
       | 'INVALID_FILE'
       | 'INVALID_PASSWORD_OR_FILE'
-      | 'KEY_DERIVATION_FAILED',
+      | 'KEY_DERIVATION_FAILED'
+      | 'INTEGRITY_FAILED',
     message: string,
   ) {
     super(message)
@@ -176,12 +251,6 @@ function buildArgon2ChunkAdditionalData(
   )
   additionalData[additionalData.length - 1] = isFinalChunk ? 1 : 0
   return additionalData
-}
-
-function createLengthPrefix(value: number) {
-  const bytes = new Uint8Array(CHUNK_RECORD_LENGTH_BYTES)
-  new DataView(bytes.buffer).setUint32(0, value, false)
-  return bytes
 }
 
 function readLengthPrefix(bytes: Uint8Array) {
@@ -242,28 +311,6 @@ export function validateArgon2Parameters(parameters: Argon2Parameters) {
   }
 
   return parameters
-}
-
-function buildArgon2Header(
-  parameters: Argon2Parameters,
-  salt: Uint8Array,
-  firstIv: Uint8Array,
-) {
-  validateArgon2Parameters(parameters)
-  const header = new Uint8Array(ARGON2_HEADER_LENGTH_BYTES)
-  let offset = 0
-
-  header.set(ARGON2_CHUNKED_FILE_HEADER_BYTES, offset)
-  offset += ARGON2_CHUNKED_FILE_HEADER_BYTES.length
-  header.set(createAsciiParameter(parameters.memoryMb), offset)
-  offset += ARGON2_PARAMETER_LENGTH_BYTES
-  header.set(createAsciiParameter(parameters.iterations), offset)
-  offset += ARGON2_PARAMETER_LENGTH_BYTES
-  header.set(salt, offset)
-  offset += SALT_LENGTH_BYTES
-  header.set(firstIv, offset)
-
-  return header
 }
 
 function readArgon2Header(header: Uint8Array) {
@@ -511,6 +558,45 @@ function buildDownloadName(mode: 'encrypt' | 'decrypt', fileName: string) {
   return `${fileName}.decrypted`
 }
 
+function createAeadOnlySecurityReport(options: {
+  format: 'CRIPTOVEU3' | 'CRIPTOVEU2' | 'CRIPTIFY2' | 'CRIPTIFY1'
+  kdf: 'Argon2id' | 'PBKDF2/SHA-256'
+  memoryMb: number | null
+  iterations: number
+  parallelism: number | null
+  chunkSize: number | null
+  chunkCount: number | null
+  originalName: string
+  originalSize: number
+}): FileSecurityReport {
+  return {
+    operation: 'decrypt',
+    format: options.format,
+    encryption:
+      options.format === 'CRIPTOVEU3' ? 'AES-256-GCM' : 'AES-GCM',
+    kdf: options.kdf,
+    memoryMb: options.memoryMb,
+    iterations: options.iterations,
+    parallelism: options.parallelism,
+    chunkSize: options.chunkSize,
+    chunkCount: options.chunkCount,
+    integrity: {
+      aesGcmAuthenticated: true,
+      manifestVerified: false,
+      sha256Verified: false,
+      status: 'aead-only',
+    },
+    fileHashSha256: null,
+    manifestId: null,
+    createdAt: Date.now(),
+    originalName: options.originalName,
+    originalSize: options.originalSize,
+    uploadToServer: false,
+    note:
+      'Formato legado autenticado por AES-GCM, sem manifesto SHA-256 do Escudo de Integridade.',
+  }
+}
+
 function inferMimeTypeFromName(fileName: string) {
   const extension = fileName.toLowerCase().split('.').pop()
 
@@ -570,17 +656,49 @@ export async function encryptFile(
   options?: FileEncryptionOptions,
 ): Promise<ProcessResult> {
   assertSupportedFileSize(file, options)
-  await reportProgress(onProgress, 8, 'Preparando leitura por blocos')
+  await reportProgress(onProgress, 5, 'Preparando Escudo de Integridade')
   const salt = randomBytes(SALT_LENGTH_BYTES)
   const firstIv = randomBytes(IV_LENGTH_BYTES)
   const parameters = validateArgon2Parameters({
     memoryMb: options?.argon2MemoryMb ?? 256,
     iterations: options?.argon2Iterations ?? ARGON2_FILE_ITERATIONS,
   })
-  const fixedHeader = buildArgon2Header(parameters, salt, firstIv)
+  let manifest: FileIntegrityManifest
+
+  try {
+    manifest = await createFileIntegrityManifest(
+      file,
+      STREAMING_CHUNK_SIZE_BYTES,
+      {
+        memoryMb: parameters.memoryMb,
+        iterations: parameters.iterations,
+        parallelism: 1,
+      },
+      (progress) => {
+        onProgress?.(
+          5 + Math.round(progress * 0.13),
+          `Calculando manifesto SHA-256 (${progress}%)`,
+        )
+      },
+    )
+  } catch (error) {
+    if (error instanceof FileIntegrityError) {
+      throw new CriptoveuError('INTEGRITY_FAILED', error.message)
+    }
+
+    throw error
+  }
+
+  const fixedHeader = buildIntegrityHeader(
+    parameters,
+    salt,
+    firstIv,
+    manifest.chunkSize,
+    manifest.chunkCount,
+  )
   await reportProgress(
     onProgress,
-    12,
+    20,
     `Derivando chave Argon2id (${parameters.memoryMb} MB)`,
   )
   const key = await deriveArgon2AesKey(password, salt, parameters, 'encrypt')
@@ -588,21 +706,20 @@ export async function encryptFile(
   let processedBytes = 0
   let chunkIndex = 0
 
-  await reportProgress(onProgress, 16, 'Chave AES-GCM preparada')
+  await reportProgress(onProgress, 24, 'Chave AES-GCM preparada')
 
   async function encryptChunk(plainChunk: Uint8Array) {
     const iv = deriveChunkIv(firstIv, chunkIndex)
     const ciphertextLength = plainChunk.byteLength + AES_GCM_TAG_LENGTH_BYTES
-    const isFinalChunk = processedBytes + plainChunk.byteLength === file.size
     const encrypted = await crypto.subtle.encrypt(
       {
         name: 'AES-GCM',
         iv,
-        additionalData: buildArgon2ChunkAdditionalData(
+        additionalData: buildIntegrityRecordAdditionalData(
           fixedHeader,
+          INTEGRITY_DATA_RECORD_TYPE,
           chunkIndex,
           ciphertextLength,
-          isFinalChunk,
         ),
       },
       key,
@@ -610,14 +727,20 @@ export async function encryptFile(
     )
     const ciphertext = new Uint8Array(encrypted)
 
-    encryptedParts.push(createLengthPrefix(ciphertext.byteLength), ciphertext)
+    encryptedParts.push(
+      createIntegrityRecordHeader(
+        INTEGRITY_DATA_RECORD_TYPE,
+        ciphertext.byteLength,
+      ),
+      ciphertext,
+    )
     processedBytes += plainChunk.byteLength
     chunkIndex += 1
 
     const progressBase = file.size === 0 ? 1 : processedBytes / file.size
     await reportProgress(
       onProgress,
-      Math.min(92, 16 + Math.round(progressBase * 76)),
+      Math.min(88, 24 + Math.round(progressBase * 64)),
       `Protegendo bloco ${chunkIndex}`,
     )
   }
@@ -635,15 +758,119 @@ export async function encryptFile(
       )
   }
 
+  if (chunkIndex !== manifest.chunkCount) {
+    throw new CriptoveuError(
+      'INTEGRITY_FAILED',
+      'A quantidade de blocos gerada diverge do manifesto criptográfico.',
+    )
+  }
+
+  const manifestBytes = serializeFileIntegrityManifest(manifest)
+  const manifestCiphertextLength =
+    manifestBytes.byteLength + AES_GCM_TAG_LENGTH_BYTES
+  const encryptedManifest = await crypto.subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv: deriveChunkIv(firstIv, manifest.chunkCount),
+      additionalData: buildIntegrityRecordAdditionalData(
+        fixedHeader,
+        INTEGRITY_MANIFEST_RECORD_TYPE,
+        manifest.chunkCount,
+        manifestCiphertextLength,
+      ),
+    },
+    key,
+    manifestBytes,
+  )
+  const manifestCiphertext = new Uint8Array(encryptedManifest)
+  encryptedParts.push(
+    createIntegrityRecordHeader(
+      INTEGRITY_MANIFEST_RECORD_TYPE,
+      manifestCiphertext.byteLength,
+    ),
+    manifestCiphertext,
+  )
+
   await reportProgress(
     onProgress,
-    96,
-    `Finalizando ${chunkIndex} bloco(s) protegido(s)`,
+    94,
+    'Verificando a estrutura final do pacote',
+  )
+  const blob = new Blob(encryptedParts, { type: 'application/octet-stream' })
+  const inspection = await inspectCriptoveuPackage(blob)
+
+  if (inspection.status !== 'plausible' || inspection.format !== 'CRIPTOVEU4') {
+    throw new CriptoveuError(
+      'INTEGRITY_FAILED',
+      'A verificação pós-geração encontrou uma estrutura de pacote inválida.',
+    )
+  }
+
+  await reportProgress(
+    onProgress,
+    98,
+    `Escudo de Integridade preparado para ${chunkIndex} bloco(s)`,
   )
 
   return {
-    blob: new Blob(encryptedParts, { type: 'application/octet-stream' }),
+    blob,
     downloadName: buildDownloadName('encrypt', file.name),
+    securityReport: {
+      operation: 'encrypt',
+      format: 'CRIPTOVEU4',
+      encryption: 'AES-256-GCM',
+      kdf: 'Argon2id',
+      memoryMb: parameters.memoryMb,
+      iterations: parameters.iterations,
+      parallelism: 1,
+      chunkSize: manifest.chunkSize,
+      chunkCount: manifest.chunkCount,
+      integrity: {
+        aesGcmAuthenticated: true,
+        manifestVerified: true,
+        sha256Verified: true,
+        status: 'prepared',
+      },
+      fileHashSha256: manifest.fileHashSha256,
+      manifestId: manifest.manifestId,
+      createdAt: manifest.createdAt,
+      originalName: manifest.originalName,
+      originalSize: manifest.originalSize,
+      uploadToServer: false,
+      note:
+        'Pacote gerado localmente e verificado estruturalmente. Reabra o arquivo baixado para confirmar novamente o manifesto.',
+    },
+  }
+}
+
+function assertSupportedPackageSize(
+  file: File,
+  { maxFileSizeBytes = MAX_FILE_SIZE_BYTES }: FileSizeGuardOptions = {},
+) {
+  if (maxFileSizeBytes === null) {
+    return
+  }
+
+  const maximumPackageSize =
+    maxFileSizeBytes + MAX_FILE_PACKAGE_OVERHEAD_BYTES
+
+  if (file.size > maximumPackageSize) {
+    throw new CriptoveuError(
+      'FILE_TOO_LARGE',
+      `Pacote excede o limite suportado de ${formatFileSize(maximumPackageSize)}.`,
+    )
+  }
+}
+
+function assertRecoveredFileSize(
+  blob: Blob,
+  { maxFileSizeBytes = MAX_FILE_SIZE_BYTES }: FileSizeGuardOptions = {},
+) {
+  if (maxFileSizeBytes !== null && blob.size > maxFileSizeBytes) {
+    throw new CriptoveuError(
+      'FILE_TOO_LARGE',
+      `O conteúdo recuperado excede o limite suportado de ${formatFileSize(maxFileSizeBytes)}.`,
+    )
   }
 }
 
@@ -696,6 +923,475 @@ export async function decryptText(
 
     throw error
   }
+}
+
+function createInvalidInspection(
+  packageSize: number,
+  message: string,
+  format: FilePackageFormat = 'UNKNOWN',
+): FilePackageInspection {
+  return {
+    status: 'invalid',
+    format,
+    packageSize,
+    message,
+    memoryMb: null,
+    iterations: null,
+    chunkSize: null,
+    declaredChunkCount: null,
+    observedChunkCount: null,
+    manifestPresent: null,
+  }
+}
+
+async function inspectIntegrityPackage(
+  blob: Blob,
+): Promise<FilePackageInspection> {
+  const fixedHeader = new Uint8Array(
+    await blob.slice(0, INTEGRITY_HEADER_LENGTH_BYTES).arrayBuffer(),
+  )
+  const headerText = new TextDecoder().decode(
+    fixedHeader.slice(0, INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length),
+  )
+
+  if (headerText !== INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
+    return createInvalidInspection(
+      blob.size,
+      'A assinatura CRIPTOVEU4 não confere.',
+      'CRIPTOVEU4',
+    )
+  }
+
+  const parsedHeader = readIntegrityHeader(fixedHeader)
+  let offset = INTEGRITY_HEADER_LENGTH_BYTES
+  let observedChunkCount = 0
+  let manifestPresent = false
+
+  while (offset < blob.size) {
+    if (blob.size - offset < INTEGRITY_RECORD_HEADER_BYTES) {
+      return createInvalidInspection(
+        blob.size,
+        'O pacote termina no meio de um cabeçalho de registro.',
+        'CRIPTOVEU4',
+      )
+    }
+
+    const recordHeader = readIntegrityRecordHeader(
+      new Uint8Array(
+        await blob
+          .slice(offset, offset + INTEGRITY_RECORD_HEADER_BYTES)
+          .arrayBuffer(),
+      ),
+    )
+    const maximumLength =
+      recordHeader.recordType === INTEGRITY_MANIFEST_RECORD_TYPE
+        ? MAX_FILE_INTEGRITY_MANIFEST_BYTES + AES_GCM_TAG_LENGTH_BYTES
+        : parsedHeader.chunkSize + AES_GCM_TAG_LENGTH_BYTES
+
+    assertChunkCiphertextLength(
+      recordHeader.ciphertextLength,
+      maximumLength,
+    )
+
+    const recordEnd =
+      offset +
+      INTEGRITY_RECORD_HEADER_BYTES +
+      recordHeader.ciphertextLength
+
+    if (recordEnd > blob.size) {
+      return createInvalidInspection(
+        blob.size,
+        'O pacote termina antes do fim de um registro declarado.',
+        'CRIPTOVEU4',
+      )
+    }
+
+    if (observedChunkCount < parsedHeader.chunkCount) {
+      if (recordHeader.recordType !== INTEGRITY_DATA_RECORD_TYPE) {
+        return createInvalidInspection(
+          blob.size,
+          'A ordem dos registros de dados não é plausível.',
+          'CRIPTOVEU4',
+        )
+      }
+
+      observedChunkCount += 1
+    } else {
+      if (
+        recordHeader.recordType !== INTEGRITY_MANIFEST_RECORD_TYPE ||
+        manifestPresent ||
+        recordEnd !== blob.size
+      ) {
+        return createInvalidInspection(
+          blob.size,
+          'O registro final do manifesto está ausente ou fora de posição.',
+          'CRIPTOVEU4',
+        )
+      }
+
+      manifestPresent = true
+    }
+
+    offset = recordEnd
+  }
+
+  if (
+    observedChunkCount !== parsedHeader.chunkCount ||
+    !manifestPresent ||
+    offset !== blob.size
+  ) {
+    return createInvalidInspection(
+      blob.size,
+      'A quantidade de blocos ou o manifesto não confere com o cabeçalho.',
+      'CRIPTOVEU4',
+    )
+  }
+
+  return {
+    status: 'plausible',
+    format: 'CRIPTOVEU4',
+    packageSize: blob.size,
+    message:
+      'Estrutura plausível. A autenticidade e o manifesto exigem a senha correta.',
+    memoryMb: parsedHeader.parameters.memoryMb,
+    iterations: parsedHeader.parameters.iterations,
+    chunkSize: parsedHeader.chunkSize,
+    declaredChunkCount: parsedHeader.chunkCount,
+    observedChunkCount,
+    manifestPresent,
+  }
+}
+
+async function inspectArgon2V3Package(
+  blob: Blob,
+): Promise<FilePackageInspection> {
+  const fixedHeader = new Uint8Array(
+    await blob.slice(0, ARGON2_HEADER_LENGTH_BYTES).arrayBuffer(),
+  )
+  const headerText = new TextDecoder().decode(
+    fixedHeader.slice(0, ARGON2_CHUNKED_FILE_HEADER_BYTES.length),
+  )
+
+  if (headerText !== ARGON2_CHUNKED_FILE_HEADER_TEXT) {
+    return createInvalidInspection(
+      blob.size,
+      'A assinatura CRIPTOVEU3 não confere.',
+      'CRIPTOVEU3',
+    )
+  }
+
+  const parsedHeader = readArgon2Header(fixedHeader)
+  let offset = ARGON2_HEADER_LENGTH_BYTES
+  let observedChunkCount = 0
+
+  while (offset < blob.size) {
+    if (blob.size - offset < CHUNK_RECORD_LENGTH_BYTES) {
+      return createInvalidInspection(
+        blob.size,
+        'O pacote V3 termina no meio de um registro.',
+        'CRIPTOVEU3',
+      )
+    }
+
+    const ciphertextLength = readLengthPrefix(
+      new Uint8Array(
+        await blob
+          .slice(offset, offset + CHUNK_RECORD_LENGTH_BYTES)
+          .arrayBuffer(),
+      ),
+    )
+    assertChunkCiphertextLength(ciphertextLength)
+    offset += CHUNK_RECORD_LENGTH_BYTES + ciphertextLength
+
+    if (offset > blob.size) {
+      return createInvalidInspection(
+        blob.size,
+        'O pacote V3 termina antes do tamanho de bloco declarado.',
+        'CRIPTOVEU3',
+      )
+    }
+
+    observedChunkCount += 1
+  }
+
+  if (observedChunkCount < 1 || offset !== blob.size) {
+    return createInvalidInspection(
+      blob.size,
+      'O pacote V3 não contém blocos completos.',
+      'CRIPTOVEU3',
+    )
+  }
+
+  return {
+    status: 'plausible',
+    format: 'CRIPTOVEU3',
+    packageSize: blob.size,
+    message:
+      'Estrutura V3 plausível. A autenticação AES-GCM exige a senha correta.',
+    memoryMb: parsedHeader.parameters.memoryMb,
+    iterations: parsedHeader.parameters.iterations,
+    chunkSize: STREAMING_CHUNK_SIZE_BYTES,
+    declaredChunkCount: null,
+    observedChunkCount,
+    manifestPresent: false,
+  }
+}
+
+export async function inspectCriptoveuPackage(
+  blob: Blob,
+): Promise<FilePackageInspection> {
+  let detectedFormat: FilePackageFormat = 'UNKNOWN'
+
+  try {
+    const header = await blob
+      .slice(0, INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length)
+      .text()
+
+    if (header === INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
+      detectedFormat = 'CRIPTOVEU4'
+
+      if (blob.size < INTEGRITY_HEADER_LENGTH_BYTES) {
+        return createInvalidInspection(
+          blob.size,
+          'O cabeçalho CRIPTOVEU4 está truncado.',
+          'CRIPTOVEU4',
+        )
+      }
+
+      return await inspectIntegrityPackage(blob)
+    }
+
+    if (header === ARGON2_CHUNKED_FILE_HEADER_TEXT) {
+      detectedFormat = 'CRIPTOVEU3'
+
+      if (blob.size < ARGON2_HEADER_LENGTH_BYTES) {
+        return createInvalidInspection(
+          blob.size,
+          'O cabeçalho CRIPTOVEU3 está truncado.',
+          'CRIPTOVEU3',
+        )
+      }
+
+      return await inspectArgon2V3Package(blob)
+    }
+
+    if (header === PBKDF2_CHUNKED_FILE_HEADER_TEXT) {
+      detectedFormat = 'CRIPTOVEU2'
+
+      return {
+        status: 'legacy',
+        format: 'CRIPTOVEU2',
+        packageSize: blob.size,
+        message:
+          'Pacote legado reconhecido. A integridade só pode ser confirmada durante a abertura.',
+        memoryMb: null,
+        iterations: PBKDF2_ITERATIONS,
+        chunkSize: STREAMING_CHUNK_SIZE_BYTES,
+        declaredChunkCount: null,
+        observedChunkCount: null,
+        manifestPresent: false,
+      }
+    }
+
+    const legacyHeader = await blob
+      .slice(0, LEGACY_CHUNKED_FILE_HEADER_BYTES.length)
+      .text()
+
+    if (legacyHeader === LEGACY_CHUNKED_FILE_HEADER_TEXT) {
+      detectedFormat = 'CRIPTIFY2'
+
+      return {
+        status: 'legacy',
+        format: 'CRIPTIFY2',
+        packageSize: blob.size,
+        message:
+          'Pacote CRIPTIFY2 reconhecido. Não existe manifesto criptográfico.',
+        memoryMb: null,
+        iterations: PBKDF2_ITERATIONS,
+        chunkSize: STREAMING_CHUNK_SIZE_BYTES,
+        declaredChunkCount: null,
+        observedChunkCount: null,
+        manifestPresent: false,
+      }
+    }
+
+    const oldestHeader = await blob.slice(0, LEGACY_FILE_HEADER_BYTES.length).text()
+
+    if (oldestHeader === LEGACY_FILE_HEADER_TEXT) {
+      detectedFormat = 'CRIPTIFY1'
+
+      return {
+        status: 'legacy',
+        format: 'CRIPTIFY1',
+        packageSize: blob.size,
+        message:
+          'Pacote CRIPTIFY1 reconhecido. Não existe manifesto criptográfico.',
+        memoryMb: null,
+        iterations: PBKDF2_ITERATIONS,
+        chunkSize: null,
+        declaredChunkCount: null,
+        observedChunkCount: null,
+        manifestPresent: false,
+      }
+    }
+
+    return createInvalidInspection(
+      blob.size,
+      'O arquivo não possui uma assinatura reconhecida do CriptoVéu.',
+    )
+  } catch (error) {
+    return createInvalidInspection(
+      blob.size,
+      error instanceof Error
+        ? error.message
+        : 'Não foi possível inspecionar a estrutura do pacote.',
+      detectedFormat,
+    )
+  }
+}
+
+function buildIntegrityHeader(
+  parameters: Argon2Parameters,
+  salt: Uint8Array,
+  firstIv: Uint8Array,
+  chunkSize: number,
+  chunkCount: number,
+) {
+  validateArgon2Parameters(parameters)
+
+  if (
+    chunkSize !== STREAMING_CHUNK_SIZE_BYTES ||
+    !Number.isSafeInteger(chunkCount) ||
+    chunkCount < 1 ||
+    chunkCount > 0xfffffffe
+  ) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'Parâmetros estruturais do pacote CRIPTOVEU4 são inválidos.',
+    )
+  }
+
+  const header = new Uint8Array(INTEGRITY_HEADER_LENGTH_BYTES)
+  let offset = 0
+
+  header.set(INTEGRITY_CHUNKED_FILE_HEADER_BYTES, offset)
+  offset += INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length
+  header.set(createAsciiParameter(parameters.memoryMb), offset)
+  offset += ARGON2_PARAMETER_LENGTH_BYTES
+  header.set(createAsciiParameter(parameters.iterations), offset)
+  offset += ARGON2_PARAMETER_LENGTH_BYTES
+  header.set(salt, offset)
+  offset += SALT_LENGTH_BYTES
+  header.set(firstIv, offset)
+  offset += IV_LENGTH_BYTES
+
+  const view = new DataView(header.buffer)
+  view.setUint32(offset, chunkSize, false)
+  view.setUint32(offset + CHUNK_RECORD_LENGTH_BYTES, chunkCount, false)
+  return header
+}
+
+function readIntegrityHeader(header: Uint8Array) {
+  if (header.byteLength !== INTEGRITY_HEADER_LENGTH_BYTES) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'Cabeçalho CRIPTOVEU4 incompleto.',
+    )
+  }
+
+  const parametersStart = INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length
+  const iterationsStart = parametersStart + ARGON2_PARAMETER_LENGTH_BYTES
+  const saltStart = iterationsStart + ARGON2_PARAMETER_LENGTH_BYTES
+  const ivStart = saltStart + SALT_LENGTH_BYTES
+  const chunkSizeStart = ivStart + IV_LENGTH_BYTES
+  const view = new DataView(
+    header.buffer,
+    header.byteOffset,
+    header.byteLength,
+  )
+  const parameters = validateArgon2Parameters({
+    memoryMb: readAsciiParameter(
+      header.slice(parametersStart, iterationsStart),
+    ),
+    iterations: readAsciiParameter(header.slice(iterationsStart, saltStart)),
+  })
+  const chunkSize = view.getUint32(chunkSizeStart, false)
+  const chunkCount = view.getUint32(
+    chunkSizeStart + CHUNK_RECORD_LENGTH_BYTES,
+    false,
+  )
+
+  if (
+    chunkSize !== STREAMING_CHUNK_SIZE_BYTES ||
+    chunkCount < 1 ||
+    chunkCount > 0xfffffffe
+  ) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'Cabeçalho CRIPTOVEU4 usa tamanho ou quantidade de blocos inválidos.',
+    )
+  }
+
+  return {
+    parameters,
+    salt: header.slice(saltStart, ivStart),
+    firstIv: header.slice(ivStart, chunkSizeStart),
+    chunkSize,
+    chunkCount,
+  }
+}
+
+function createIntegrityRecordHeader(recordType: number, ciphertextLength: number) {
+  const header = new Uint8Array(INTEGRITY_RECORD_HEADER_BYTES)
+  header[0] = recordType
+  new DataView(header.buffer).setUint32(
+    INTEGRITY_RECORD_TYPE_BYTES,
+    ciphertextLength,
+    false,
+  )
+  return header
+}
+
+function readIntegrityRecordHeader(bytes: Uint8Array) {
+  if (bytes.byteLength !== INTEGRITY_RECORD_HEADER_BYTES) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'Registro CRIPTOVEU4 incompleto.',
+    )
+  }
+
+  return {
+    recordType: bytes[0],
+    ciphertextLength: new DataView(
+      bytes.buffer,
+      bytes.byteOffset,
+      bytes.byteLength,
+    ).getUint32(INTEGRITY_RECORD_TYPE_BYTES, false),
+  }
+}
+
+function buildIntegrityRecordAdditionalData(
+  fixedHeader: Uint8Array,
+  recordType: number,
+  recordIndex: number,
+  ciphertextLength: number,
+) {
+  const additionalData = new Uint8Array(
+    fixedHeader.length +
+      INTEGRITY_RECORD_TYPE_BYTES +
+      CHUNK_RECORD_LENGTH_BYTES * 2,
+  )
+  additionalData.set(fixedHeader)
+  const offset = fixedHeader.length
+  additionalData[offset] = recordType
+  const view = new DataView(additionalData.buffer)
+  view.setUint32(offset + INTEGRITY_RECORD_TYPE_BYTES, recordIndex, false)
+  view.setUint32(
+    offset + INTEGRITY_RECORD_TYPE_BYTES + CHUNK_RECORD_LENGTH_BYTES,
+    ciphertextLength,
+    false,
+  )
+  return additionalData
 }
 
 export async function encryptTextArgon2(
@@ -845,10 +1541,24 @@ async function decryptLegacyFile(
     )
 
     const downloadName = buildDownloadName('decrypt', file.name)
+    const blob = new Blob([decrypted], {
+      type: inferMimeTypeFromName(downloadName),
+    })
 
     return {
-      blob: new Blob([decrypted], { type: inferMimeTypeFromName(downloadName) }),
+      blob,
       downloadName,
+      securityReport: createAeadOnlySecurityReport({
+        format: 'CRIPTIFY1',
+        kdf: 'PBKDF2/SHA-256',
+        memoryMb: null,
+        iterations: PBKDF2_ITERATIONS,
+        parallelism: null,
+        chunkSize: null,
+        chunkCount: 1,
+        originalName: downloadName,
+        originalSize: blob.size,
+      }),
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'OperationError') {
@@ -965,10 +1675,28 @@ async function decryptPbkdf2ChunkedFile(
   }
 
   const downloadName = buildDownloadName('decrypt', file.name)
+  const blob = new Blob(decryptedParts, {
+    type: inferMimeTypeFromName(downloadName),
+  })
+  const format =
+    headerText === PBKDF2_CHUNKED_FILE_HEADER_TEXT
+      ? 'CRIPTOVEU2'
+      : 'CRIPTIFY2'
 
   return {
-    blob: new Blob(decryptedParts, { type: inferMimeTypeFromName(downloadName) }),
+    blob,
     downloadName,
+    securityReport: createAeadOnlySecurityReport({
+      format,
+      kdf: 'PBKDF2/SHA-256',
+      memoryMb: null,
+      iterations: PBKDF2_ITERATIONS,
+      parallelism: null,
+      chunkSize: STREAMING_CHUNK_SIZE_BYTES,
+      chunkCount: chunkIndex,
+      originalName: downloadName,
+      originalSize: blob.size,
+    }),
   }
 }
 
@@ -982,6 +1710,7 @@ async function decryptArgon2ChunkedFile(
   let pendingBytes = new Uint8Array(0)
   let fixedHeader: Uint8Array<ArrayBuffer> | null = null
   let firstIv: Uint8Array<ArrayBuffer> | null = null
+  let argon2Parameters: Argon2Parameters | null = null
   let key: CryptoKey | null = null
   let chunkIndex = 0
   let consumedBytes = 0
@@ -1058,6 +1787,7 @@ async function decryptArgon2ChunkedFile(
 
         const parsedHeader = readArgon2Header(fixedHeader)
         firstIv = cloneBytes(parsedHeader.firstIv)
+        argon2Parameters = parsedHeader.parameters
         await reportProgress(
           onProgress,
           12,
@@ -1101,17 +1831,310 @@ async function decryptArgon2ChunkedFile(
     reader.releaseLock()
   }
 
-  if (!key || pendingBytes.length > 0 || !bufferedCiphertext) {
+  if (
+    !key ||
+    !argon2Parameters ||
+    pendingBytes.length > 0 ||
+    !bufferedCiphertext
+  ) {
     throw new CriptoveuError('INVALID_FILE', 'Arquivo inválido ou incompleto.')
   }
 
   await decryptChunk(bufferedCiphertext, bufferedCiphertextLength, true)
 
   const downloadName = buildDownloadName('decrypt', file.name)
+  const blob = new Blob(decryptedParts, {
+    type: inferMimeTypeFromName(downloadName),
+  })
 
   return {
-    blob: new Blob(decryptedParts, { type: inferMimeTypeFromName(downloadName) }),
+    blob,
     downloadName,
+    securityReport: createAeadOnlySecurityReport({
+      format: 'CRIPTOVEU3',
+      kdf: 'Argon2id',
+      memoryMb: argon2Parameters.memoryMb,
+      iterations: argon2Parameters.iterations,
+      parallelism: 1,
+      chunkSize: STREAMING_CHUNK_SIZE_BYTES,
+      chunkCount: chunkIndex,
+      originalName: downloadName,
+      originalSize: blob.size,
+    }),
+  }
+}
+
+async function decryptIntegrityChunkedFile(
+  file: File,
+  password: string,
+  onProgress?: ProgressCallback,
+): Promise<ProcessResult> {
+  await reportProgress(onProgress, 6, 'Lendo cabeçalho CRIPTOVEU4')
+  const reader = file.stream().getReader()
+  let pendingBytes = new Uint8Array(0)
+  let fixedHeader: Uint8Array<ArrayBuffer> | null = null
+  let parsedHeader: ReturnType<typeof readIntegrityHeader> | null = null
+  let key: CryptoKey | null = null
+  let dataChunkIndex = 0
+  let consumedBytes = 0
+  let decryptedSize = 0
+  let manifest: FileIntegrityManifest | null = null
+  const decryptedParts: BlobPart[] = []
+
+  async function decryptRecord(
+    recordType: number,
+    ciphertext: Uint8Array<ArrayBuffer>,
+    ciphertextLength: number,
+    recordIndex: number,
+  ) {
+    if (!key || !fixedHeader || !parsedHeader) {
+      throw new CriptoveuError(
+        'INVALID_FILE',
+        'Pacote CRIPTOVEU4 incompleto.',
+      )
+    }
+
+    try {
+      return new Uint8Array(
+        await crypto.subtle.decrypt(
+          {
+            name: 'AES-GCM',
+            iv: deriveChunkIv(parsedHeader.firstIv, recordIndex),
+            additionalData: buildIntegrityRecordAdditionalData(
+              fixedHeader,
+              recordType,
+              recordIndex,
+              ciphertextLength,
+            ),
+          },
+          key,
+          ciphertext,
+        ),
+      )
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'OperationError') {
+        throw new CriptoveuError(
+          'INVALID_PASSWORD_OR_FILE',
+          'Senha incorreta ou pacote CRIPTOVEU4 adulterado.',
+        )
+      }
+
+      throw error
+    }
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) {
+        break
+      }
+
+      pendingBytes = concatBytes(pendingBytes, value)
+
+      if (!key && pendingBytes.length >= INTEGRITY_HEADER_LENGTH_BYTES) {
+        fixedHeader = cloneBytes(
+          pendingBytes.slice(0, INTEGRITY_HEADER_LENGTH_BYTES),
+        )
+        const incomingHeader = new TextDecoder().decode(
+          fixedHeader.slice(0, INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length),
+        )
+
+        if (incomingHeader !== INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
+          throw new CriptoveuError(
+            'INVALID_FILE',
+            'A assinatura CRIPTOVEU4 não foi reconhecida.',
+          )
+        }
+
+        parsedHeader = readIntegrityHeader(fixedHeader)
+        const minimumPackageSize =
+          INTEGRITY_HEADER_LENGTH_BYTES +
+          parsedHeader.chunkCount *
+            (INTEGRITY_RECORD_HEADER_BYTES + AES_GCM_TAG_LENGTH_BYTES) +
+          INTEGRITY_RECORD_HEADER_BYTES +
+          AES_GCM_TAG_LENGTH_BYTES
+
+        if (file.size < minimumPackageSize) {
+          throw new CriptoveuError(
+            'INVALID_FILE',
+            'A quantidade de blocos declarada não cabe neste pacote.',
+          )
+        }
+
+        await reportProgress(
+          onProgress,
+          10,
+          `Derivando chave Argon2id (${parsedHeader.parameters.memoryMb} MB)`,
+        )
+        key = await deriveArgon2AesKey(
+          password,
+          parsedHeader.salt,
+          parsedHeader.parameters,
+          'decrypt',
+        )
+        pendingBytes = pendingBytes.slice(INTEGRITY_HEADER_LENGTH_BYTES)
+        consumedBytes = INTEGRITY_HEADER_LENGTH_BYTES
+        await reportProgress(onProgress, 16, 'Chave AES-GCM preparada')
+      }
+
+      while (
+        key &&
+        fixedHeader &&
+        parsedHeader &&
+        pendingBytes.length >= INTEGRITY_RECORD_HEADER_BYTES
+      ) {
+        const recordHeader = readIntegrityRecordHeader(
+          pendingBytes.slice(0, INTEGRITY_RECORD_HEADER_BYTES),
+        )
+        const expectingData = dataChunkIndex < parsedHeader.chunkCount
+        const expectedType = expectingData
+          ? INTEGRITY_DATA_RECORD_TYPE
+          : INTEGRITY_MANIFEST_RECORD_TYPE
+        const maximumLength = expectingData
+          ? parsedHeader.chunkSize + AES_GCM_TAG_LENGTH_BYTES
+          : MAX_FILE_INTEGRITY_MANIFEST_BYTES + AES_GCM_TAG_LENGTH_BYTES
+
+        if (recordHeader.recordType !== expectedType || manifest) {
+          throw new CriptoveuError(
+            'INVALID_FILE',
+            'A ordem dos registros CRIPTOVEU4 é inválida.',
+          )
+        }
+
+        assertChunkCiphertextLength(
+          recordHeader.ciphertextLength,
+          maximumLength,
+        )
+        const recordLength =
+          INTEGRITY_RECORD_HEADER_BYTES + recordHeader.ciphertextLength
+
+        if (pendingBytes.length < recordLength) {
+          break
+        }
+
+        const ciphertext = cloneBytes(
+          pendingBytes.slice(INTEGRITY_RECORD_HEADER_BYTES, recordLength),
+        )
+        const recordIndex = expectingData
+          ? dataChunkIndex
+          : parsedHeader.chunkCount
+        const decrypted = await decryptRecord(
+          recordHeader.recordType,
+          ciphertext,
+          recordHeader.ciphertextLength,
+          recordIndex,
+        )
+
+        if (expectingData) {
+          decryptedParts.push(decrypted)
+          decryptedSize += decrypted.byteLength
+          dataChunkIndex += 1
+          await reportProgress(
+            onProgress,
+            Math.min(88, 16 + Math.round((consumedBytes / file.size) * 72)),
+            `Abrindo bloco ${dataChunkIndex} de ${parsedHeader.chunkCount}`,
+          )
+        } else {
+          try {
+            manifest = parseFileIntegrityManifest(decrypted)
+          } catch (error) {
+            if (error instanceof FileIntegrityError) {
+              throw new CriptoveuError('INTEGRITY_FAILED', error.message)
+            }
+
+            throw error
+          }
+        }
+
+        pendingBytes = pendingBytes.slice(recordLength)
+        consumedBytes += recordLength
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  if (
+    !key ||
+    !parsedHeader ||
+    pendingBytes.length > 0 ||
+    dataChunkIndex !== parsedHeader.chunkCount ||
+    !manifest
+  ) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'Pacote CRIPTOVEU4 inválido, truncado ou sem manifesto.',
+    )
+  }
+
+  if (
+    manifest.chunkSize !== parsedHeader.chunkSize ||
+    manifest.chunkCount !== parsedHeader.chunkCount ||
+    manifest.originalSize !== decryptedSize ||
+    manifest.argon2.memoryMb !== parsedHeader.parameters.memoryMb ||
+    manifest.argon2.iterations !== parsedHeader.parameters.iterations
+  ) {
+    throw new CriptoveuError(
+      'INTEGRITY_FAILED',
+      'O manifesto não confere com o cabeçalho ou o conteúdo recuperado.',
+    )
+  }
+
+  const blob = new Blob(decryptedParts, { type: manifest.mimeType })
+  let hashes
+
+  try {
+    hashes = await hashBlobIntegrity(
+      blob,
+      manifest.chunkSize,
+      (progress) => {
+        onProgress?.(
+          90 + Math.round(progress * 0.08),
+          `Verificando Escudo de Integridade (${progress}%)`,
+        )
+      },
+    )
+    assertIntegrityHashes(manifest, hashes)
+  } catch (error) {
+    if (error instanceof FileIntegrityError) {
+      throw new CriptoveuError('INTEGRITY_FAILED', error.message)
+    }
+
+    throw error
+  }
+
+  await reportProgress(onProgress, 99, 'Manifesto e SHA-256 verificados')
+
+  return {
+    blob,
+    downloadName: manifest.originalName,
+    securityReport: {
+      operation: 'decrypt',
+      format: 'CRIPTOVEU4',
+      encryption: 'AES-256-GCM',
+      kdf: 'Argon2id',
+      memoryMb: parsedHeader.parameters.memoryMb,
+      iterations: parsedHeader.parameters.iterations,
+      parallelism: 1,
+      chunkSize: manifest.chunkSize,
+      chunkCount: manifest.chunkCount,
+      integrity: {
+        aesGcmAuthenticated: true,
+        manifestVerified: true,
+        sha256Verified: true,
+        status: 'verified',
+      },
+      fileHashSha256: hashes.fileHashSha256,
+      manifestId: manifest.manifestId,
+      createdAt: manifest.createdAt,
+      originalName: manifest.originalName,
+      originalSize: manifest.originalSize,
+      uploadToServer: false,
+      note:
+        'Escudo de Integridade verificado após a recuperação local do conteúdo.',
+    },
   }
 }
 
@@ -1121,40 +2144,44 @@ export async function decryptFile(
   onProgress?: ProgressCallback,
   options?: FileSizeGuardOptions,
 ): Promise<ProcessResult> {
-  assertSupportedFileSize(file, options)
+  assertSupportedPackageSize(file, options)
   const modernHeader = await file
-    .slice(0, ARGON2_CHUNKED_FILE_HEADER_BYTES.length)
+    .slice(0, INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length)
     .text()
+  let result: ProcessResult
 
-  if (modernHeader === ARGON2_CHUNKED_FILE_HEADER_TEXT) {
-    return decryptArgon2ChunkedFile(file, password, onProgress)
-  }
-
-  if (modernHeader === PBKDF2_CHUNKED_FILE_HEADER_TEXT) {
-    return decryptPbkdf2ChunkedFile(
+  if (modernHeader === INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
+    result = await decryptIntegrityChunkedFile(file, password, onProgress)
+  } else if (modernHeader === ARGON2_CHUNKED_FILE_HEADER_TEXT) {
+    result = await decryptArgon2ChunkedFile(file, password, onProgress)
+  } else if (modernHeader === PBKDF2_CHUNKED_FILE_HEADER_TEXT) {
+    result = await decryptPbkdf2ChunkedFile(
       file,
       password,
       PBKDF2_CHUNKED_FILE_HEADER_TEXT,
       PBKDF2_CHUNKED_FILE_HEADER_BYTES,
       onProgress,
     )
+  } else {
+    const legacyChunkedHeader = await file
+      .slice(0, LEGACY_CHUNKED_FILE_HEADER_BYTES.length)
+      .text()
+
+    if (legacyChunkedHeader === LEGACY_CHUNKED_FILE_HEADER_TEXT) {
+      result = await decryptPbkdf2ChunkedFile(
+        file,
+        password,
+        LEGACY_CHUNKED_FILE_HEADER_TEXT,
+        LEGACY_CHUNKED_FILE_HEADER_BYTES,
+        onProgress,
+      )
+    } else {
+      result = await decryptLegacyFile(file, password, onProgress)
+    }
   }
 
-  const legacyChunkedHeader = await file
-    .slice(0, LEGACY_CHUNKED_FILE_HEADER_BYTES.length)
-    .text()
-
-  if (legacyChunkedHeader === LEGACY_CHUNKED_FILE_HEADER_TEXT) {
-    return decryptPbkdf2ChunkedFile(
-      file,
-      password,
-      LEGACY_CHUNKED_FILE_HEADER_TEXT,
-      LEGACY_CHUNKED_FILE_HEADER_BYTES,
-      onProgress,
-    )
-  }
-
-  return decryptLegacyFile(file, password, onProgress)
+  assertRecoveredFileSize(result.blob, options)
+  return result
 }
 
 export function generateWhatsappStyleKey() {

@@ -350,6 +350,36 @@
           "description": "Requires a lot of memory and is recommended for computers. It may fail or slow down on phones."
         }
       },
+      "inspector": {
+        "title": "Package diagnostics",
+        "helper": "Local structural check without a password. \"Plausible\" does not mean authenticated.",
+        "checking": "Checking",
+        "reading": "Reading header and records...",
+        "unavailable": "Diagnostics unavailable.",
+        "status": {
+          "plausible": "Plausible structure",
+          "legacy": "Legacy format",
+          "invalid": "Invalid package"
+        },
+        "format": "Format: {{format}}",
+        "memory": "Argon2id: {{memory}} MB",
+        "blocks": "Observed blocks: {{count}}",
+        "manifestPresent": "Manifest present",
+        "manifestAbsent": "No manifest"
+      },
+      "securityReport": {
+        "preparedTitle": "Integrity Shield prepared",
+        "verifiedTitle": "Integrity Shield verified",
+        "legacyTitle": "AES-GCM authentication completed",
+        "preparedNote": "The manifest and hashes were generated locally. Reopen the downloaded package to confirm the saved file.",
+        "verifiedNote": "Manifest and hashes confirmed after local content recovery.",
+        "legacyNote": "Format authenticated by AES-GCM, but without the CRIPTOVEU4 SHA-256 manifest.",
+        "download": "Download JSON report",
+        "format": "Format: {{format}}",
+        "kdf": "KDF: {{kdf}}",
+        "blocks": "Blocks: {{count}}",
+        "upload": "Server upload: no"
+      },
       "quickGuide": { "eyebrow": "Quick guide", "title": "Before processing" },
       "progress": { "title": "Local processing", "aria": "Processing progress" },
       "results": {

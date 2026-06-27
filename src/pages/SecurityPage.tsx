@@ -48,17 +48,27 @@ export default function SecurityPage() {
             {
               title: 'Novas criações usam Argon2id',
               description:
-                'MSG2, QR2 e LINK2 usam 64 MB de memória; NOTE2 usa 128 MB. Todos executam Argon2id em Web Worker com AES-256-GCM.',
+                'Arquivos CRIPTOVEU4 usam o perfil escolhido de 64, 256 ou 512 MB; MSG2, QR2 e LINK2 usam 64 MB; NOTE2 usa 128 MB. Todos executam Argon2id em Web Worker com AES-256-GCM.',
             },
             {
               title: 'Metadados críticos são autenticados',
               description:
-                'Tipo, versão e parâmetros da KDF entram no AAD. No LINK2, criação, expiração e limite também são autenticados.',
+                'Tipo, versão e parâmetros da KDF entram no AAD. Em arquivos V4, cabeçalho, tipo, índice e tamanho de cada registro também são autenticados.',
+            },
+            {
+              title: 'Escudo de Integridade para arquivos',
+              description:
+                'O CRIPTOVEU4 cifra um manifesto com SHA-256 do arquivo e de cada bloco. Após a recuperação, o navegador recalcula e compara todos os hashes localmente.',
+            },
+            {
+              title: 'Diagnóstico sem senha tem alcance limitado',
+              description:
+                'O inspetor pode reconhecer cabeçalho, registros e manifesto, mas informa apenas estrutura plausível. A autenticidade só é confirmada com a senha e o AES-GCM.',
             },
             {
               title: 'Compatibilidade sem enfraquecer novas criações',
               description:
-                'Payloads V1 com PBKDF2 continuam legíveis. O CriptoVéu cria somente V2 e migra NOTE1 após uma abertura bem-sucedida.',
+                'Arquivos V3 e payloads V1 com PBKDF2 continuam legíveis. Novos arquivos usam V4; mensagens, QRs e links usam V2.',
             },
           ],
         },
