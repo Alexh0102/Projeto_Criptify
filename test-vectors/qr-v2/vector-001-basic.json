@@ -1,0 +1,20 @@
+{
+  "name": "QR V2 básico",
+  "format": "QR2",
+  "password": "vetor-qr2-2026",
+  "plaintext": "QR protegido de teste.",
+  "saltHex": "202122232425262728292a2b2c2d2e2f",
+  "ivHex": "303132333435363738393a3b",
+  "kdf": {
+    "algorithm": "argon2id",
+    "version": "1.3",
+    "memoryMb": 64,
+    "iterations": 2,
+    "parallelism": 1,
+    "hashLength": 32
+  },
+  "aadUtf8": "[\"CriptoVéu\",\"QR2\",2,\"argon2id\",64,2,1]",
+  "ciphertextBase64": "oU+2OjPe5kEhvY4az4N3vLYdSFpzX6zIckfCYPDBtcSWlbL/eus=",
+  "payload": "CVQ2.eyJ2ZXJzaW9uIjoyLCJ0eXBlIjoiUVIyIiwia2RmIjoiYXJnb24yaWQiLCJtZW1vcnlNYiI6NjQsIml0ZXJhdGlvbnMiOjIsInBhcmFsbGVsaXNtIjoxLCJjaXBoZXJ0ZXh0Ijoib1UrMk9qUGU1a0Vodlk0YXo0TjN2TFlkU0Zwelg2eklja2ZDWVBEQnRjU1dsYkwvZXVzPSIsIml2IjoiTURFeU16UTFOamM0T1RvNyIsInNhbHQiOiJJQ0VpSXlRbEppY29LU29yTEMwdUx3PT0ifQ",
+  "tamperingExpectedResult": "rejected"
+}

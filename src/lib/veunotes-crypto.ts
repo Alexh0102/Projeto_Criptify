@@ -1,28 +1,99 @@
+import {
+  CriptoveuError,
+  deriveArgon2AesKey,
+  validateArgon2Parameters,
+} from './criptoveu'
+import {
+  ARGON2_V2_DEFAULT_ITERATIONS,
+  ARGON2_V2_KDF,
+  ARGON2_V2_NOTE_MEMORY_MB,
+  ARGON2_V2_PARALLELISM,
+  buildPayloadV2Aad,
+} from './payload-v2'
+import {
+  assertAllowedPayloadFields,
+  assertNoSecretFields,
+} from './share-payload-security'
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
 const SALT_LENGTH_BYTES = 16
 const IV_LENGTH_BYTES = 12
 const BASE64_CHUNK_SIZE_BYTES = 0x8000
+const VEU_NOTES_V1_FIELDS = [
+  'version',
+  'salt',
+  'iterations',
+  'iv',
+  'ciphertext',
+] as const
+const VEU_NOTES_V2_FIELDS = [
+  'version',
+  'type',
+  'kdf',
+  'memoryMb',
+  'iterations',
+  'parallelism',
+  'salt',
+  'iv',
+  'ciphertext',
+] as const
 
-export const VEU_NOTES_VERSION = 1
+export const VEU_NOTES_VERSION = 2
 export const VEU_NOTES_MIN_PASSWORD_LENGTH = 12
 export const VEU_NOTES_PBKDF2_ITERATIONS = 210_000
 export const VEU_NOTES_MAX_PBKDF2_ITERATIONS = 1_200_000
 
-export type VeuNotesBlobJson = {
-  version: number
+export type VeuNotesBlobV1 = {
+  version: 1
   salt: string
   iterations: number
   iv: string
   ciphertext: string
 }
 
+export type VeuNotesBlobV2 = {
+  version: 2
+  type: 'NOTE2'
+  kdf: typeof ARGON2_V2_KDF
+  memoryMb: number
+  iterations: number
+  parallelism: typeof ARGON2_V2_PARALLELISM
+  salt: string
+  iv: string
+  ciphertext: string
+}
+
+export type VeuNotesBlobJson = VeuNotesBlobV1 | VeuNotesBlobV2
+
+export type VeuNotesSession = {
+  aesKey: CryptoKey
+  salt: Uint8Array<ArrayBuffer>
+  memoryMb: number
+  iterations: number
+  parallelism: typeof ARGON2_V2_PARALLELISM
+}
+
+export type VeuNotesUnlockResult = {
+  plaintext: string
+  session: VeuNotesSession
+  migratedBlob: VeuNotesBlobV2 | null
+}
+
 export class VeuNotesCryptoError extends Error {
-  code: 'INVALID_PASSWORD' | 'INVALID_BLOB' | 'UNSUPPORTED_VERSION'
+  code:
+    | 'INVALID_PASSWORD'
+    | 'INVALID_BLOB'
+    | 'UNSUPPORTED_VERSION'
+    | 'KEY_DERIVATION_FAILED'
 
   constructor(
-    code: 'INVALID_PASSWORD' | 'INVALID_BLOB' | 'UNSUPPORTED_VERSION',
+    code:
+      | 'INVALID_PASSWORD'
+      | 'INVALID_BLOB'
+      | 'UNSUPPORTED_VERSION'
+      | 'KEY_DERIVATION_FAILED',
     message: string,
   ) {
     super(message)
@@ -45,7 +116,7 @@ export function encodeBytesToBase64(bytes: Uint8Array) {
 
 export function decodeBase64ToBytes(value: string) {
   const binary = atob(value)
-  const bytes = new Uint8Array(binary.length)
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length))
 
   for (let index = 0; index < binary.length; index += 1) {
     bytes[index] = binary.charCodeAt(index)
@@ -66,52 +137,109 @@ function cloneBytes(source: Uint8Array) {
   return bytes
 }
 
-export function isVeuNotesBlobJson(value: unknown): value is VeuNotesBlobJson {
-  if (!value || typeof value !== 'object') {
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function validateBinaryFields(
+  saltValue: string,
+  ivValue: string,
+  ciphertext: string,
+) {
+  try {
+    return (
+      decodeBase64ToBytes(saltValue).byteLength === SALT_LENGTH_BYTES &&
+      decodeBase64ToBytes(ivValue).byteLength === IV_LENGTH_BYTES &&
+      decodeBase64ToBytes(ciphertext).byteLength >= 16
+    )
+  } catch {
     return false
   }
+}
 
-  const candidate = value as Record<string, unknown>
-
-  return (
-    typeof candidate.version === 'number' &&
-    typeof candidate.salt === 'string' &&
-    typeof candidate.iterations === 'number' &&
-    typeof candidate.iv === 'string' &&
-    typeof candidate.ciphertext === 'string'
-  )
+export function buildVeuNotesV2Aad(
+  metadata: Pick<
+    VeuNotesBlobV2,
+    'version' | 'type' | 'kdf' | 'memoryMb' | 'iterations' | 'parallelism'
+  >,
+) {
+  return buildPayloadV2Aad([
+    metadata.type,
+    metadata.version,
+    metadata.kdf,
+    metadata.memoryMb,
+    metadata.iterations,
+    metadata.parallelism,
+  ])
 }
 
 export function assertVeuNotesBlobJson(value: unknown): VeuNotesBlobJson {
-  if (!isVeuNotesBlobJson(value)) {
+  if (!isObject(value)) {
     throw new VeuNotesCryptoError(
       'INVALID_BLOB',
       'O cofre não está no formato esperado.',
     )
   }
 
-  if (value.version !== VEU_NOTES_VERSION) {
-    throw new VeuNotesCryptoError(
-      'UNSUPPORTED_VERSION',
-      'Esta versão do cofre não é compatível com o VéuNotes atual.',
-    )
-  }
+  try {
+    assertNoSecretFields(value)
 
-  if (
-    !Number.isSafeInteger(value.iterations) ||
-    value.iterations < 100_000 ||
-    value.iterations > VEU_NOTES_MAX_PBKDF2_ITERATIONS
-  ) {
+    if (value.version === 1) {
+      assertAllowedPayloadFields(value, VEU_NOTES_V1_FIELDS)
+
+      if (
+        typeof value.salt !== 'string' ||
+        typeof value.iterations !== 'number' ||
+        typeof value.iv !== 'string' ||
+        typeof value.ciphertext !== 'string' ||
+        !Number.isSafeInteger(value.iterations) ||
+        value.iterations < 100_000 ||
+        value.iterations > VEU_NOTES_MAX_PBKDF2_ITERATIONS ||
+        !validateBinaryFields(value.salt, value.iv, value.ciphertext)
+      ) {
+        throw new Error('Invalid NOTE1 fields')
+      }
+
+      return value as VeuNotesBlobV1
+    }
+
+    if (value.version === 2) {
+      assertAllowedPayloadFields(value, VEU_NOTES_V2_FIELDS)
+
+      if (
+        value.type !== 'NOTE2' ||
+        value.kdf !== ARGON2_V2_KDF ||
+        value.parallelism !== ARGON2_V2_PARALLELISM ||
+        typeof value.memoryMb !== 'number' ||
+        typeof value.iterations !== 'number' ||
+        typeof value.salt !== 'string' ||
+        typeof value.iv !== 'string' ||
+        typeof value.ciphertext !== 'string' ||
+        !validateBinaryFields(value.salt, value.iv, value.ciphertext)
+      ) {
+        throw new Error('Invalid NOTE2 fields')
+      }
+
+      validateArgon2Parameters({
+        memoryMb: value.memoryMb,
+        iterations: value.iterations,
+      })
+      return value as VeuNotesBlobV2
+    }
+  } catch {
     throw new VeuNotesCryptoError(
       'INVALID_BLOB',
-      'O cofre salvo usa parâmetros de derivação inválidos.',
+      'O cofre salvo usa campos ou parâmetros criptográficos inválidos.',
     )
   }
 
-  return value
+  throw new VeuNotesCryptoError(
+    'UNSUPPORTED_VERSION',
+    'Esta versão do cofre não é compatível com o VéuNotes atual.',
+  )
 }
 
-export async function getPasswordKey(password: string): Promise<CryptoKey> {
+async function getLegacyPasswordKey(password: string) {
   return crypto.subtle.importKey(
     'raw',
     encoder.encode(password),
@@ -121,11 +249,13 @@ export async function getPasswordKey(password: string): Promise<CryptoKey> {
   )
 }
 
-export async function deriveAesKey(
-  passwordKey: CryptoKey,
+async function deriveLegacyAesKey(
+  password: string,
   salt: Uint8Array,
   iterations: number,
-): Promise<CryptoKey> {
+) {
+  const passwordKey = await getLegacyPasswordKey(password)
+
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
@@ -139,58 +269,93 @@ export async function deriveAesKey(
       length: 256,
     },
     false,
-    ['encrypt', 'decrypt'],
+    ['decrypt'],
   )
 }
 
-export async function deriveSessionKey(
+async function deriveVeuNotesV2Session(
   password: string,
-  salt: Uint8Array,
-  iterations: number,
-) {
-  const passwordKey = await getPasswordKey(password)
-  return deriveAesKey(passwordKey, salt, iterations)
+  salt = randomBytes(SALT_LENGTH_BYTES),
+  memoryMb = ARGON2_V2_NOTE_MEMORY_MB,
+  iterations = ARGON2_V2_DEFAULT_ITERATIONS,
+): Promise<VeuNotesSession> {
+  try {
+    const aesKey = await deriveArgon2AesKey(
+      password,
+      salt,
+      { memoryMb, iterations },
+      ['encrypt', 'decrypt'],
+    )
+
+    return {
+      aesKey,
+      salt: cloneBytes(salt),
+      memoryMb,
+      iterations,
+      parallelism: ARGON2_V2_PARALLELISM,
+    }
+  } catch (error) {
+    if (
+      error instanceof CriptoveuError &&
+      error.code === 'KEY_DERIVATION_FAILED'
+    ) {
+      throw new VeuNotesCryptoError(
+        'KEY_DERIVATION_FAILED',
+        'Este dispositivo não conseguiu executar o Argon2id exigido pelo cofre.',
+      )
+    }
+
+    throw error
+  }
 }
 
-export async function encryptNoteWithKey(
+export async function encryptNoteWithSession(
   plaintext: string,
-  aesKey: CryptoKey,
-  salt: Uint8Array,
-  iterations: number,
-): Promise<VeuNotesBlobJson> {
+  session: VeuNotesSession,
+): Promise<VeuNotesBlobV2> {
   const iv = randomBytes(IV_LENGTH_BYTES)
+  const metadata = {
+    version: 2 as const,
+    type: 'NOTE2' as const,
+    kdf: ARGON2_V2_KDF,
+    memoryMb: session.memoryMb,
+    iterations: session.iterations,
+    parallelism: session.parallelism,
+  } satisfies Pick<
+    VeuNotesBlobV2,
+    'version' | 'type' | 'kdf' | 'memoryMb' | 'iterations' | 'parallelism'
+  >
   const encrypted = await crypto.subtle.encrypt(
     {
       name: 'AES-GCM',
       iv,
+      additionalData: buildVeuNotesV2Aad(metadata),
     },
-    aesKey,
+    session.aesKey,
     encoder.encode(plaintext),
   )
 
   return {
-    version: VEU_NOTES_VERSION,
-    salt: encodeBytesToBase64(salt),
-    iterations,
+    ...metadata,
+    salt: encodeBytesToBase64(session.salt),
     iv: encodeBytesToBase64(iv),
     ciphertext: encodeBytesToBase64(new Uint8Array(encrypted)),
   }
 }
 
-export async function decryptNoteWithKey(
-  blobJson: VeuNotesBlobJson,
-  aesKey: CryptoKey,
-): Promise<string> {
-  const safeBlob = assertVeuNotesBlobJson(blobJson)
-
+async function decryptNoteV2WithSession(
+  blob: VeuNotesBlobV2,
+  session: VeuNotesSession,
+) {
   try {
     const decrypted = await crypto.subtle.decrypt(
       {
         name: 'AES-GCM',
-        iv: cloneBytes(decodeBase64ToBytes(safeBlob.iv)),
+        iv: cloneBytes(decodeBase64ToBytes(blob.iv)),
+        additionalData: buildVeuNotesV2Aad(blob),
       },
-      aesKey,
-      decodeBase64ToBytes(safeBlob.ciphertext),
+      session.aesKey,
+      decodeBase64ToBytes(blob.ciphertext),
     )
 
     return decoder.decode(decrypted)
@@ -202,28 +367,82 @@ export async function decryptNoteWithKey(
   }
 }
 
+async function decryptLegacyNote(blob: VeuNotesBlobV1, password: string) {
+  try {
+    const key = await deriveLegacyAesKey(
+      password,
+      decodeBase64ToBytes(blob.salt),
+      blob.iterations,
+    )
+    const decrypted = await crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: cloneBytes(decodeBase64ToBytes(blob.iv)),
+      },
+      key,
+      decodeBase64ToBytes(blob.ciphertext),
+    )
+
+    return decoder.decode(decrypted)
+  } catch {
+    throw new VeuNotesCryptoError(
+      'INVALID_PASSWORD',
+      'Senha incorreta ou cofre inválido. Verifique a senha e tente novamente.',
+    )
+  }
+}
+
+export async function createVeuNotesVault(
+  plaintext: string,
+  password: string,
+) {
+  const session = await deriveVeuNotesV2Session(password)
+  const blob = await encryptNoteWithSession(plaintext, session)
+  return { blob, session }
+}
+
+export async function unlockVeuNotesBlob(
+  blobJson: VeuNotesBlobJson,
+  password: string,
+): Promise<VeuNotesUnlockResult> {
+  const safeBlob = assertVeuNotesBlobJson(blobJson)
+
+  if (safeBlob.version === 2) {
+    const session = await deriveVeuNotesV2Session(
+      password,
+      decodeBase64ToBytes(safeBlob.salt),
+      safeBlob.memoryMb,
+      safeBlob.iterations,
+    )
+    const plaintext = await decryptNoteV2WithSession(safeBlob, session)
+
+    return {
+      plaintext,
+      session,
+      migratedBlob: null,
+    }
+  }
+
+  const plaintext = await decryptLegacyNote(safeBlob, password)
+  const { blob, session } = await createVeuNotesVault(plaintext, password)
+
+  return {
+    plaintext,
+    session,
+    migratedBlob: blob,
+  }
+}
+
 export async function encryptNote(
   plaintext: string,
   password: string,
-): Promise<VeuNotesBlobJson> {
-  const salt = randomBytes(SALT_LENGTH_BYTES)
-  const passwordKey = await getPasswordKey(password)
-  const aesKey = await deriveAesKey(passwordKey, salt, VEU_NOTES_PBKDF2_ITERATIONS)
-
-  return encryptNoteWithKey(plaintext, aesKey, salt, VEU_NOTES_PBKDF2_ITERATIONS)
+): Promise<VeuNotesBlobV2> {
+  return (await createVeuNotesVault(plaintext, password)).blob
 }
 
 export async function decryptNote(
   blobJson: VeuNotesBlobJson,
   password: string,
 ): Promise<string> {
-  const safeBlob = assertVeuNotesBlobJson(blobJson)
-  const passwordKey = await getPasswordKey(password)
-  const aesKey = await deriveAesKey(
-    passwordKey,
-    decodeBase64ToBytes(safeBlob.salt),
-    safeBlob.iterations,
-  )
-
-  return decryptNoteWithKey(safeBlob, aesKey)
+  return (await unlockVeuNotesBlob(blobJson, password)).plaintext
 }

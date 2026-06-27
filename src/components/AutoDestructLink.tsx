@@ -16,15 +16,15 @@ import {
   type AutoDestructReadResult,
   assertAutoDestructAvailability,
   buildAutoDestructLink,
+  decryptAutoDestructPayload,
+  encryptAutoDestructPayload,
   getAutoDestructViewState,
   getExpirationLabel,
   incrementAutoDestructViews,
-  payloadToDecryptInput,
   readAutoDestructPayloadFromInput,
-  serializeAutoDestructPayload,
 } from '../lib/auto-destruct-link'
 import { usePremium } from '../context/premium'
-import { CriptoveuError, decryptText, encryptText } from '../lib/criptoveu'
+import { CriptoveuError } from '../lib/criptoveu'
 import {
   consumeFreeUsage,
   getFreeUsageStatus,
@@ -284,12 +284,15 @@ export default function AutoDestructLink({
     setGeneratedLink('')
 
     try {
-      const encryptedPayload = await encryptText(plainText, generatePassword)
-      const encodedPayload = serializeAutoDestructPayload(encryptedPayload, {
-        createdAt: Date.now(),
-        expiresIn,
-        maxViews: resolveMaxViews(maxViewsValue),
-      })
+      const encodedPayload = await encryptAutoDestructPayload(
+        plainText,
+        generatePassword,
+        {
+          createdAt: Date.now(),
+          expiresIn,
+          maxViews: resolveMaxViews(maxViewsValue),
+        },
+      )
       const link = buildAutoDestructLink(encodedPayload)
       const usageStatus = isPremium ? null : consumeFreeUsage('protected-link')
 
@@ -384,8 +387,8 @@ export default function AutoDestructLink({
         resolved.payload,
         resolved.encodedPayload,
       )
-      const decrypted = await decryptText(
-        payloadToDecryptInput(resolved.payload),
+      const decrypted = await decryptAutoDestructPayload(
+        resolved.payload,
         readPassword,
       )
 

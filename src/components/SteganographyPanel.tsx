@@ -16,14 +16,12 @@ import type { ChangeEvent } from 'react'
 
 import {
   CriptoveuError,
-  decryptText,
-  encryptText,
   formatFileSize,
 } from '../lib/criptoveu'
 import {
+  decryptSecretTextPayload,
+  encryptSecretTextPayload,
   SecretTextPayloadError,
-  parseEncryptedTextPayload,
-  serializeEncryptedTextPayload,
 } from '../lib/secret-text-payload'
 import { usePremium } from '../context/premium'
 import {
@@ -235,8 +233,11 @@ export default function SteganographyPanel({ compact = false }: Props) {
     updateSecretImagePreview(null)
 
     try {
-      const encrypted = await encryptText(plainText, hidePassword)
-      const serialized = serializeEncryptedTextPayload(encrypted)
+      const serialized = await encryptSecretTextPayload(
+        plainText,
+        hidePassword,
+        'MSG2',
+      )
       const secretBlob = await hideMessageInImage(coverImage, serialized)
       const usageStatus = isPremium ? null : consumeFreeUsage('hidden-message')
 
@@ -280,8 +281,11 @@ export default function SteganographyPanel({ compact = false }: Props) {
 
     try {
       const extractedPayload = await extractMessageFromImage(revealImage)
-      const encrypted = parseEncryptedTextPayload(extractedPayload)
-      const decrypted = await decryptText(encrypted, revealPassword)
+      const decrypted = await decryptSecretTextPayload(
+        extractedPayload,
+        revealPassword,
+        'MSG2',
+      )
 
       setRevealedCiphertext(extractedPayload)
       setRevealedText(decrypted)

@@ -463,7 +463,7 @@
         },
         "saved": {
           "title": "O que fica salvo no navegador",
-          "content": "Apenas um JSON criptografado com version, salt, iterations, iv e ciphertext. Texto puro, senha e chave não são persistidos."
+          "content": "Apenas um JSON NOTE2 criptografado com versão, Argon2id, salt, IV e ciphertext. Texto puro, senha e chave não são persistidos. Cofres NOTE1 antigos são migrados somente após a senha correta."
         },
         "backup": {
           "title": "Backup e recuperação",

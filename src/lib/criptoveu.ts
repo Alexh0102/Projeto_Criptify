@@ -74,10 +74,20 @@ export type FileEncryptionOptions = FileSizeGuardOptions & {
   argon2Iterations?: number
 }
 
-type Argon2Parameters = {
+export type Argon2Parameters = {
   memoryMb: number
   iterations: number
 }
+
+export type Argon2TextEncryptionResult = TextEncryptionResult &
+  Argon2Parameters & {
+    parallelism: 1
+  }
+
+export type Argon2TextDecryptionInput = TextDecryptionInput &
+  Argon2Parameters & {
+    parallelism: 1
+  }
 
 type PasswordStrength = {
   level: number
@@ -216,7 +226,7 @@ function readAsciiParameter(bytes: Uint8Array) {
   return Number(text)
 }
 
-function validateArgon2Parameters(parameters: Argon2Parameters) {
+export function validateArgon2Parameters(parameters: Argon2Parameters) {
   if (
     !Number.isInteger(parameters.memoryMb) ||
     parameters.memoryMb < ARGON2_MIN_MEMORY_MB ||
@@ -400,11 +410,11 @@ function createArgon2Worker() {
   })
 }
 
-async function deriveArgon2AesKey(
+export async function deriveArgon2AesKey(
   password: string,
   salt: Uint8Array,
   parameters: Argon2Parameters,
-  usage: KeyUsage,
+  usage: KeyUsage | readonly KeyUsage[],
 ) {
   validateArgon2Parameters(parameters)
   const requestId = (argon2RequestId += 1)
@@ -446,7 +456,8 @@ async function deriveArgon2AesKey(
   })
 
   try {
-    return await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, [usage])
+    const usages = Array.isArray(usage) ? [...usage] : [usage]
+    return await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, usages)
   } finally {
     new Uint8Array(keyBytes).fill(0)
   }
@@ -684,6 +695,102 @@ export async function decryptText(
     }
 
     throw error
+  }
+}
+
+export async function encryptTextArgon2(
+  plainText: string,
+  password: string,
+  additionalData: Uint8Array,
+  parameters: Argon2Parameters,
+): Promise<Argon2TextEncryptionResult> {
+  const normalizedText = plainText.trim()
+
+  if (!normalizedText) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'Digite um texto antes de proteger a mensagem.',
+    )
+  }
+
+  const safeParameters = validateArgon2Parameters(parameters)
+  const salt = randomBytes(SALT_LENGTH_BYTES)
+  const iv = randomBytes(IV_LENGTH_BYTES)
+  const key = await deriveArgon2AesKey(
+    password,
+    salt,
+    safeParameters,
+    'encrypt',
+  )
+  const encrypted = await crypto.subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv,
+      additionalData: cloneBytes(additionalData),
+    },
+    key,
+    new TextEncoder().encode(normalizedText),
+  )
+
+  return {
+    ciphertext: encodeBytesToBase64(new Uint8Array(encrypted)),
+    iv,
+    salt,
+    memoryMb: safeParameters.memoryMb,
+    iterations: safeParameters.iterations,
+    parallelism: 1,
+  }
+}
+
+export async function decryptTextArgon2(
+  encryptedInput: Argon2TextDecryptionInput,
+  password: string,
+  additionalData: Uint8Array,
+): Promise<string> {
+  if (
+    encryptedInput.parallelism !== 1 ||
+    encryptedInput.salt.byteLength !== SALT_LENGTH_BYTES ||
+    encryptedInput.iv.byteLength !== IV_LENGTH_BYTES
+  ) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'Os parâmetros da mensagem Argon2id são inválidos.',
+    )
+  }
+
+  try {
+    const key = await deriveArgon2AesKey(
+      password,
+      encryptedInput.salt,
+      {
+        memoryMb: encryptedInput.memoryMb,
+        iterations: encryptedInput.iterations,
+      },
+      'decrypt',
+    )
+    const decrypted = await crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: cloneBytes(encryptedInput.iv),
+        additionalData: cloneBytes(additionalData),
+      },
+      key,
+      decodeBase64ToBytes(encryptedInput.ciphertext),
+    )
+
+    return new TextDecoder().decode(decrypted)
+  } catch (error) {
+    if (
+      error instanceof CriptoveuError &&
+      error.code === 'KEY_DERIVATION_FAILED'
+    ) {
+      throw error
+    }
+
+    throw new CriptoveuError(
+      'INVALID_PASSWORD_OR_FILE',
+      'Senha incorreta ou mensagem V2 inválida. Verifique a senha e tente novamente.',
+    )
   }
 }
 

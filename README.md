@@ -14,7 +14,7 @@ O projeto foi construído com foco em privacidade: arquivos, senhas, mensagens e
 
 O objetivo do CriptoVéu é oferecer ferramentas simples para criptografia, descriptografia e compartilhamento protegido de conteúdo em um ambiente **100% client-side**.
 
-A aplicação usa a **Web Crypto API** nativa do navegador para realizar criptografia autenticada com **AES-GCM**. Novos pacotes de arquivos usam **Argon2id em WebAssembly**, executado dentro de um **Web Worker**. Formatos anteriores, mensagens, QR Codes, links protegidos e notas preservam **PBKDF2/SHA-256** para compatibilidade com payloads já existentes.
+A aplicação usa a **Web Crypto API** nativa do navegador para realizar criptografia autenticada com **AES-GCM**. Novos arquivos, mensagens, QR Codes, links protegidos e cofres VéuNotes usam **Argon2id em WebAssembly**, executado dentro de um **Web Worker**. Formatos V1 anteriores com PBKDF2/SHA-256 continuam aceitos para leitura.
 
 Principais recursos:
 
@@ -66,11 +66,12 @@ Principais recursos:
 |---|---|---|---|
 | Arquivos V3 | AES-256-GCM | Argon2id v1.3 via WASM em Web Worker | Arquivo `.criptoveu` |
 | Arquivos legados | AES-GCM | PBKDF2/SHA-256 | Pacotes `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1` |
-| Mensagens | AES-GCM | PBKDF2/SHA-256 | Payload próprio do CriptoVéu |
-| QR protegido | AES-GCM | PBKDF2/SHA-256 | QR Code apontando para payload no hash da URL |
-| Link protegido | AES-GCM | PBKDF2/SHA-256 | Payload criptografado no hash da URL |
-| Esteganografia | Mensagem protegida antes da ocultação | PBKDF2/SHA-256 para a mensagem protegida | Imagem PNG com dados ocultos |
-| VéuNotes | AES-GCM | PBKDF2/SHA-256 | `localStorage` do navegador |
+| Mensagens `MSG2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVM2` |
+| QR protegido `QR2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVQ2` no hash da URL |
+| Link protegido `LINK2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVL2` no hash da URL |
+| Esteganografia | Mensagem `MSG2` protegida antes da ocultação | Argon2id, 64 MB, `t=2`, `p=1` | Imagem PNG com dados ocultos |
+| VéuNotes `NOTE2` | AES-256-GCM | Argon2id, 128 MB, `t=2`, `p=1` | `localStorage` do navegador |
+| Formatos V1 legados | AES-GCM | PBKDF2/SHA-256 | Leitura compatível; novas criações usam V2 |
 
 ---
 
@@ -123,7 +124,14 @@ Detalhes técnicos:
 
 ### Mensagens, QR Code e links protegidos
 
-Mensagens são criptografadas localmente com AES-GCM e serializadas em payloads próprios do CriptoVéu.
+Mensagens são criptografadas localmente com AES-256-GCM e serializadas em payloads próprios do CriptoVéu. Novas criações usam Argon2id dentro de Web Worker:
+
+- `CVM2.` / `MSG2` para mensagens protegidas e esteganografia;
+- `CVQ2.` / `QR2` para QR protegido;
+- `CVL2.` / `LINK2` para links protegidos;
+- memória de **64 MB**, `t=2` e `p=1`;
+- salt aleatório de 16 bytes e IV aleatório de 12 bytes;
+- Base64URL para o envelope V2.
 
 O QR protegido aponta para a rota `/qr-secreto` usando o hash da URL. O link protegido usa a rota `/link-secreto`, também com dados no hash da URL.
 
@@ -133,7 +141,9 @@ Importante:
 - Quem recebe o link ou o QR Code tem acesso ao payload criptografado.
 - A senha ou chave nunca é incluída no link ou no QR Code e deve ser compartilhada separadamente.
 - A proteção real depende da senha usada para abrir a mensagem.
-- Os formatos atuais de mensagens, QR Codes e links continuam derivados com **PBKDF2/SHA-256 com 600.000 iterações**, para que payloads já compartilhados permaneçam legíveis.
+- Tipo, versão, KDF, parâmetros Argon2id e, no `LINK2`, criação, expiração e limite de visualizações entram no AAD do AES-GCM.
+- Alterar ciphertext, IV, salt ou metadados autenticados faz a abertura falhar.
+- Payloads V1 anteriores com **PBKDF2/SHA-256 e 600.000 iterações** continuam legíveis, mas não são mais gerados.
 
 #### Sobre expiração e limite de visualizações
 
@@ -165,15 +175,31 @@ Limites aplicados:
 
 O VéuNotes salva um único cofre de texto criptografado no `localStorage` do navegador.
 
-A nota é criptografada com AES-GCM e protegida por senha mestre.
+A nota é criptografada com AES-256-GCM e protegida por senha mestre. Novos cofres usam o formato `NOTE2`.
 
 Parâmetros principais:
 
 - Senha mínima: **12 caracteres**.
-- PBKDF2 com SHA-256.
-- Iterações padrão: **210.000**.
-- Limite máximo aceito em cofres importados: **1.200.000 iterações**.
+- Argon2id em Web Worker com **128 MB**, `t=2` e `p=1`.
+- Tipo, versão e parâmetros da KDF são autenticados como AAD.
+- Cofres `NOTE1` com PBKDF2 continuam legíveis.
+- Depois de uma abertura V1 bem-sucedida, o cofre é recriptografado como `NOTE2`; o blob antigo só é substituído após a nova criptografia terminar.
 - Backup em JSON com validação de formato antes da importação.
+
+---
+
+## Testes e vetores públicos
+
+Os diretórios em `test-vectors/` contêm vetores reproduzíveis para `MSG2`,
+`QR2`, `LINK2` e `NOTE2`, incluindo senha de teste, salt, IV, AAD e ciphertext
+esperado.
+
+Salt e IV fixos existem apenas nesses vetores. A produção sempre usa
+`crypto.getRandomValues`.
+
+A suíte automatizada verifica compatibilidade V1, migração de `NOTE1`, senha
+incorreta, payload truncado e adulterações de ciphertext, IV, salt, tipo,
+versão, KDF, parâmetros Argon2id, expiração e limite.
 
 > Atenção: o `localStorage` pertence ao navegador atual e pode ser apagado pelo usuário, pelo sistema, por extensões, por limpeza de dados ou por políticas do navegador. Faça backup quando necessário.
 
@@ -309,7 +335,7 @@ Ideias e melhorias futuras planejadas ou em estudo:
 - [ ] Criptografia ponta a ponta no navegador.
 - [ ] Troca de chaves híbrida clássica/pós-quântica para o chat.
 - [ ] Verificação manual de fingerprint da sessão.
-- [ ] Migração gradual de mensagens, QR Codes, links e VéuNotes para Argon2id, mantendo compatibilidade com payloads antigos.
+- [x] Migração de mensagens, QR Codes, links e VéuNotes para Argon2id, mantendo leitura dos payloads V1.
 
 > Observação sobre o futuro chat: mesmo sem armazenar mensagens, um servidor de sinalização ou relay poderá observar metadados como IP, horário, duração da sessão e tamanho aproximado dos pacotes. Isso deve ser documentado claramente quando o recurso for implementado.
 

@@ -1,0 +1,30 @@
+{
+  "name": "VéuNotes V2 básico",
+  "format": "NOTE2",
+  "password": "vetor-note2-2026",
+  "plaintext": "Nota local de teste.",
+  "saltHex": "606162636465666768696a6b6c6d6e6f",
+  "ivHex": "707172737475767778797a7b",
+  "kdf": {
+    "algorithm": "argon2id",
+    "version": "1.3",
+    "memoryMb": 128,
+    "iterations": 2,
+    "parallelism": 1,
+    "hashLength": 32
+  },
+  "aadUtf8": "[\"CriptoVéu\",\"NOTE2\",2,\"argon2id\",128,2,1]",
+  "ciphertextBase64": "YNp4lw7FWkx3yuFEH6uaSpKPIPoOenxxfe3GAuAAm6MB+QgY",
+  "payload": {
+    "version": 2,
+    "type": "NOTE2",
+    "kdf": "argon2id",
+    "memoryMb": 128,
+    "iterations": 2,
+    "parallelism": 1,
+    "ciphertext": "YNp4lw7FWkx3yuFEH6uaSpKPIPoOenxxfe3GAuAAm6MB+QgY",
+    "iv": "cHFyc3R1dnd4eXp7",
+    "salt": "YGFiY2RlZmdoaWprbG1ubw=="
+  },
+  "tamperingExpectedResult": "rejected"
+}

@@ -42,6 +42,41 @@ export default function SecurityPage() {
             },
           ],
         },
+        {
+          title: 'Formatos criptográficos',
+          items: [
+            {
+              title: 'Novas criações usam Argon2id',
+              description:
+                'MSG2, QR2 e LINK2 usam 64 MB de memória; NOTE2 usa 128 MB. Todos executam Argon2id em Web Worker com AES-256-GCM.',
+            },
+            {
+              title: 'Metadados críticos são autenticados',
+              description:
+                'Tipo, versão e parâmetros da KDF entram no AAD. No LINK2, criação, expiração e limite também são autenticados.',
+            },
+            {
+              title: 'Compatibilidade sem enfraquecer novas criações',
+              description:
+                'Payloads V1 com PBKDF2 continuam legíveis. O CriptoVéu cria somente V2 e migra NOTE1 após uma abertura bem-sucedida.',
+            },
+          ],
+        },
+        {
+          title: 'Limites realistas',
+          items: [
+            {
+              title: 'Argon2id não corrige senha fraca',
+              description:
+                'O custo de memória dificulta tentativas paralelas, mas senhas curtas ou previsíveis ainda podem ser adivinhadas.',
+            },
+            {
+              title: 'Sem promessa de resistência quântica absoluta',
+              description:
+                'AES-256 oferece uma margem conservadora diante de modelos conhecidos, mas o projeto não afirma segurança pós-quântica absoluta.',
+            },
+          ],
+        },
       ]}
     />
   )

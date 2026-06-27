@@ -1,9 +1,23 @@
 import {
   decodeBase64ToBytes,
+  decryptText,
+  decryptTextArgon2,
   encodeBytesToBase64,
+  encryptTextArgon2,
+  validateArgon2Parameters,
   type TextDecryptionInput,
   type TextEncryptionResult,
 } from './criptoveu'
+import {
+  ARGON2_V2_DEFAULT_ITERATIONS,
+  ARGON2_V2_DEFAULT_MEMORY_MB,
+  ARGON2_V2_KDF,
+  ARGON2_V2_PARALLELISM,
+  PayloadV2EncodingError,
+  buildPayloadV2Aad,
+  decodePayloadV2Json,
+  encodePayloadV2Json,
+} from './payload-v2'
 import {
   SHARE_PAYLOAD_FIELD_ALLOWLISTS,
   assertAllowedPayloadFields,
@@ -16,10 +30,11 @@ const AUTO_DESTRUCT_APP_PATH = '/link-secreto'
 const AUTO_DESTRUCT_HASH_PREFIX = '#msg='
 const AUTO_DESTRUCT_STORAGE_PREFIX = 'criptify:auto-destruct:'
 const MAX_AUTO_DESTRUCT_PAYLOAD_CHARS = 200_000
+export const AUTO_DESTRUCT_V2_PREFIX = 'CVL2.'
 
 export type AutoDestructExpiration = '24h' | '7d' | 'never'
 
-export type AutoDestructPayload = {
+export type AutoDestructPayloadV1 = {
   version: 1
   ciphertext: string
   iv: string
@@ -28,6 +43,25 @@ export type AutoDestructPayload = {
   expiresIn: AutoDestructExpiration
   maxViews: number | null
 }
+
+export type AutoDestructPayloadV2 = {
+  version: 2
+  type: 'LINK2'
+  kdf: typeof ARGON2_V2_KDF
+  memoryMb: number
+  iterations: number
+  parallelism: typeof ARGON2_V2_PARALLELISM
+  ciphertext: string
+  iv: string
+  salt: string
+  createdAt: number
+  expiresIn: AutoDestructExpiration
+  maxViews: number | null
+}
+
+export type AutoDestructPayload =
+  | AutoDestructPayloadV1
+  | AutoDestructPayloadV2
 
 export type AutoDestructReadResult = {
   encodedPayload: string
@@ -132,23 +166,119 @@ export function serializeAutoDestructPayload(
     maxViews: number | null
   },
 ) {
-  const payload = createAllowlistedPayload<AutoDestructPayload, keyof AutoDestructPayload>({
-    version: 1,
-    ciphertext: encrypted.ciphertext,
-    iv: encodeBytesToBase64(encrypted.iv),
-    salt: encodeBytesToBase64(encrypted.salt),
-    createdAt: options.createdAt ?? Date.now(),
-    expiresIn: options.expiresIn,
-    maxViews: options.maxViews,
-  }, SHARE_PAYLOAD_FIELD_ALLOWLISTS.autoDestructV1)
+  const payload = createAllowlistedPayload<
+    AutoDestructPayloadV1,
+    keyof AutoDestructPayloadV1
+  >(
+    {
+      version: 1,
+      ciphertext: encrypted.ciphertext,
+      iv: encodeBytesToBase64(encrypted.iv),
+      salt: encodeBytesToBase64(encrypted.salt),
+      createdAt: options.createdAt ?? Date.now(),
+      expiresIn: options.expiresIn,
+      maxViews: options.maxViews,
+    },
+    SHARE_PAYLOAD_FIELD_ALLOWLISTS.autoDestructV1,
+  )
 
   return encodeJsonToBase64(payload)
 }
 
-export function parseAutoDestructPayload(encodedPayload: string): AutoDestructPayload {
-  const parsed = decodeJsonFromBase64(encodedPayload) as Partial<AutoDestructPayload>
+export function buildAutoDestructV2Aad(
+  metadata: Pick<
+    AutoDestructPayloadV2,
+    | 'version'
+    | 'type'
+    | 'kdf'
+    | 'memoryMb'
+    | 'iterations'
+    | 'parallelism'
+    | 'createdAt'
+    | 'expiresIn'
+    | 'maxViews'
+  >,
+) {
+  return buildPayloadV2Aad([
+    metadata.type,
+    metadata.version,
+    metadata.kdf,
+    metadata.memoryMb,
+    metadata.iterations,
+    metadata.parallelism,
+    metadata.createdAt,
+    metadata.expiresIn,
+    metadata.maxViews,
+  ])
+}
 
-  assertAllowedPayloadFields(parsed, SHARE_PAYLOAD_FIELD_ALLOWLISTS.autoDestructV1)
+export async function encryptAutoDestructPayload(
+  plainText: string,
+  password: string,
+  options: {
+    createdAt?: number
+    expiresIn: AutoDestructExpiration
+    maxViews: number | null
+  },
+) {
+  const metadata = {
+    version: 2 as const,
+    type: 'LINK2' as const,
+    kdf: ARGON2_V2_KDF,
+    memoryMb: ARGON2_V2_DEFAULT_MEMORY_MB,
+    iterations: ARGON2_V2_DEFAULT_ITERATIONS,
+    parallelism: ARGON2_V2_PARALLELISM,
+    createdAt: options.createdAt ?? Date.now(),
+    expiresIn: options.expiresIn,
+    maxViews: options.maxViews,
+  } satisfies Pick<
+    AutoDestructPayloadV2,
+    | 'version'
+    | 'type'
+    | 'kdf'
+    | 'memoryMb'
+    | 'iterations'
+    | 'parallelism'
+    | 'createdAt'
+    | 'expiresIn'
+    | 'maxViews'
+  >
+  const encrypted = await encryptTextArgon2(
+    plainText,
+    password,
+    buildAutoDestructV2Aad(metadata),
+    {
+      memoryMb: metadata.memoryMb,
+      iterations: metadata.iterations,
+    },
+  )
+  const payload = createAllowlistedPayload<
+    AutoDestructPayloadV2,
+    keyof AutoDestructPayloadV2
+  >(
+    {
+      ...metadata,
+      ciphertext: encrypted.ciphertext,
+      iv: encodeBytesToBase64(encrypted.iv),
+      salt: encodeBytesToBase64(encrypted.salt),
+    },
+    SHARE_PAYLOAD_FIELD_ALLOWLISTS.autoDestructV2,
+  )
+
+  return `${AUTO_DESTRUCT_V2_PREFIX}${encodePayloadV2Json(payload)}`
+}
+
+function parseAutoDestructPayloadV1(
+  encodedPayload: string,
+): AutoDestructPayloadV1 {
+  const parsed = decodeJsonFromBase64(
+    encodedPayload,
+  ) as Partial<AutoDestructPayloadV1>
+
+  assertAllowedPayloadFields(
+    parsed,
+    SHARE_PAYLOAD_FIELD_ALLOWLISTS.autoDestructV1,
+  )
   assertNoSecretFields(parsed)
 
   if (
@@ -162,7 +292,7 @@ export function parseAutoDestructPayload(encodedPayload: string): AutoDestructPa
   ) {
     throw new AutoDestructLinkError(
       'INVALID_PAYLOAD',
-      'Os dados da mensagem não estão no formato esperado.',
+      'Os dados da mensagem não estão no formato LINK1 esperado.',
     )
   }
 
@@ -177,12 +307,117 @@ export function parseAutoDestructPayload(encodedPayload: string): AutoDestructPa
   }
 }
 
-export function payloadToDecryptInput(payload: AutoDestructPayload): TextDecryptionInput {
+function parseAutoDestructPayloadV2(
+  encodedPayload: string,
+): AutoDestructPayloadV2 {
+  let parsed: Partial<AutoDestructPayloadV2>
+
+  try {
+    parsed = decodePayloadV2Json(
+      encodedPayload.slice(AUTO_DESTRUCT_V2_PREFIX.length),
+      MAX_AUTO_DESTRUCT_PAYLOAD_CHARS,
+    ) as Partial<AutoDestructPayloadV2>
+  } catch (error) {
+    if (error instanceof PayloadV2EncodingError) {
+      throw new AutoDestructLinkError('INVALID_PAYLOAD', error.message)
+    }
+
+    throw error
+  }
+
+  assertAllowedPayloadFields(
+    parsed,
+    SHARE_PAYLOAD_FIELD_ALLOWLISTS.autoDestructV2,
+  )
+  assertNoSecretFields(parsed)
+
+  if (
+    parsed.version !== 2 ||
+    parsed.type !== 'LINK2' ||
+    parsed.kdf !== ARGON2_V2_KDF ||
+    parsed.parallelism !== ARGON2_V2_PARALLELISM ||
+    typeof parsed.memoryMb !== 'number' ||
+    typeof parsed.iterations !== 'number' ||
+    typeof parsed.ciphertext !== 'string' ||
+    !parsed.ciphertext ||
+    typeof parsed.iv !== 'string' ||
+    typeof parsed.salt !== 'string' ||
+    !Number.isSafeInteger(parsed.createdAt) ||
+    (parsed.createdAt ?? -1) < 0 ||
+    !isExpirationValue(parsed.expiresIn) ||
+    !(
+      parsed.maxViews === null ||
+      (Number.isSafeInteger(parsed.maxViews) && (parsed.maxViews ?? 0) >= 1)
+    )
+  ) {
+    throw new AutoDestructLinkError(
+      'INVALID_PAYLOAD',
+      'Os dados da mensagem não estão no formato LINK2 esperado.',
+    )
+  }
+
+  try {
+    validateArgon2Parameters({
+      memoryMb: parsed.memoryMb,
+      iterations: parsed.iterations,
+    })
+
+    if (
+      decodeBase64ToBytes(parsed.iv).byteLength !== 12 ||
+      decodeBase64ToBytes(parsed.salt).byteLength !== 16
+    ) {
+      throw new Error('Invalid LINK2 binary parameters')
+    }
+  } catch {
+    throw new AutoDestructLinkError(
+      'INVALID_PAYLOAD',
+      'O LINK2 contém parâmetros criptográficos inválidos.',
+    )
+  }
+
+  return parsed as AutoDestructPayloadV2
+}
+
+export function parseAutoDestructPayload(
+  encodedPayload: string,
+): AutoDestructPayload {
+  if (encodedPayload.startsWith(AUTO_DESTRUCT_V2_PREFIX)) {
+    return parseAutoDestructPayloadV2(encodedPayload)
+  }
+
+  return parseAutoDestructPayloadV1(encodedPayload)
+}
+
+export function payloadToDecryptInput(
+  payload: AutoDestructPayloadV1,
+): TextDecryptionInput {
   return {
     ciphertext: payload.ciphertext,
     iv: decodeBase64ToBytes(payload.iv),
     salt: decodeBase64ToBytes(payload.salt),
   }
+}
+
+export async function decryptAutoDestructPayload(
+  payload: AutoDestructPayload,
+  password: string,
+) {
+  if (payload.version === 1) {
+    return decryptText(payloadToDecryptInput(payload), password)
+  }
+
+  return decryptTextArgon2(
+    {
+      ciphertext: payload.ciphertext,
+      iv: decodeBase64ToBytes(payload.iv),
+      salt: decodeBase64ToBytes(payload.salt),
+      memoryMb: payload.memoryMb,
+      iterations: payload.iterations,
+      parallelism: payload.parallelism,
+    },
+    password,
+    buildAutoDestructV2Aad(payload),
+  )
 }
 
 export function buildAutoDestructLink(encodedPayload: string) {

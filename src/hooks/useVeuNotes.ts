@@ -2,13 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   VEU_NOTES_MIN_PASSWORD_LENGTH,
-  VEU_NOTES_PBKDF2_ITERATIONS,
   VeuNotesCryptoError,
-  decodeBase64ToBytes,
-  decryptNoteWithKey,
-  deriveSessionKey,
-  encryptNoteWithKey,
+  createVeuNotesVault,
+  encryptNoteWithSession,
+  unlockVeuNotesBlob,
   type VeuNotesBlobJson,
+  type VeuNotesSession,
 } from '../lib/veunotes-crypto'
 import {
   VEU_NOTES_BACKUP_FILE,
@@ -92,9 +91,7 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [storageError, setStorageError] = useState<string | null>(null)
 
-  const sessionKeyRef = useRef<CryptoKey | null>(null)
-  const sessionSaltRef = useRef<Uint8Array | null>(null)
-  const sessionIterationsRef = useRef<number>(VEU_NOTES_PBKDF2_ITERATIONS)
+  const sessionRef = useRef<VeuNotesSession | null>(null)
   const lastSavedNoteRef = useRef('')
   const idleTimerRef = useRef<number | null>(null)
   const hiddenTimerRef = useRef<number | null>(null)
@@ -109,9 +106,7 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
   const usageLabel = formatStorageUsage(storageBytes)
 
   const clearSession = useCallback(() => {
-    sessionKeyRef.current = null
-    sessionSaltRef.current = null
-    sessionIterationsRef.current = VEU_NOTES_PBKDF2_ITERATIONS
+    sessionRef.current = null
     setNote('')
   }, [])
 
@@ -159,16 +154,11 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
 
   const saveNote = useCallback(
     async (options?: { silent?: boolean }) => {
-      if (!sessionKeyRef.current || !sessionSaltRef.current) {
+      if (!sessionRef.current) {
         throw new Error('Não existe uma sessão ativa para salvar a nota.')
       }
 
-      const blob = await encryptNoteWithKey(
-        note,
-        sessionKeyRef.current,
-        sessionSaltRef.current,
-        sessionIterationsRef.current,
-      )
+      const blob = await encryptNoteWithSession(note, sessionRef.current)
 
       persistBlob(blob)
       lastSavedNoteRef.current = note
@@ -319,23 +309,13 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
       setIsBusy(true)
 
       try {
-        const salt = crypto.getRandomValues(new Uint8Array(16))
-        const sessionKey = await deriveSessionKey(
-          normalizedPassword,
-          salt,
-          VEU_NOTES_PBKDF2_ITERATIONS,
-        )
-        const blob = await encryptNoteWithKey(
+        const { blob, session } = await createVeuNotesVault(
           '',
-          sessionKey,
-          salt,
-          VEU_NOTES_PBKDF2_ITERATIONS,
+          normalizedPassword,
         )
 
         persistBlob(blob)
-        sessionKeyRef.current = sessionKey
-        sessionSaltRef.current = salt
-        sessionIterationsRef.current = VEU_NOTES_PBKDF2_ITERATIONS
+        sessionRef.current = session
         lastSavedNoteRef.current = ''
         setNote('')
         setVaultState('unlocked')
@@ -359,24 +339,30 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
           throw new Error('Nenhum cofre local foi encontrado neste navegador.')
         }
 
-        const salt = decodeBase64ToBytes(blob.salt)
-        const sessionKey = await deriveSessionKey(password, salt, blob.iterations)
-        const decrypted = await decryptNoteWithKey(blob, sessionKey)
+        const unlocked = await unlockVeuNotesBlob(blob, password)
+        const activeBlob = unlocked.migratedBlob ?? blob
 
-        sessionKeyRef.current = sessionKey
-        sessionSaltRef.current = salt
-        sessionIterationsRef.current = blob.iterations
-        lastSavedNoteRef.current = decrypted
-        setNote(decrypted)
+        if (unlocked.migratedBlob) {
+          persistBlob(unlocked.migratedBlob)
+        }
+
+        sessionRef.current = unlocked.session
+        lastSavedNoteRef.current = unlocked.plaintext
+        setNote(unlocked.plaintext)
         setVaultState('unlocked')
-        setStorageBytes(measureVaultBlobBytes(blob))
+        setStorageBytes(measureVaultBlobBytes(activeBlob))
         setStorageError(null)
-        showToast('success', 'Cofre destrancado com sucesso.')
+        showToast(
+          'success',
+          unlocked.migratedBlob
+            ? 'Cofre destrancado e migrado com segurança para NOTE2.'
+            : 'Cofre destrancado com sucesso.',
+        )
       } finally {
         setIsBusy(false)
       }
     },
-    [showToast],
+    [persistBlob, showToast],
   )
 
   const exportVault = useCallback(async () => {
@@ -402,16 +388,13 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
         assertSupportedBackupFile(file)
         const rawContent = await file.text()
         const importedBlob = parseVaultBlob(rawContent)
-        const salt = decodeBase64ToBytes(importedBlob.salt)
-        const sessionKey = await deriveSessionKey(password, salt, importedBlob.iterations)
-        const decrypted = await decryptNoteWithKey(importedBlob, sessionKey)
+        const unlocked = await unlockVeuNotesBlob(importedBlob, password)
+        const blobToPersist = unlocked.migratedBlob ?? importedBlob
 
-        persistBlob(importedBlob)
-        sessionKeyRef.current = sessionKey
-        sessionSaltRef.current = salt
-        sessionIterationsRef.current = importedBlob.iterations
-        lastSavedNoteRef.current = decrypted
-        setNote(decrypted)
+        persistBlob(blobToPersist)
+        sessionRef.current = unlocked.session
+        lastSavedNoteRef.current = unlocked.plaintext
+        setNote(unlocked.plaintext)
         setVaultState('unlocked')
         setStorageError(null)
         showToast('success', 'Backup importado com sucesso.')
