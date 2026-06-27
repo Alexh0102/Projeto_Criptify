@@ -4,9 +4,11 @@
   Copy,
   Download,
   FileArchive,
+  FileSearch,
   LoaderCircle,
   Lock,
   Maximize2,
+  ShieldCheck,
   Sparkles,
   Unlock,
   Upload,
@@ -32,11 +34,15 @@ import {
   ARGON2_FILE_ITERATIONS,
   DEFAULT_FILE_SECURITY_PROFILE_ID,
   FILE_SECURITY_PROFILES,
+  MAX_FILE_PACKAGE_OVERHEAD_BYTES,
   STREAMING_CHUNK_SIZE_BYTES,
   CriptoveuError,
   formatFileSize,
   generateWhatsappStyleKey,
   getPasswordStrength,
+  inspectCriptoveuPackage,
+  type FilePackageInspection,
+  type FileSecurityReport,
   type FileSecurityProfileId,
 } from '../../lib/criptoveu'
 import { FREE_FILE_SIZE_BYTES } from '../../lib/premium'
@@ -57,6 +63,7 @@ type ResultItem = {
   size: number
   sourceName: string
   preview: PreviewMetadata
+  securityReport: FileSecurityReport
 }
 
 const MODE_COPY: Record<
@@ -113,6 +120,10 @@ function downloadBlobUrl(url: string, fileName: string) {
   anchor.remove()
 }
 
+function getFileIdentity(file: File, index: number) {
+  return `${index}-${file.name}-${file.size}-${file.lastModified}`
+}
+
 export default function FileCryptoWorkspace() {
   const { t } = useTranslation()
   const [mode, setMode] = useState<Mode>('encrypt')
@@ -125,6 +136,10 @@ export default function FileCryptoWorkspace() {
     message: t('files.workspace.status.initial'),
   })
   const [results, setResults] = useState<ResultItem[]>([])
+  const [packageInspections, setPackageInspections] = useState<
+    Record<string, FilePackageInspection>
+  >({})
+  const [isInspectingPackages, setIsInspectingPackages] = useState(false)
   const [previewItem, setPreviewItem] = useState<ResultItem | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -146,14 +161,50 @@ export default function FileCryptoWorkspace() {
     FILE_SECURITY_PROFILES.find((profile) => profile.id === securityProfileId) ??
     FILE_SECURITY_PROFILES[1]
 
+  useEffect(() => {
+    let cancelled = false
+
+    if (mode !== 'decrypt' || files.length === 0) {
+      setPackageInspections({})
+      setIsInspectingPackages(false)
+      return
+    }
+
+    setIsInspectingPackages(true)
+
+    void Promise.all(
+      files.map(async (file, index) => [
+        getFileIdentity(file, index),
+        await inspectCriptoveuPackage(file),
+      ] as const),
+    )
+      .then((entries) => {
+        if (!cancelled) {
+          setPackageInspections(Object.fromEntries(entries))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsInspectingPackages(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [files, mode])
+
   const strength = getPasswordStrength(password)
   const currentMode = MODE_COPY[mode]
   const totalSelectedSize = files.reduce((sum, currentFile) => sum + currentFile.size, 0)
-  const activeFileLimit = isPremium ? null : FREE_FILE_SIZE_BYTES
+  const activeFileLimit = isPremium
+    ? null
+    : FREE_FILE_SIZE_BYTES +
+      (mode === 'decrypt' ? MAX_FILE_PACKAGE_OVERHEAD_BYTES : 0)
   const fileLimitLabel =
-    activeFileLimit === null
+    isPremium
       ? t('files.workspace.plan.unlimited')
-      : formatFileSize(activeFileLimit)
+      : formatFileSize(FREE_FILE_SIZE_BYTES)
   const resultUrl = previewItem?.url ?? results[0]?.url ?? null
   const resultName = previewItem?.name ?? results[0]?.name ?? ''
   const activePreviewItem = previewItem ?? results[0] ?? null
@@ -419,6 +470,23 @@ export default function FileCryptoWorkspace() {
     downloadBlobUrl(result.url, result.name)
   }
 
+  function handleDownloadSecurityReport(result: ResultItem) {
+    const reportBlob = new Blob(
+      [JSON.stringify(result.securityReport, null, 2)],
+      { type: 'application/json' },
+    )
+    const reportUrl = URL.createObjectURL(reportBlob)
+
+    try {
+      downloadBlobUrl(
+        reportUrl,
+        `${result.name}.relatorio-seguranca.json`,
+      )
+    } finally {
+      URL.revokeObjectURL(reportUrl)
+    }
+  }
+
   function handleDownload() {
     const targetResult = previewItem ?? results[0] ?? null
 
@@ -472,9 +540,14 @@ export default function FileCryptoWorkspace() {
       return
     }
 
+    const maximumSelectedFileSize =
+      FREE_FILE_SIZE_BYTES +
+      (mode === 'decrypt' ? MAX_FILE_PACKAGE_OVERHEAD_BYTES : 0)
     const oversizedFreeFiles = isPremium
       ? []
-      : files.filter((selectedFile) => selectedFile.size > FREE_FILE_SIZE_BYTES)
+      : files.filter(
+          (selectedFile) => selectedFile.size > maximumSelectedFileSize,
+        )
 
     if (oversizedFreeFiles.length > 0) {
       setStatus({
@@ -507,34 +580,37 @@ export default function FileCryptoWorkspace() {
         const currentStep = index + 1
 
         try {
-          const { blob, downloadName } = await streamingCrypto.processFile(
-            mode,
-            currentFile,
-            password,
-            (value, label) => {
-              const startProgress = (index / files.length) * 100
-              const endProgress = ((index + 1) / files.length) * 100
-              const aggregateProgress = startProgress + ((endProgress - startProgress) * value) / 100
+          const { blob, downloadName, securityReport } =
+            await streamingCrypto.processFile(
+              mode,
+              currentFile,
+              password,
+              (value, label) => {
+                const startProgress = (index / files.length) * 100
+                const endProgress = ((index + 1) / files.length) * 100
+                const aggregateProgress =
+                  startProgress +
+                  ((endProgress - startProgress) * value) / 100
 
-              setProgress(Math.round(aggregateProgress))
-              setProgressLabel(
-                files.length === 1
-                  ? label
-                  : t('files.workspace.status.fileStep', {
-                      current: currentStep,
-                      total: files.length,
-                      label,
-                    }),
-              )
-            },
-            {
-              maxFileSizeBytes: isPremium ? null : FREE_FILE_SIZE_BYTES,
-              argon2MemoryMb:
-                mode === 'encrypt' ? securityProfile.memoryMb : undefined,
-              argon2Iterations:
-                mode === 'encrypt' ? ARGON2_FILE_ITERATIONS : undefined,
-            },
-          )
+                setProgress(Math.round(aggregateProgress))
+                setProgressLabel(
+                  files.length === 1
+                    ? label
+                    : t('files.workspace.status.fileStep', {
+                        current: currentStep,
+                        total: files.length,
+                        label,
+                      }),
+                )
+              },
+              {
+                maxFileSizeBytes: isPremium ? null : FREE_FILE_SIZE_BYTES,
+                argon2MemoryMb:
+                  mode === 'encrypt' ? securityProfile.memoryMb : undefined,
+                argon2Iterations:
+                  mode === 'encrypt' ? ARGON2_FILE_ITERATIONS : undefined,
+              },
+            )
 
           const nextUrl = URL.createObjectURL(blob)
           const nextPreview =
@@ -550,6 +626,7 @@ export default function FileCryptoWorkspace() {
             size: blob.size,
             sourceName: currentFile.name,
             preview: nextPreview,
+            securityReport,
           })
 
           if (mode === 'encrypt') {
@@ -780,6 +857,104 @@ export default function FileCryptoWorkspace() {
                 </div>
               </div>
             </label>
+
+            {mode === 'decrypt' && files.length > 0 ? (
+              <section className="surface-primary rounded-[28px] p-5">
+                <div className="flex items-start gap-3">
+                  <div className="icon-chip p-2.5">
+                    <FileSearch className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {t('files.workspace.inspector.title')}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-zinc-400">
+                      {t('files.workspace.inspector.helper')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {files.slice(0, 4).map((selectedFile, fileIndex) => {
+                    const inspection =
+                      packageInspections[
+                        getFileIdentity(selectedFile, fileIndex)
+                      ]
+                    const statusClass =
+                      !inspection
+                        ? 'border-cyan-400/20 bg-cyan-400/[0.06]'
+                        : inspection.status === 'plausible'
+                        ? 'border-emerald-400/20 bg-emerald-400/[0.06]'
+                        : inspection.status === 'legacy'
+                          ? 'border-amber-400/20 bg-amber-400/[0.06]'
+                          : 'border-rose-400/20 bg-rose-400/[0.06]'
+
+                    return (
+                      <div
+                        key={getFileIdentity(selectedFile, fileIndex)}
+                        className={`rounded-[20px] border p-4 ${statusClass}`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="break-all text-sm font-medium text-white">
+                            {selectedFile.name}
+                          </p>
+                          <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-zinc-300">
+                            {inspection
+                              ? t(
+                                  `files.workspace.inspector.status.${inspection.status}`,
+                                )
+                              : t('files.workspace.inspector.checking')}
+                          </span>
+                        </div>
+
+                        {inspection ? (
+                          <>
+                            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-500">
+                              <span>
+                                {t('files.workspace.inspector.format', {
+                                  format: inspection.format,
+                                })}
+                              </span>
+                              {inspection.memoryMb !== null ? (
+                                <span>
+                                  {t('files.workspace.inspector.memory', {
+                                    memory: inspection.memoryMb,
+                                  })}
+                                </span>
+                              ) : null}
+                              {inspection.observedChunkCount !== null ? (
+                                <span>
+                                  {t('files.workspace.inspector.blocks', {
+                                    count: inspection.observedChunkCount,
+                                  })}
+                                </span>
+                              ) : null}
+                              {inspection.manifestPresent !== null ? (
+                                <span>
+                                  {inspection.manifestPresent
+                                    ? t(
+                                        'files.workspace.inspector.manifestPresent',
+                                      )
+                                    : t(
+                                        'files.workspace.inspector.manifestAbsent',
+                                      )}
+                                </span>
+                              ) : null}
+                            </div>
+                          </>
+                        ) : (
+                          <p className="mt-2 text-xs text-zinc-500">
+                            {isInspectingPackages
+                              ? t('files.workspace.inspector.reading')
+                              : t('files.workspace.inspector.unavailable')}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            ) : null}
 
             <div className="surface-primary rounded-[28px] p-5">
               <FieldBlock
@@ -1081,6 +1256,92 @@ export default function FileCryptoWorkspace() {
                       <span>{formatFileSize(result.size)}</span>
                       {mode === 'decrypt' && result.preview.kind !== 'none' ? (
                         <span>{t('files.workspace.results.localPreview')}</span>
+                      ) : null}
+                    </div>
+
+                    <div
+                      className={`mt-4 rounded-[20px] border p-4 ${
+                        result.securityReport.integrity.status !== 'aead-only'
+                          ? 'border-emerald-400/20 bg-emerald-400/[0.06]'
+                          : 'border-amber-400/20 bg-amber-400/[0.06]'
+                      }`}
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-200" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-white">
+                              {result.securityReport.integrity.status ===
+                              'prepared'
+                                ? t(
+                                    'files.workspace.securityReport.preparedTitle',
+                                  )
+                                : result.securityReport.integrity.status ===
+                                    'verified'
+                                ? t(
+                                    'files.workspace.securityReport.verifiedTitle',
+                                  )
+                                : t(
+                                    'files.workspace.securityReport.legacyTitle',
+                                  )}
+                            </p>
+                            <p className="mt-1 text-xs leading-6 text-zinc-400">
+                              {result.securityReport.integrity.status ===
+                              'prepared'
+                                ? t(
+                                    'files.workspace.securityReport.preparedNote',
+                                  )
+                                : result.securityReport.integrity.status ===
+                                    'verified'
+                                  ? t(
+                                      'files.workspace.securityReport.verifiedNote',
+                                    )
+                                  : t(
+                                      'files.workspace.securityReport.legacyNote',
+                                    )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDownloadSecurityReport(result)
+                          }
+                          className="btn-secondary shrink-0"
+                        >
+                          <Download className="h-4 w-4" />
+                          {t('files.workspace.securityReport.download')}
+                        </button>
+                      </div>
+
+                      <div className="mt-3 grid gap-2 text-xs text-zinc-500 sm:grid-cols-2">
+                        <span>
+                          {t('files.workspace.securityReport.format', {
+                            format: result.securityReport.format,
+                          })}
+                        </span>
+                        <span>
+                          {t('files.workspace.securityReport.kdf', {
+                            kdf: result.securityReport.kdf,
+                          })}
+                        </span>
+                        {result.securityReport.chunkCount !== null ? (
+                          <span>
+                            {t('files.workspace.securityReport.blocks', {
+                              count: result.securityReport.chunkCount,
+                            })}
+                          </span>
+                        ) : null}
+                        <span>
+                          {t('files.workspace.securityReport.upload')}
+                        </span>
+                      </div>
+
+                      {result.securityReport.fileHashSha256 ? (
+                        <p className="mt-3 break-all font-mono text-[11px] leading-5 text-zinc-500">
+                          SHA-256: {result.securityReport.fileHashSha256}
+                        </p>
                       ) : null}
                     </div>
 

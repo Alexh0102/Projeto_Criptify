@@ -1,0 +1,60 @@
+{
+  "name": "Arquivo CRIPTOVEU4 básico",
+  "format": "CRIPTOVEU4",
+  "warning": "Parâmetros reduzidos e valores fixos exclusivamente para interoperabilidade em testes.",
+  "password": "vetor-arquivo-v4-2026",
+  "plaintextUtf8": "Vetor CRIPTOVEU4 - integridade local.\n",
+  "expectedFileName": "vetor-v4.txt",
+  "expectedMimeType": "text/plain",
+  "saltHex": "808182838485868788898a8b8c8d8e8f",
+  "ivHex": "909192939495969798999a9b",
+  "kdf": {
+    "algorithm": "argon2id",
+    "version": "1.3",
+    "memoryMb": 8,
+    "iterations": 1,
+    "parallelism": 1,
+    "hashLength": 32
+  },
+  "chunkSize": 2097152,
+  "headerHex": "43524950544f564555343030303830303031808182838485868788898a8b8c8d8e8f909192939495969798999a9b0020000000000001",
+  "manifest": {
+    "version": 1,
+    "format": "CRIPTOVEU4",
+    "manifestId": "00112233445566778899aabbccddeeff",
+    "createdAt": 1780272000000,
+    "originalName": "vetor-v4.txt",
+    "originalSize": 38,
+    "mimeType": "text/plain",
+    "chunkSize": 2097152,
+    "chunkCount": 1,
+    "fileHashSha256": "96777edc02724d7c7c42763a1c75b1057d0a609995620f9c07ef3b46743d9b80",
+    "chunkHashesSha256": [
+      "96777edc02724d7c7c42763a1c75b1057d0a609995620f9c07ef3b46743d9b80"
+    ],
+    "encryption": "AES-256-GCM",
+    "kdf": "Argon2id",
+    "hash": "SHA-256",
+    "argon2": {
+      "memoryMb": 8,
+      "iterations": 1,
+      "parallelism": 1
+    }
+  },
+  "records": [
+    {
+      "type": "data",
+      "index": 0,
+      "aadHex": "43524950544f564555343030303830303031808182838485868788898a8b8c8d8e8f909192939495969798999a9b0020000000000001010000000000000036",
+      "ciphertextBase64": "OyFyDfFfHJImy7XTR+6PF2U8XeyLD/zi3ltBOvV68e/6HcuKLRNJ8lp5w0eANYdcamYf331s"
+    },
+    {
+      "type": "manifest",
+      "index": 1,
+      "aadHex": "43524950544f564555343030303830303031808182838485868788898a8b8c8d8e8f909192939495969798999a9b0020000000000001020000000100000209",
+      "ciphertextBase64": "f2Xr28QIX4as3kroj5ytpa+V7f65j0vke/hGTQ6VosKCxvkfBodrNhskOM+awpzHBLVxjOSSChej4bfbHXcQZoHJJ5hzPmKBZvoqsISKo/xdYsvxaVJYJw5xeVD4utltJDy8XVbrcDqI80caNRuJe8NJaTxc+09wcms2TNTKCf8G0ZgOQvF2pwLImFjF7s4gH0MQDyD8/mk8rDC8eX2L2XtPyE470bYRldYtXhicl8hGqeOzXwDal8BX+aD3Ba0205LgtW9fW2qsiAUFieAZ8sPIlVODdqaRlRJvwYJMlq0p61N78/EzMeQ5KizBN13chUjFQqJfGevnjndusMsT+iP4Ilvhxtp8eBZV7R4/+qp8ZjGaQs2Z2SHZ3F22nXfy82OCzQCRMKUY0/TMKEREmgI7KjDndyaOrBKgeqKlBr/uAwVyrZlIpywbrk+Gy7pgNqBm25Kg+6Hmg7gwBaiR0ZhSvmeqdXZWcg68oZuRgmVidJiC4+ESWYjvQDxUkh4PFv/7GHzJAoKGZCqmfO4B5UleFHFpVKconBUHy+SUFnNzfy+zq+6vlMpuTQl29grBVHG1cKSpaEWDUZyS0LnGt4xQCFOOtX8cS4srOPA9BZx1HPz+7LT+wu/AMFrmB6GVc1NWvT6UFTzoPGU5AaE50ZuCgSgyNkgpafmIXRBvNEGzBTl9rxb6tmo="
+    }
+  ],
+  "packageBase64": "Q1JJUFRPVkVVNDAwMDgwMDAxgIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmamwAgAAAAAAABAQAAADY7IXIN8V8ckibLtdNH7o8XZTxd7IsP/OLeW0E69Xrx7/ody4otE0nyWnnDR4A1h1xqZh/ffWwCAAACCX9l69vECF+GrN5K6I+craWvle3+uY9L5Hv4Rk0OlaLCgsb5HwaHazYbJDjPmsKcxwS1cYzkkgoXo+G32x13EGaBySeYcz5igWb6KrCEiqP8XWLL8WlSWCcOcXlQ+LrZbSQ8vF1W63A6iPNHGjUbiXvDSWk8XPtPcHJrNkzUygn/BtGYDkLxdqcCyJhYxe7OIB9DEA8g/P5pPKwwvHl9i9l7T8hOO9G2EZXWLV4YnJfIRqnjs18A2pfAV/mg9wWtNtOS4LVvX1tqrIgFBYngGfLDyJVTg3amkZUSb8GCTJatKetTe/PxMzHkOSoswTdd3IVIxUKiXxnr5453brDLE/oj+CJb4cbafHgWVe0eP/qqfGYxmkLNmdkh2dxdtp138vNjgs0AkTClGNP0zChERJoCOyow53cmjqwSoHqipQa/7gMFcq2ZSKcsG65Phsu6YDagZtuSoPuh5oO4MAWokdGYUr5nqnV2VnIOvKGbkYJlYnSYguPhElmI70A8VJIeDxb/+xh8yQKChmQqpnzuAeVJXhRxaVSnKJwVB8vklBZzc38vs6vur5TKbk0JdvYKwVRxtXCkqWhFg1GcktC5xreMUAhTjrV/HEuLKzjwPQWcdRz8/uy0/sLvwDBa5gehlXNTVr0+lBU86DxlOQGhOdGbgoEoMjZIKWn5iF0QbzRBswU5fa8W+rZq",
+  "tamperingExpectedResult": "rejected"
+}

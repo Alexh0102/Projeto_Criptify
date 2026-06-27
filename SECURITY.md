@@ -21,10 +21,14 @@ CriptoVéu é um app 100% client-side. Isso significa que:
 - `X-Content-Type-Options: nosniff`
 - `Cache-Control` conservador para HTML e agressivo para assets versionados
 - `sourcemap` desabilitado
-- Pacotes de arquivos `CRIPTOVEU3` usam Argon2id em WASM dentro de Web Worker, com RAM e passes registrados no cabeçalho autenticado
-- O Worker Argon2id é criado por uma política Trusted Types nomeada e permitida explicitamente pela CSP
-- Blocos V3 autenticam tamanho, ordem e término do fluxo para rejeitar reordenação e truncamento
-- A recuperação de arquivos V3 extrai parâmetros do próprio pacote, sem depender de cache local
+- Novos pacotes de arquivos `CRIPTOVEU4` usam Argon2id em WASM dentro de Web Worker, com RAM, passes, tamanho e quantidade de blocos no cabeçalho autenticado
+- Os Workers Argon2id e SHA-256 usam políticas Trusted Types nomeadas e permitidas explicitamente pela CSP
+- Registros V4 autenticam cabeçalho, tipo, índice e tamanho para rejeitar adulteração, reordenação e truncamento
+- Um Worker separado calcula SHA-256 do arquivo completo e de cada bloco
+- O manifesto de integridade é cifrado e autenticado; após a recuperação, os hashes são recalculados antes da confirmação
+- O inspetor sem senha verifica somente a estrutura e nunca apresenta essa etapa como autenticação
+- A recuperação extrai parâmetros do próprio pacote, sem depender de cache local
+- Pacotes `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1` permanecem compatíveis para leitura
 
 ## Limites
 
@@ -32,6 +36,7 @@ CriptoVéu é um app 100% client-side. Isso significa que:
 - minificacao nao substitui arquitetura segura
 - qualquer segredo deve ficar fora do frontend
 - Argon2id aumenta o custo de força bruta, mas nao compensa senha fraca nem constitui garantia absoluta contra ataques quanticos
+- SHA-256 nao recupera arquivos corrompidos e nao substitui autenticacao AES-GCM; ele detecta divergencias no conteudo recuperado
 
 ## Recomendacoes de deploy
 

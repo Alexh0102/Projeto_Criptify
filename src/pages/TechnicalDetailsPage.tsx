@@ -41,6 +41,11 @@ export default function TechnicalDetailsPage() {
           title: 'Formatos e compatibilidade',
           items: [
             {
+              title: 'Pacotes de arquivo CRIPTOVEU4',
+              description:
+                'O cabeçalho registra Argon2id, tamanho e quantidade de blocos. Registros tipados separam dados do manifesto criptográfico final.',
+            },
+            {
               title: 'Envelopes V2 separados',
               description:
                 'CVM2 identifica MSG2, CVQ2 identifica QR2 e CVL2 identifica LINK2. O VéuNotes grava um objeto NOTE2 versionado.',
@@ -53,7 +58,7 @@ export default function TechnicalDetailsPage() {
             {
               title: 'Leitura V1 preservada',
               description:
-                'Os parsers detectam V2 antes de recorrer aos formatos PBKDF2 existentes. Assim, links, QRs, mensagens e cofres antigos continuam utilizáveis.',
+                'Os parsers preservam arquivos CRIPTOVEU3 e formatos PBKDF2 anteriores. Links, QRs, mensagens e cofres antigos também continuam utilizáveis.',
             },
           ],
         },
@@ -63,17 +68,27 @@ export default function TechnicalDetailsPage() {
             {
               title: 'AAD canônico',
               description:
-                'Tipo, versão, KDF e parâmetros Argon2id são serializados em ordem fixa e autenticados. LINK2 também autentica criação, validade e limite.',
+                'Tipo, versão, KDF e parâmetros Argon2id são serializados em ordem fixa. O V4 autentica cabeçalho, tipo, índice e tamanho de cada registro.',
+            },
+            {
+              title: 'Manifesto e verificação pós-recuperação',
+              description:
+                'SHA-256 completo e por bloco é calculado em Worker. O manifesto cifrado preserva metadados e hashes, que são recalculados após a abertura.',
+            },
+            {
+              title: 'Inspetor e relatório local',
+              description:
+                'O inspetor sem senha valida somente a estrutura. Depois do processamento, um relatório JSON registra algoritmos, parâmetros e resultado da integridade sem enviar o arquivo.',
             },
             {
               title: 'Vetores públicos',
               description:
-                'Vetores reproduzíveis registram salt, IV, AAD e ciphertext para MSG2, QR2, LINK2 e NOTE2. Valores fixos existem somente em teste.',
+                'Vetores reproduzíveis registram salt, IV, AAD e ciphertext para MSG2, QR2, LINK2, NOTE2 e CRIPTOVEU4. Valores fixos existem somente em teste.',
             },
             {
               title: 'Adulteração rejeitada',
               description:
-                'A suíte cobre mudança de ciphertext, IV, salt, parâmetros, tipo, versão, expiração, limite, truncamento e senha incorreta.',
+                'A suíte cobre ciphertext, IV, salt, parâmetros, tipo, ordem, truncamento, manifesto, hashes e senha incorreta.',
             },
           ],
         },

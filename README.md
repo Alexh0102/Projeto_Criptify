@@ -64,8 +64,8 @@ Principais recursos:
 
 | Ferramenta | Criptografia | Derivação de chave | Armazenamento / saída |
 |---|---|---|---|
-| Arquivos V3 | AES-256-GCM | Argon2id v1.3 via WASM em Web Worker | Arquivo `.criptoveu` |
-| Arquivos legados | AES-GCM | PBKDF2/SHA-256 | Pacotes `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1` |
+| Arquivos V4 | AES-256-GCM + manifesto SHA-256 cifrado | Argon2id v1.3 via WASM em Web Worker | Arquivo `.criptoveu` |
+| Arquivos legados | AES-GCM | Argon2id no `CRIPTOVEU3`; PBKDF2/SHA-256 nos anteriores | Pacotes `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1` |
 | Mensagens `MSG2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVM2` |
 | QR protegido `QR2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVQ2` no hash da URL |
 | Link protegido `LINK2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVL2` no hash da URL |
@@ -83,23 +83,27 @@ A ferramenta de arquivos aceita múltiplos arquivos no modo de proteção e gera
 
 A criptografia acontece em blocos de até **2 MB**, reduzindo o consumo de memória e permitindo processar arquivos maiores com mais estabilidade.
 
-Formato atual do pacote V3:
+Formato atual do pacote V4:
 
 ```text
-CRIPTOVEU3 + ram_mb_ascii + passes_ascii + salt + iv_inicial
-  + [tamanho_ciphertext + ciphertext]...
+CRIPTOVEU4 + ram_mb_ascii + passes_ascii + salt + iv_inicial
+  + tamanho_bloco + quantidade_blocos
+  + [tipo_dados + tamanho_ciphertext + ciphertext]...
+  + [tipo_manifesto + tamanho_ciphertext + manifesto_cifrado]
 ```
 
-Estrutura do cabeçalho V3:
+Estrutura do cabeçalho V4:
 
 ```text
 offset  tamanho   campo
-0       10        assinatura: "CRIPTOVEU3"
+0       10        assinatura: "CRIPTOVEU4"
 10      4         RAM Argon2id em MB, ASCII decimal
 14      4         passes Argon2id, ASCII decimal
 18      16        salt
 34      12        IV inicial
-46      ...       blocos criptografados
+46      4         tamanho dos blocos em bytes
+50      4         quantidade de blocos
+54      ...       registros de dados e manifesto
 ```
 
 Detalhes técnicos:
@@ -109,16 +113,21 @@ Detalhes técnicos:
 - Parâmetros Argon2id: `t=2`, `p=1`.
 - Perfis de memória Argon2id: **64 MB**, **256 MB** por padrão ou **512 MB**.
 - A seleção de memória fica em cache apenas para criar arquivos novos.
-- Cabeçalho V3: assinatura `CRIPTOVEU3` com 10 bytes, RAM em MB com 4 bytes ASCII, passes com 4 bytes ASCII, salt com 16 bytes e IV inicial com 12 bytes.
-- A descriptografia V3 lê RAM e passes diretamente do cabeçalho; não depende de `localStorage`.
+- O cabeçalho V4 registra RAM, passes, salt, IV inicial, tamanho de bloco e quantidade de blocos.
+- A descriptografia lê os parâmetros diretamente do pacote; não depende de `localStorage`.
 - Cada bloco tem até 2 MB.
-- O tamanho do bloco, sua ordem e a marca do bloco final entram no AAD, junto com o cabeçalho fixo, para rejeitar alterações, reordenação indevida e truncamentos.
+- O cabeçalho fixo, tipo, índice e tamanho de cada registro entram no AAD para rejeitar alteração, reordenação e truncamento.
 - O primeiro bloco usa o IV armazenado no cabeçalho.
-- Os blocos seguintes usam IVs exclusivos derivados do IV inicial e do índice do bloco.
-- Compatibilidade de leitura com pacotes `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1`, que continuam usando PBKDF2.
+- Os registros seguintes usam IVs exclusivos derivados do IV inicial e do índice; o manifesto usa o índice imediatamente posterior ao último bloco.
+- O **Escudo de Integridade** calcula SHA-256 do arquivo completo e de cada bloco em um Web Worker separado.
+- O manifesto guarda nome original, tipo MIME, tamanho, hashes, algoritmos e parâmetros Argon2id. Ele é cifrado e autenticado como o último registro do pacote.
+- Depois da recuperação, o navegador recalcula os hashes do conteúdo e só confirma a integridade quando todos coincidem.
+- O diagnóstico sem senha valida apenas a estrutura do pacote e usa a expressão **estrutura plausível**. Autenticidade exige a senha correta.
+- Cada resultado pode gerar um relatório JSON local com formato, KDF, parâmetros, contagem de blocos e estado da verificação.
+- Compatibilidade de leitura com `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1`.
 - Limite recomendado de arquivo: **2 GB**.
 
-> Observação: em AES-GCM, o IV/nonce nunca deve se repetir com a mesma chave. O formato V3 deriva IVs exclusivos por bloco para evitar reutilização dentro do mesmo pacote.
+> Observação: o SHA-256 do manifesto complementa a autenticação AES-GCM e permite verificação explícita pós-recuperação. Ele não substitui AES-GCM nem torna uma estrutura sem senha “verificada”.
 
 ---
 
@@ -336,6 +345,7 @@ Ideias e melhorias futuras planejadas ou em estudo:
 - [ ] Troca de chaves híbrida clássica/pós-quântica para o chat.
 - [ ] Verificação manual de fingerprint da sessão.
 - [x] Migração de mensagens, QR Codes, links e VéuNotes para Argon2id, mantendo leitura dos payloads V1.
+- [x] Escudo de Integridade para arquivos com `CRIPTOVEU4`, manifesto cifrado, verificação pós-recuperação, inspetor estrutural e relatório local.
 
 > Observação sobre o futuro chat: mesmo sem armazenar mensagens, um servidor de sinalização ou relay poderá observar metadados como IP, horário, duração da sessão e tamanho aproximado dos pacotes. Isso deve ser documentado claramente quando o recurso for implementado.
 
