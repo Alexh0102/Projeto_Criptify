@@ -10,7 +10,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent } from 'react'
 
-import { CriptoveuError, decryptText, encryptText, formatFileSize } from '../lib/criptoveu'
+import { CriptoveuError, formatFileSize } from '../lib/criptoveu'
 import {
   MAX_QR_IMAGE_SIZE_BYTES,
   QRCodeSecretError,
@@ -19,9 +19,9 @@ import {
   readSecretPayloadFromQrInput,
 } from '../lib/qr-secret'
 import {
+  decryptSecretTextPayload,
+  encryptSecretTextPayload,
   SecretTextPayloadError,
-  parseEncryptedTextPayload,
-  serializeEncryptedTextPayload,
 } from '../lib/secret-text-payload'
 import { useSecretQrCode } from '../hooks/useSecretQrCode'
 import { usePremium } from '../context/premium'
@@ -197,8 +197,11 @@ export default function QRCodeGenerator({
     clearQrCode()
 
     try {
-      const encrypted = await encryptText(plainText, generatePassword)
-      const serialized = serializeEncryptedTextPayload(encrypted)
+      const serialized = await encryptSecretTextPayload(
+        plainText,
+        generatePassword,
+        'QR2',
+      )
       const qrUrl = buildSecretQrUrl(serialized)
       setReadPassword((currentPassword) => currentPassword || generatePassword)
 
@@ -289,8 +292,11 @@ export default function QRCodeGenerator({
       const extractedPayload =
         resolvedPayload ||
         readSecretPayloadFromQrInput(await extractSecretPayloadFromQrImage(qrImage as File))
-      const encrypted = parseEncryptedTextPayload(extractedPayload)
-      const decrypted = await decryptText(encrypted, readPassword)
+      const decrypted = await decryptSecretTextPayload(
+        extractedPayload,
+        readPassword,
+        'QR2',
+      )
 
       setResolvedPayload(extractedPayload)
       setRevealedText(decrypted)

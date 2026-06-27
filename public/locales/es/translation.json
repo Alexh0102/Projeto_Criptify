@@ -400,7 +400,7 @@
       "badge": "100% client-side",
       "help": {
         "how": { "title": "Cómo funciona", "content": "En el primer uso, creas una contraseña maestra. Después, la nota solo se descifra en memoria cuando la bóveda se desbloquea." },
-        "saved": { "title": "Qué queda guardado en el navegador", "content": "Solo un JSON cifrado con version, salt, iterations, iv y ciphertext. El texto plano, la contraseña y la clave no se persisten." },
+        "saved": { "title": "Qué queda guardado en el navegador", "content": "Solo un JSON NOTE2 cifrado con versión, Argon2id, salt, IV y ciphertext. El texto plano, la contraseña y la clave no se guardan. Los cofres NOTE1 antiguos se migran solo después de usar la contraseña correcta." },
         "backup": { "title": "Copia de seguridad y recuperación", "content": "Puedes exportar un archivo JSON cifrado e importarlo después en el mismo u otro dispositivo, siempre que uses la misma contraseña maestra." },
         "forgot": { "title": "Si olvido la contraseña", "content": "No hay recuperación. Por eso, usa una contraseña fuerte y guarda una copia de seguridad de la bóveda en un lugar seguro." }
       }

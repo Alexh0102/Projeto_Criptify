@@ -1,0 +1,20 @@
+{
+  "name": "Link V2 com expiração",
+  "format": "LINK2",
+  "password": "vetor-link2-2026",
+  "plaintext": "Link protegido de teste.",
+  "saltHex": "404142434445464748494a4b4c4d4e4f",
+  "ivHex": "505152535455565758595a5b",
+  "kdf": {
+    "algorithm": "argon2id",
+    "version": "1.3",
+    "memoryMb": 64,
+    "iterations": 2,
+    "parallelism": 1,
+    "hashLength": 32
+  },
+  "aadUtf8": "[\"CriptoVéu\",\"LINK2\",2,\"argon2id\",64,2,1,1767225600000,\"24h\",3]",
+  "ciphertextBase64": "v7aLwIBU0wQvQPna/QiBG0kFj63rSR3/E78wAjn58nQVKrwjTMvf9A==",
+  "payload": "CVL2.eyJ2ZXJzaW9uIjoyLCJ0eXBlIjoiTElOSzIiLCJrZGYiOiJhcmdvbjJpZCIsIm1lbW9yeU1iIjo2NCwiaXRlcmF0aW9ucyI6MiwicGFyYWxsZWxpc20iOjEsImNpcGhlcnRleHQiOiJ2N2FMd0lCVTB3UXZRUG5hL1FpQkcwa0ZqNjNyU1IzL0U3OHdBam41OG5RVktyd2pUTXZmOUE9PSIsIml2IjoiVUZGU1UxUlZWbGRZV1ZwYiIsInNhbHQiOiJRRUZDUTBSRlJrZElTVXBMVEUxT1R3PT0iLCJjcmVhdGVkQXQiOjE3NjcyMjU2MDAwMDAsImV4cGlyZXNJbiI6IjI0aCIsIm1heFZpZXdzIjozfQ",
+  "tamperingExpectedResult": "rejected"
+}

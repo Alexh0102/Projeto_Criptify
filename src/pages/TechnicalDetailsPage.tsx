@@ -37,6 +37,46 @@ export default function TechnicalDetailsPage() {
             },
           ],
         },
+        {
+          title: 'Formatos e compatibilidade',
+          items: [
+            {
+              title: 'Envelopes V2 separados',
+              description:
+                'CVM2 identifica MSG2, CVQ2 identifica QR2 e CVL2 identifica LINK2. O VéuNotes grava um objeto NOTE2 versionado.',
+            },
+            {
+              title: 'Argon2id fora da thread da interface',
+              description:
+                'A derivação usa hash-wasm em WebAssembly dentro de Web Worker. O navegador principal recebe apenas os 32 bytes derivados para importar uma chave AES-GCM não extraível.',
+            },
+            {
+              title: 'Leitura V1 preservada',
+              description:
+                'Os parsers detectam V2 antes de recorrer aos formatos PBKDF2 existentes. Assim, links, QRs, mensagens e cofres antigos continuam utilizáveis.',
+            },
+          ],
+        },
+        {
+          title: 'Autenticação e testes',
+          items: [
+            {
+              title: 'AAD canônico',
+              description:
+                'Tipo, versão, KDF e parâmetros Argon2id são serializados em ordem fixa e autenticados. LINK2 também autentica criação, validade e limite.',
+            },
+            {
+              title: 'Vetores públicos',
+              description:
+                'Vetores reproduzíveis registram salt, IV, AAD e ciphertext para MSG2, QR2, LINK2 e NOTE2. Valores fixos existem somente em teste.',
+            },
+            {
+              title: 'Adulteração rejeitada',
+              description:
+                'A suíte cobre mudança de ciphertext, IV, salt, parâmetros, tipo, versão, expiração, limite, truncamento e senha incorreta.',
+            },
+          ],
+        },
       ]}
     />
   )

@@ -1,6 +1,6 @@
 import jsQR from 'jsqr'
 
-import { parseEncryptedTextPayload } from './secret-text-payload'
+import { parseSecretTextPayload } from './secret-text-payload'
 
 export const MAX_QR_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
 const MAX_QR_IMAGE_PIXELS = 20_000_000
@@ -120,7 +120,15 @@ export async function extractSecretPayloadFromQrImage(file: File | Blob) {
 }
 
 function assertSecretPayload(payload: string) {
-  parseEncryptedTextPayload(payload)
+  const parsed = parseSecretTextPayload(payload)
+
+  if (parsed.format === 'V2' && parsed.payload.type !== 'QR2') {
+    throw new QRCodeSecretError(
+      'INVALID_QR_CONTENT',
+      'Esse QR não contém um payload QR2 válido.',
+    )
+  }
+
   return payload
 }
 
@@ -128,6 +136,7 @@ export function buildSecretQrUrl(
   secretPayload: string,
   origin = typeof window !== 'undefined' ? window.location.origin : '',
 ) {
+  assertSecretPayload(secretPayload)
   const normalizedOrigin = origin.replace(/\/$/, '')
   return `${normalizedOrigin}${QR_SECRET_ROUTE_PATH}${QR_SECRET_HASH_PREFIX}${encodeURIComponent(secretPayload)}`
 }

@@ -1,0 +1,20 @@
+{
+  "name": "Mensagem V2 básica",
+  "format": "MSG2",
+  "password": "vetor-msg2-2026",
+  "plaintext": "Mensagem de teste do CriptoVéu.",
+  "saltHex": "000102030405060708090a0b0c0d0e0f",
+  "ivHex": "101112131415161718191a1b",
+  "kdf": {
+    "algorithm": "argon2id",
+    "version": "1.3",
+    "memoryMb": 64,
+    "iterations": 2,
+    "parallelism": 1,
+    "hashLength": 32
+  },
+  "aadUtf8": "[\"CriptoVéu\",\"MSG2\",2,\"argon2id\",64,2,1]",
+  "ciphertextBase64": "CXs02XwRHzqxPZ1ACdcg7EtMqXSQmtMqzIoRo9quXsWtTGlWWlgLxmCyqaDN1L5e",
+  "payload": "CVM2.eyJ2ZXJzaW9uIjoyLCJ0eXBlIjoiTVNHMiIsImtkZiI6ImFyZ29uMmlkIiwibWVtb3J5TWIiOjY0LCJpdGVyYXRpb25zIjoyLCJwYXJhbGxlbGlzbSI6MSwiY2lwaGVydGV4dCI6IkNYczAyWHdSSHpxeFBaMUFDZGNnN0V0TXFYU1FtdE1xeklvUm85cXVYc1d0VEdsV1dsZ0x4bUN5cWFETjFMNWUiLCJpdiI6IkVCRVNFeFFWRmhjWUdSb2IiLCJzYWx0IjoiQUFFQ0F3UUZCZ2NJQ1FvTERBME9Edz09In0",
+  "tamperingExpectedResult": "rejected"
+}
