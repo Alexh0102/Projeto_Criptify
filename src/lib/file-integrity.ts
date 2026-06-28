@@ -20,8 +20,16 @@ const MANIFEST_FIELDS = [
   'kdf',
   'hash',
   'argon2',
+  'keyFileProtection',
 ] as const
 const ARGON2_FIELDS = ['memoryMb', 'iterations', 'parallelism'] as const
+const KEY_FILE_PROTECTION_FIELDS = [
+  'required',
+  'digest',
+  'embedded',
+] as const
+
+export type FileIntegrityFormat = 'CRIPTOVEU4' | 'CRIPTOVEU5'
 
 export type FileIntegrityHashes = {
   fileHashSha256: string
@@ -30,7 +38,7 @@ export type FileIntegrityHashes = {
 
 export type FileIntegrityManifest = FileIntegrityHashes & {
   version: typeof FILE_INTEGRITY_MANIFEST_VERSION
-  format: 'CRIPTOVEU4'
+  format: FileIntegrityFormat
   manifestId: string
   createdAt: number
   originalName: string
@@ -45,6 +53,11 @@ export type FileIntegrityManifest = FileIntegrityHashes & {
     memoryMb: number
     iterations: number
     parallelism: 1
+  }
+  keyFileProtection?: {
+    required: true
+    digest: 'SHA-256'
+    embedded: false
   }
 }
 
@@ -179,12 +192,13 @@ export async function createFileIntegrityManifest(
   chunkSize: number,
   argon2: FileIntegrityManifest['argon2'],
   onProgress?: (progress: number) => void,
+  format: FileIntegrityFormat = 'CRIPTOVEU4',
 ): Promise<FileIntegrityManifest> {
   const hashes = await hashBlobIntegrity(file, chunkSize, onProgress)
 
   return {
     version: FILE_INTEGRITY_MANIFEST_VERSION,
-    format: 'CRIPTOVEU4',
+    format,
     manifestId: randomManifestId(),
     createdAt: Date.now(),
     originalName: file.name,
@@ -198,6 +212,15 @@ export async function createFileIntegrityManifest(
     kdf: 'Argon2id',
     hash: 'SHA-256',
     argon2,
+    ...(format === 'CRIPTOVEU5'
+      ? {
+          keyFileProtection: {
+            required: true as const,
+            digest: 'SHA-256' as const,
+            embedded: false as const,
+          },
+        }
+      : {}),
   }
 }
 
@@ -233,10 +256,27 @@ export function assertFileIntegrityManifest(
 
   const manifest = value as Partial<FileIntegrityManifest>
   const argon2 = manifest.argon2
+  const keyFileProtection = manifest.keyFileProtection
+  const hasValidKeyFileProtection =
+    manifest.format === 'CRIPTOVEU4'
+      ? keyFileProtection === undefined
+      : manifest.format === 'CRIPTOVEU5' &&
+        keyFileProtection !== undefined &&
+        typeof keyFileProtection === 'object' &&
+        !Array.isArray(keyFileProtection) &&
+        hasOnlyFields(
+          keyFileProtection as unknown as Record<string, unknown>,
+          KEY_FILE_PROTECTION_FIELDS,
+        ) &&
+        keyFileProtection.required === true &&
+        keyFileProtection.digest === 'SHA-256' &&
+        keyFileProtection.embedded === false
 
   if (
     manifest.version !== FILE_INTEGRITY_MANIFEST_VERSION ||
-    manifest.format !== 'CRIPTOVEU4' ||
+    (manifest.format !== 'CRIPTOVEU4' &&
+      manifest.format !== 'CRIPTOVEU5') ||
+    !hasValidKeyFileProtection ||
     typeof manifest.manifestId !== 'string' ||
     !/^[a-f0-9]{32}$/.test(manifest.manifestId) ||
     !Number.isSafeInteger(manifest.createdAt) ||

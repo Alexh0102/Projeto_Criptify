@@ -41,6 +41,11 @@ export default function TechnicalDetailsPage() {
           title: 'Formatos e compatibilidade',
           items: [
             {
+              title: 'Proteção dupla CRIPTOVEU5',
+              description:
+                'V5 reutiliza os registros autenticados do V4, mas deriva o material Argon2id de uma estrutura com domínio, tamanho da senha, senha UTF-8 e SHA-256 do arquivo-chave.',
+            },
+            {
               title: 'Pacotes de arquivo CRIPTOVEU4',
               description:
                 'O cabeçalho registra Argon2id, tamanho e quantidade de blocos. Registros tipados separam dados do manifesto criptográfico final.',
@@ -114,6 +119,11 @@ export default function TechnicalDetailsPage() {
               title: 'Testes de propriedades',
               description:
                 'A suíte valida formato, tamanho, classes, unicidade amostral, fonte Web Crypto e ausência de Math.random sem fixar valores secretos.',
+            },
+            {
+              title: 'Arquivo-chave sem fingerprint público',
+              description:
+                'O pacote registra apenas a exigência do segundo fator. Nenhum hash do arquivo-chave é serializado, pois isso permitiria usá-lo no lugar do próprio arquivo.',
             },
           ],
         },

@@ -8,13 +8,20 @@ import {
   hashBlobIntegrity,
   parseFileIntegrityManifest,
   serializeFileIntegrityManifest,
+  type FileIntegrityFormat,
   type FileIntegrityManifest,
 } from './file-integrity'
+import {
+  KeyFileProtectionError,
+  assertValidKeyFile,
+  derivePasswordKeyFileMaterial,
+} from './key-file-protection'
 
 const LEGACY_CHUNKED_FILE_HEADER_TEXT = 'CRIPTIFY2'
 const PBKDF2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU2'
 const ARGON2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU3'
 const INTEGRITY_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU4'
+const KEY_FILE_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU5'
 const LEGACY_FILE_HEADER_BYTES = new TextEncoder().encode(LEGACY_FILE_HEADER_TEXT)
 const LEGACY_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
   LEGACY_CHUNKED_FILE_HEADER_TEXT,
@@ -27,6 +34,9 @@ const ARGON2_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
 )
 const INTEGRITY_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
   INTEGRITY_CHUNKED_FILE_HEADER_TEXT,
+)
+const KEY_FILE_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
+  KEY_FILE_CHUNKED_FILE_HEADER_TEXT,
 )
 const SALT_LENGTH_BYTES = 16
 const IV_LENGTH_BYTES = 12
@@ -98,6 +108,7 @@ export const DEFAULT_FILE_SECURITY_PROFILE_ID: FileSecurityProfileId =
 export type FileEncryptionOptions = FileSizeGuardOptions & {
   argon2MemoryMb?: number
   argon2Iterations?: number
+  keyFile?: File | null
 }
 
 export type Argon2Parameters = {
@@ -122,6 +133,7 @@ export type ProcessResult = {
 }
 
 export type FilePackageFormat =
+  | 'CRIPTOVEU5'
   | 'CRIPTOVEU4'
   | 'CRIPTOVEU3'
   | 'CRIPTOVEU2'
@@ -140,6 +152,7 @@ export type FilePackageInspection = {
   declaredChunkCount: number | null
   observedChunkCount: number | null
   manifestPresent: boolean | null
+  keyFileRequired: boolean | null
 }
 
 export type FileSecurityReport = {
@@ -163,6 +176,11 @@ export type FileSecurityReport = {
   createdAt: number
   originalName: string
   originalSize: number
+  keyFileProtection: {
+    required: boolean
+    digest: 'SHA-256' | null
+    embedded: false
+  }
   uploadToServer: false
   note: string
 }
@@ -186,6 +204,8 @@ export class CriptoveuError extends Error {
     | 'INVALID_PASSWORD_OR_FILE'
     | 'KEY_DERIVATION_FAILED'
     | 'INTEGRITY_FAILED'
+    | 'KEY_FILE_REQUIRED'
+    | 'INVALID_KEY_FILE'
 
   constructor(
     code:
@@ -193,7 +213,9 @@ export class CriptoveuError extends Error {
       | 'INVALID_FILE'
       | 'INVALID_PASSWORD_OR_FILE'
       | 'KEY_DERIVATION_FAILED'
-      | 'INTEGRITY_FAILED',
+      | 'INTEGRITY_FAILED'
+      | 'KEY_FILE_REQUIRED'
+      | 'INVALID_KEY_FILE',
     message: string,
   ) {
     super(message)
@@ -584,6 +606,11 @@ function createAeadOnlySecurityReport(options: {
     createdAt: Date.now(),
     originalName: options.originalName,
     originalSize: options.originalSize,
+    keyFileProtection: {
+      required: false,
+      digest: null,
+      embedded: false,
+    },
     uploadToServer: false,
     note:
       'Formato legado autenticado por AES-GCM, sem manifesto SHA-256 do Escudo de Integridade.',
@@ -642,6 +669,35 @@ export function assertSupportedFileSize(
   }
 }
 
+function isSameFileSelection(first: File, second: File) {
+  return (
+    first === second ||
+    (first.name === second.name &&
+      first.size === second.size &&
+      first.lastModified === second.lastModified)
+  )
+}
+
+async function resolveFilePasswordMaterial(
+  password: string,
+  keyFile: File | null,
+  onProgress?: (progress: number) => void,
+) {
+  if (!keyFile) {
+    return password
+  }
+
+  try {
+    return await derivePasswordKeyFileMaterial(password, keyFile, onProgress)
+  } catch (error) {
+    if (error instanceof KeyFileProtectionError) {
+      throw new CriptoveuError('INVALID_KEY_FILE', error.message)
+    }
+
+    throw error
+  }
+}
+
 export async function encryptFile(
   file: File,
   password: string,
@@ -649,6 +705,30 @@ export async function encryptFile(
   options?: FileEncryptionOptions,
 ): Promise<ProcessResult> {
   assertSupportedFileSize(file, options)
+  const keyFile = options?.keyFile ?? null
+  const packageFormat: FileIntegrityFormat = keyFile
+    ? 'CRIPTOVEU5'
+    : 'CRIPTOVEU4'
+
+  if (keyFile && isSameFileSelection(file, keyFile)) {
+    throw new CriptoveuError(
+      'INVALID_KEY_FILE',
+      'O arquivo protegido não pode ser usado como seu próprio arquivo-chave.',
+    )
+  }
+
+  if (keyFile) {
+    try {
+      assertValidKeyFile(keyFile)
+    } catch (error) {
+      if (error instanceof KeyFileProtectionError) {
+        throw new CriptoveuError('INVALID_KEY_FILE', error.message)
+      }
+
+      throw error
+    }
+  }
+
   await reportProgress(onProgress, 5, 'Preparando Escudo de Integridade')
   const salt = randomBytes(SALT_LENGTH_BYTES)
   const firstIv = randomBytes(IV_LENGTH_BYTES)
@@ -669,10 +749,11 @@ export async function encryptFile(
       },
       (progress) => {
         onProgress?.(
-          5 + Math.round(progress * 0.13),
+          5 + Math.round(progress * 0.12),
           `Calculando manifesto SHA-256 (${progress}%)`,
         )
       },
+      packageFormat,
     )
   } catch (error) {
     if (error instanceof FileIntegrityError) {
@@ -682,7 +763,18 @@ export async function encryptFile(
     throw error
   }
 
+  const passwordMaterial = await resolveFilePasswordMaterial(
+    password,
+    keyFile,
+    (progress) => {
+      onProgress?.(
+        17 + Math.round(progress * 0.05),
+        `Processando arquivo-chave (${progress}%)`,
+      )
+    },
+  )
   const fixedHeader = buildIntegrityHeader(
+    packageFormat,
     parameters,
     salt,
     firstIv,
@@ -691,15 +783,20 @@ export async function encryptFile(
   )
   await reportProgress(
     onProgress,
-    20,
+    22,
     `Derivando chave Argon2id (${parameters.memoryMb} MB)`,
   )
-  const key = await deriveArgon2AesKey(password, salt, parameters, 'encrypt')
+  const key = await deriveArgon2AesKey(
+    passwordMaterial,
+    salt,
+    parameters,
+    'encrypt',
+  )
   const encryptedParts: BlobPart[] = [fixedHeader]
   let processedBytes = 0
   let chunkIndex = 0
 
-  await reportProgress(onProgress, 24, 'Chave AES-GCM preparada')
+  await reportProgress(onProgress, 26, 'Chave AES-GCM preparada')
 
   async function encryptChunk(plainChunk: Uint8Array) {
     const iv = deriveChunkIv(firstIv, chunkIndex)
@@ -733,7 +830,7 @@ export async function encryptFile(
     const progressBase = file.size === 0 ? 1 : processedBytes / file.size
     await reportProgress(
       onProgress,
-      Math.min(88, 24 + Math.round(progressBase * 64)),
+      Math.min(88, 26 + Math.round(progressBase * 62)),
       `Protegendo bloco ${chunkIndex}`,
     )
   }
@@ -792,7 +889,7 @@ export async function encryptFile(
   const blob = new Blob(encryptedParts, { type: 'application/octet-stream' })
   const inspection = await inspectCriptoveuPackage(blob)
 
-  if (inspection.status !== 'plausible' || inspection.format !== 'CRIPTOVEU4') {
+  if (inspection.status !== 'plausible' || inspection.format !== packageFormat) {
     throw new CriptoveuError(
       'INTEGRITY_FAILED',
       'A verificação pós-geração encontrou uma estrutura de pacote inválida.',
@@ -810,7 +907,7 @@ export async function encryptFile(
     downloadName: buildDownloadName('encrypt', file.name),
     securityReport: {
       operation: 'encrypt',
-      format: 'CRIPTOVEU4',
+      format: packageFormat,
       encryption: 'AES-256-GCM',
       kdf: 'Argon2id',
       memoryMb: parameters.memoryMb,
@@ -829,9 +926,16 @@ export async function encryptFile(
       createdAt: manifest.createdAt,
       originalName: manifest.originalName,
       originalSize: manifest.originalSize,
+      keyFileProtection: {
+        required: keyFile !== null,
+        digest: keyFile ? 'SHA-256' : null,
+        embedded: false,
+      },
       uploadToServer: false,
       note:
-        'Pacote gerado localmente e verificado estruturalmente. Reabra o arquivo baixado para confirmar novamente o manifesto.',
+        keyFile
+          ? 'Pacote com proteção dupla gerado localmente. O arquivo-chave não foi incorporado ao pacote.'
+          : 'Pacote gerado localmente e verificado estruturalmente. Reabra o arquivo baixado para confirmar novamente o manifesto.',
     },
   }
 }
@@ -934,24 +1038,30 @@ function createInvalidInspection(
     declaredChunkCount: null,
     observedChunkCount: null,
     manifestPresent: null,
+    keyFileRequired: null,
   }
 }
 
 async function inspectIntegrityPackage(
   blob: Blob,
+  format: FileIntegrityFormat,
 ): Promise<FilePackageInspection> {
+  const expectedHeaderBytes =
+    format === 'CRIPTOVEU5'
+      ? KEY_FILE_CHUNKED_FILE_HEADER_BYTES
+      : INTEGRITY_CHUNKED_FILE_HEADER_BYTES
   const fixedHeader = new Uint8Array(
     await blob.slice(0, INTEGRITY_HEADER_LENGTH_BYTES).arrayBuffer(),
   )
   const headerText = new TextDecoder().decode(
-    fixedHeader.slice(0, INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length),
+    fixedHeader.slice(0, expectedHeaderBytes.length),
   )
 
-  if (headerText !== INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
+  if (headerText !== format) {
     return createInvalidInspection(
       blob.size,
-      'A assinatura CRIPTOVEU4 não confere.',
-      'CRIPTOVEU4',
+      `A assinatura ${format} não confere.`,
+      format,
     )
   }
 
@@ -965,7 +1075,7 @@ async function inspectIntegrityPackage(
       return createInvalidInspection(
         blob.size,
         'O pacote termina no meio de um cabeçalho de registro.',
-        'CRIPTOVEU4',
+        format,
       )
     }
 
@@ -995,7 +1105,7 @@ async function inspectIntegrityPackage(
       return createInvalidInspection(
         blob.size,
         'O pacote termina antes do fim de um registro declarado.',
-        'CRIPTOVEU4',
+        format,
       )
     }
 
@@ -1004,7 +1114,7 @@ async function inspectIntegrityPackage(
         return createInvalidInspection(
           blob.size,
           'A ordem dos registros de dados não é plausível.',
-          'CRIPTOVEU4',
+          format,
         )
       }
 
@@ -1018,7 +1128,7 @@ async function inspectIntegrityPackage(
         return createInvalidInspection(
           blob.size,
           'O registro final do manifesto está ausente ou fora de posição.',
-          'CRIPTOVEU4',
+          format,
         )
       }
 
@@ -1036,22 +1146,25 @@ async function inspectIntegrityPackage(
     return createInvalidInspection(
       blob.size,
       'A quantidade de blocos ou o manifesto não confere com o cabeçalho.',
-      'CRIPTOVEU4',
+      format,
     )
   }
 
   return {
     status: 'plausible',
-    format: 'CRIPTOVEU4',
+    format,
     packageSize: blob.size,
     message:
-      'Estrutura plausível. A autenticidade e o manifesto exigem a senha correta.',
+      format === 'CRIPTOVEU5'
+        ? 'Estrutura plausível. A autenticação exige a senha e o arquivo-chave corretos.'
+        : 'Estrutura plausível. A autenticidade e o manifesto exigem a senha correta.',
     memoryMb: parsedHeader.parameters.memoryMb,
     iterations: parsedHeader.parameters.iterations,
     chunkSize: parsedHeader.chunkSize,
     declaredChunkCount: parsedHeader.chunkCount,
     observedChunkCount,
     manifestPresent,
+    keyFileRequired: format === 'CRIPTOVEU5',
   }
 }
 
@@ -1127,6 +1240,7 @@ async function inspectArgon2V3Package(
     declaredChunkCount: null,
     observedChunkCount,
     manifestPresent: false,
+    keyFileRequired: false,
   }
 }
 
@@ -1140,6 +1254,20 @@ export async function inspectCriptoveuPackage(
       .slice(0, INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length)
       .text()
 
+    if (header === KEY_FILE_CHUNKED_FILE_HEADER_TEXT) {
+      detectedFormat = 'CRIPTOVEU5'
+
+      if (blob.size < INTEGRITY_HEADER_LENGTH_BYTES) {
+        return createInvalidInspection(
+          blob.size,
+          'O cabeçalho CRIPTOVEU5 está truncado.',
+          'CRIPTOVEU5',
+        )
+      }
+
+      return await inspectIntegrityPackage(blob, 'CRIPTOVEU5')
+    }
+
     if (header === INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
       detectedFormat = 'CRIPTOVEU4'
 
@@ -1151,7 +1279,7 @@ export async function inspectCriptoveuPackage(
         )
       }
 
-      return await inspectIntegrityPackage(blob)
+      return await inspectIntegrityPackage(blob, 'CRIPTOVEU4')
     }
 
     if (header === ARGON2_CHUNKED_FILE_HEADER_TEXT) {
@@ -1183,6 +1311,7 @@ export async function inspectCriptoveuPackage(
         declaredChunkCount: null,
         observedChunkCount: null,
         manifestPresent: false,
+        keyFileRequired: false,
       }
     }
 
@@ -1205,6 +1334,7 @@ export async function inspectCriptoveuPackage(
         declaredChunkCount: null,
         observedChunkCount: null,
         manifestPresent: false,
+        keyFileRequired: false,
       }
     }
 
@@ -1225,6 +1355,7 @@ export async function inspectCriptoveuPackage(
         declaredChunkCount: null,
         observedChunkCount: null,
         manifestPresent: false,
+        keyFileRequired: false,
       }
     }
 
@@ -1244,6 +1375,7 @@ export async function inspectCriptoveuPackage(
 }
 
 function buildIntegrityHeader(
+  format: FileIntegrityFormat,
   parameters: Argon2Parameters,
   salt: Uint8Array,
   firstIv: Uint8Array,
@@ -1260,15 +1392,19 @@ function buildIntegrityHeader(
   ) {
     throw new CriptoveuError(
       'INVALID_FILE',
-      'Parâmetros estruturais do pacote CRIPTOVEU4 são inválidos.',
+      `Parâmetros estruturais do pacote ${format} são inválidos.`,
     )
   }
 
   const header = new Uint8Array(INTEGRITY_HEADER_LENGTH_BYTES)
+  const formatBytes =
+    format === 'CRIPTOVEU5'
+      ? KEY_FILE_CHUNKED_FILE_HEADER_BYTES
+      : INTEGRITY_CHUNKED_FILE_HEADER_BYTES
   let offset = 0
 
-  header.set(INTEGRITY_CHUNKED_FILE_HEADER_BYTES, offset)
-  offset += INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length
+  header.set(formatBytes, offset)
+  offset += formatBytes.length
   header.set(createAsciiParameter(parameters.memoryMb), offset)
   offset += ARGON2_PARAMETER_LENGTH_BYTES
   header.set(createAsciiParameter(parameters.iterations), offset)
@@ -1288,7 +1424,7 @@ function readIntegrityHeader(header: Uint8Array) {
   if (header.byteLength !== INTEGRITY_HEADER_LENGTH_BYTES) {
     throw new CriptoveuError(
       'INVALID_FILE',
-      'Cabeçalho CRIPTOVEU4 incompleto.',
+      'Cabeçalho de integridade incompleto.',
     )
   }
 
@@ -1321,7 +1457,7 @@ function readIntegrityHeader(header: Uint8Array) {
   ) {
     throw new CriptoveuError(
       'INVALID_FILE',
-      'Cabeçalho CRIPTOVEU4 usa tamanho ou quantidade de blocos inválidos.',
+      'Cabeçalho usa tamanho ou quantidade de blocos inválidos.',
     )
   }
 
@@ -1860,9 +1996,22 @@ async function decryptArgon2ChunkedFile(
 async function decryptIntegrityChunkedFile(
   file: File,
   password: string,
+  format: FileIntegrityFormat,
+  keyFile: File | null,
   onProgress?: ProgressCallback,
 ): Promise<ProcessResult> {
-  await reportProgress(onProgress, 6, 'Lendo cabeçalho CRIPTOVEU4')
+  if (format === 'CRIPTOVEU5' && !keyFile) {
+    throw new CriptoveuError(
+      'KEY_FILE_REQUIRED',
+      'Este pacote exige o arquivo-chave original além da senha.',
+    )
+  }
+
+  const expectedHeaderBytes =
+    format === 'CRIPTOVEU5'
+      ? KEY_FILE_CHUNKED_FILE_HEADER_BYTES
+      : INTEGRITY_CHUNKED_FILE_HEADER_BYTES
+  await reportProgress(onProgress, 6, `Lendo cabeçalho ${format}`)
   const reader = file.stream().getReader()
   let pendingBytes = new Uint8Array(0)
   let fixedHeader: Uint8Array<ArrayBuffer> | null = null
@@ -1883,7 +2032,7 @@ async function decryptIntegrityChunkedFile(
     if (!key || !fixedHeader || !parsedHeader) {
       throw new CriptoveuError(
         'INVALID_FILE',
-        'Pacote CRIPTOVEU4 incompleto.',
+        `Pacote ${format} incompleto.`,
       )
     }
 
@@ -1908,7 +2057,9 @@ async function decryptIntegrityChunkedFile(
       if (error instanceof DOMException && error.name === 'OperationError') {
         throw new CriptoveuError(
           'INVALID_PASSWORD_OR_FILE',
-          'Senha incorreta ou pacote CRIPTOVEU4 adulterado.',
+          format === 'CRIPTOVEU5'
+            ? 'Senha ou arquivo-chave incorreto, ou pacote adulterado.'
+            : 'Senha incorreta ou pacote CRIPTOVEU4 adulterado.',
         )
       }
 
@@ -1931,13 +2082,13 @@ async function decryptIntegrityChunkedFile(
           pendingBytes.slice(0, INTEGRITY_HEADER_LENGTH_BYTES),
         )
         const incomingHeader = new TextDecoder().decode(
-          fixedHeader.slice(0, INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length),
+          fixedHeader.slice(0, expectedHeaderBytes.length),
         )
 
-        if (incomingHeader !== INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
+        if (incomingHeader !== format) {
           throw new CriptoveuError(
             'INVALID_FILE',
-            'A assinatura CRIPTOVEU4 não foi reconhecida.',
+            `A assinatura ${format} não foi reconhecida.`,
           )
         }
 
@@ -1956,20 +2107,34 @@ async function decryptIntegrityChunkedFile(
           )
         }
 
+        const passwordMaterial = await resolveFilePasswordMaterial(
+          password,
+          format === 'CRIPTOVEU5' ? keyFile : null,
+          (progress) => {
+            onProgress?.(
+              10 + Math.round(progress * 0.06),
+              `Processando arquivo-chave (${progress}%)`,
+            )
+          },
+        )
         await reportProgress(
           onProgress,
-          10,
+          format === 'CRIPTOVEU5' ? 17 : 10,
           `Derivando chave Argon2id (${parsedHeader.parameters.memoryMb} MB)`,
         )
         key = await deriveArgon2AesKey(
-          password,
+          passwordMaterial,
           parsedHeader.salt,
           parsedHeader.parameters,
           'decrypt',
         )
         pendingBytes = pendingBytes.slice(INTEGRITY_HEADER_LENGTH_BYTES)
         consumedBytes = INTEGRITY_HEADER_LENGTH_BYTES
-        await reportProgress(onProgress, 16, 'Chave AES-GCM preparada')
+        await reportProgress(
+          onProgress,
+          format === 'CRIPTOVEU5' ? 22 : 16,
+          'Chave AES-GCM preparada',
+        )
       }
 
       while (
@@ -2026,7 +2191,14 @@ async function decryptIntegrityChunkedFile(
           dataChunkIndex += 1
           await reportProgress(
             onProgress,
-            Math.min(88, 16 + Math.round((consumedBytes / file.size) * 72)),
+            Math.min(
+              88,
+              (format === 'CRIPTOVEU5' ? 22 : 16) +
+                Math.round(
+                  (consumedBytes / file.size) *
+                    (format === 'CRIPTOVEU5' ? 66 : 72),
+                ),
+            ),
             `Abrindo bloco ${dataChunkIndex} de ${parsedHeader.chunkCount}`,
           )
         } else {
@@ -2058,11 +2230,12 @@ async function decryptIntegrityChunkedFile(
   ) {
     throw new CriptoveuError(
       'INVALID_FILE',
-      'Pacote CRIPTOVEU4 inválido, truncado ou sem manifesto.',
+      `Pacote ${format} inválido, truncado ou sem manifesto.`,
     )
   }
 
   if (
+    manifest.format !== format ||
     manifest.chunkSize !== parsedHeader.chunkSize ||
     manifest.chunkCount !== parsedHeader.chunkCount ||
     manifest.originalSize !== decryptedSize ||
@@ -2105,7 +2278,7 @@ async function decryptIntegrityChunkedFile(
     downloadName: manifest.originalName,
     securityReport: {
       operation: 'decrypt',
-      format: 'CRIPTOVEU4',
+      format,
       encryption: 'AES-256-GCM',
       kdf: 'Argon2id',
       memoryMb: parsedHeader.parameters.memoryMb,
@@ -2124,9 +2297,16 @@ async function decryptIntegrityChunkedFile(
       createdAt: manifest.createdAt,
       originalName: manifest.originalName,
       originalSize: manifest.originalSize,
+      keyFileProtection: {
+        required: format === 'CRIPTOVEU5',
+        digest: format === 'CRIPTOVEU5' ? 'SHA-256' : null,
+        embedded: false,
+      },
       uploadToServer: false,
       note:
-        'Escudo de Integridade verificado após a recuperação local do conteúdo.',
+        format === 'CRIPTOVEU5'
+          ? 'Proteção dupla, manifesto e SHA-256 verificados localmente. O arquivo-chave não estava incorporado ao pacote.'
+          : 'Escudo de Integridade verificado após a recuperação local do conteúdo.',
     },
   }
 }
@@ -2135,7 +2315,7 @@ export async function decryptFile(
   file: File,
   password: string,
   onProgress?: ProgressCallback,
-  options?: FileSizeGuardOptions,
+  options?: FileEncryptionOptions,
 ): Promise<ProcessResult> {
   assertSupportedPackageSize(file, options)
   const modernHeader = await file
@@ -2143,8 +2323,22 @@ export async function decryptFile(
     .text()
   let result: ProcessResult
 
-  if (modernHeader === INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
-    result = await decryptIntegrityChunkedFile(file, password, onProgress)
+  if (modernHeader === KEY_FILE_CHUNKED_FILE_HEADER_TEXT) {
+    result = await decryptIntegrityChunkedFile(
+      file,
+      password,
+      'CRIPTOVEU5',
+      options?.keyFile ?? null,
+      onProgress,
+    )
+  } else if (modernHeader === INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
+    result = await decryptIntegrityChunkedFile(
+      file,
+      password,
+      'CRIPTOVEU4',
+      null,
+      onProgress,
+    )
   } else if (modernHeader === ARGON2_CHUNKED_FILE_HEADER_TEXT) {
     result = await decryptArgon2ChunkedFile(file, password, onProgress)
   } else if (modernHeader === PBKDF2_CHUNKED_FILE_HEADER_TEXT) {

@@ -384,6 +384,25 @@
         "strength": "Password strength",
         "keepPassword": "Keep the password: you will need it to recover the content."
       },
+      "keyFile": {
+        "title": "Dual protection: password + key file",
+        "helper": "Require both a password and a local file for new CRIPTOVEU5 packages.",
+        "enable": "Also require a key file",
+        "enableDescription": "Both factors are combined before Argon2id. The key file is not embedded in the package.",
+        "requiredTitle": "This package requires a key file",
+        "requiredHelper": "Select the same file content used during protection. The file name may be different.",
+        "choose": "Choose key file",
+        "change": "Change key file",
+        "remove": "Remove key file",
+        "limit": "Any non-empty file up to 32 MB.",
+        "selected": "Key file selected only for this operation.",
+        "emptyError": "The key file cannot be empty.",
+        "tooLargeError": "The key file exceeds the {{size}} limit.",
+        "requiredError": "Select the required key file to continue.",
+        "noRecovery": "If you lose the key file, the content cannot be recovered.",
+        "notEmbedded": "The file, its name, and its SHA-256 fingerprint are not stored in the package.",
+        "exactBytes": "Keep a copy with the exact same bytes and share it separately from the password and package."
+      },
       "advanced": {
         "title": "Advanced settings",
         "helper": "Argon2id: {{memory}} MB RAM, {{iterations}} passes",
@@ -419,7 +438,8 @@
         "memory": "Argon2id: {{memory}} MB",
         "blocks": "Observed blocks: {{count}}",
         "manifestPresent": "Manifest present",
-        "manifestAbsent": "No manifest"
+        "manifestAbsent": "No manifest",
+        "keyFileRequired": "Key file required"
       },
       "securityReport": {
         "preparedTitle": "Integrity Shield prepared",
@@ -432,7 +452,9 @@
         "format": "Format: {{format}}",
         "kdf": "KDF: {{kdf}}",
         "blocks": "Blocks: {{count}}",
-        "upload": "Server upload: no"
+        "upload": "Server upload: no",
+        "keyFileProtection": "Dual protection confirmed: both password and key file were required.",
+        "keyFileNotEmbedded": "Key file embedded: no"
       },
       "quickGuide": { "eyebrow": "Quick guide", "title": "Before processing" },
       "progress": { "title": "Local processing", "aria": "Processing progress" },

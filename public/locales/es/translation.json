@@ -384,6 +384,25 @@
         "strength": "Seguridad de la contraseña",
         "keepPassword": "Guarda la contraseña: la necesitarás para recuperar el contenido."
       },
+      "keyFile": {
+        "title": "Protección doble: contraseña + archivo-clave",
+        "helper": "Exige una contraseña y un archivo local para los nuevos paquetes CRIPTOVEU5.",
+        "enable": "Exigir también un archivo-clave",
+        "enableDescription": "Ambos factores se combinan antes de Argon2id. El archivo-clave no se incorpora al paquete.",
+        "requiredTitle": "Este paquete exige un archivo-clave",
+        "requiredHelper": "Selecciona el mismo contenido usado durante la protección. El nombre del archivo puede ser diferente.",
+        "choose": "Elegir archivo-clave",
+        "change": "Cambiar archivo-clave",
+        "remove": "Eliminar archivo-clave",
+        "limit": "Cualquier archivo no vacío de hasta 32 MB.",
+        "selected": "Archivo-clave seleccionado solo para esta operación.",
+        "emptyError": "El archivo-clave no puede estar vacío.",
+        "tooLargeError": "El archivo-clave supera el límite de {{size}}.",
+        "requiredError": "Selecciona el archivo-clave necesario para continuar.",
+        "noRecovery": "Si pierdes el archivo-clave, no podrás recuperar el contenido.",
+        "notEmbedded": "El archivo, su nombre y su huella SHA-256 no se guardan en el paquete.",
+        "exactBytes": "Guarda una copia con los mismos bytes y compártela por separado de la contraseña y del paquete."
+      },
       "advanced": {
         "title": "Configuración avanzada",
         "helper": "Argon2id: {{memory}} MB de RAM, {{iterations}} pasadas",
@@ -419,7 +438,8 @@
         "memory": "Argon2id: {{memory}} MB",
         "blocks": "Bloques observados: {{count}}",
         "manifestPresent": "Manifiesto presente",
-        "manifestAbsent": "Sin manifiesto"
+        "manifestAbsent": "Sin manifiesto",
+        "keyFileRequired": "Archivo-clave obligatorio"
       },
       "securityReport": {
         "preparedTitle": "Escudo de Integridad preparado",
@@ -432,7 +452,9 @@
         "format": "Formato: {{format}}",
         "kdf": "KDF: {{kdf}}",
         "blocks": "Bloques: {{count}}",
-        "upload": "Envío al servidor: no"
+        "upload": "Envío al servidor: no",
+        "keyFileProtection": "Protección doble confirmada: se necesitaron la contraseña y el archivo-clave.",
+        "keyFileNotEmbedded": "Archivo-clave incorporado: no"
       },
       "quickGuide": { "eyebrow": "Guía rápida", "title": "Antes de procesar" },
       "progress": { "title": "Procesamiento local", "aria": "Progreso del procesamiento" },
