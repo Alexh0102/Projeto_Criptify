@@ -17,9 +17,9 @@ import type { ChangeEvent } from 'react'
 
 import useVeuNotes from '../hooks/useVeuNotes'
 import { VEU_NOTES_MIN_PASSWORD_LENGTH } from '../lib/veunotes-crypto'
-import { getPasswordStrength } from '../lib/criptoveu'
 import FieldBlock from './ui/FieldBlock'
 import MobileStickyCTA from './ui/MobileStickyCTA'
+import PasswordSecurityPanel from './ui/PasswordSecurityPanel'
 
 type ToastTone = 'success' | 'error' | 'info'
 
@@ -28,8 +28,6 @@ const TOAST_STYLES: Record<ToastTone, string> = {
   error: 'border-rose-500/25 bg-rose-500/10 text-rose-50',
   info: 'border-cyan-500/25 bg-cyan-500/10 text-cyan-50',
 }
-
-const STRENGTH_SLOTS = [1, 2, 3, 4, 5]
 
 function formatDateTime(value: number | null) {
   if (!value) {
@@ -79,8 +77,6 @@ export default function VeuNotesVault() {
   const [unlockPassword, setUnlockPassword] = useState('')
   const [importPassword, setImportPassword] = useState('')
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null)
-
-  const strength = getPasswordStrength(createPassword)
 
   function triggerImportPicker() {
     importInputRef.current?.click()
@@ -298,21 +294,12 @@ export default function VeuNotesVault() {
                     />
                   </FieldBlock>
 
-                  <div className="surface-technical rounded-[22px] p-4">
-                    <div className="flex items-center justify-between gap-3 text-sm">
-                      <span className="text-zinc-300">Força da senha</span>
-                      <span className={strength.textClass}>{strength.label}</span>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-5 gap-2">
-                      {STRENGTH_SLOTS.map((slot) => (
-                        <span
-                          key={slot}
-                          className={`h-2 rounded-full transition ${slot <= strength.level ? strength.barClass : 'bg-zinc-800'}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  <PasswordSecurityPanel
+                    value={createPassword}
+                    onChange={setCreatePassword}
+                    context="note"
+                    disabled={isBusy}
+                  />
 
                   <FieldBlock
                     label="Confirmar senha"

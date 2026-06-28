@@ -115,13 +115,6 @@ export type Argon2TextDecryptionInput = TextDecryptionInput &
     parallelism: 1
   }
 
-type PasswordStrength = {
-  level: number
-  label: string
-  barClass: string
-  textClass: string
-}
-
 export type ProcessResult = {
   blob: Blob
   downloadName: string
@@ -2182,83 +2175,6 @@ export async function decryptFile(
 
   assertRecoveredFileSize(result.blob, options)
   return result
-}
-
-export function generateWhatsappStyleKey() {
-  const bytes = crypto.getRandomValues(new Uint8Array(32))
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-    .toUpperCase()
-}
-
-export function getPasswordStrength(password: string): PasswordStrength {
-  if (!password) {
-    return {
-      level: 0,
-      label: 'Digite uma senha',
-      barClass: 'bg-zinc-700',
-      textClass: 'font-medium text-zinc-400',
-    }
-  }
-
-  let score = 0
-
-  if (password.length >= 8) {
-    score += 1
-  }
-
-  if (password.length >= 12) {
-    score += 1
-  }
-
-  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) {
-    score += 1
-  }
-
-  if (/\d/.test(password)) {
-    score += 1
-  }
-
-  if (/[^A-Za-z0-9]/.test(password)) {
-    score += 1
-  }
-
-  const level = Math.min(Math.max(score, 1), 5)
-
-  const levels: Record<number, PasswordStrength> = {
-    1: {
-      level,
-      label: 'Muito fraca',
-      barClass: 'bg-rose-500',
-      textClass: 'font-medium text-rose-300',
-    },
-    2: {
-      level,
-      label: 'Fraca',
-      barClass: 'bg-orange-500',
-      textClass: 'font-medium text-orange-300',
-    },
-    3: {
-      level,
-      label: 'Média',
-      barClass: 'bg-yellow-500',
-      textClass: 'font-medium text-yellow-300',
-    },
-    4: {
-      level,
-      label: 'Forte',
-      barClass: 'bg-sky-500',
-      textClass: 'font-medium text-sky-300',
-    },
-    5: {
-      level,
-      label: 'Muito forte',
-      barClass: 'bg-emerald-500',
-      textClass: 'font-medium text-emerald-300',
-    },
-  }
-
-  return levels[level]
 }
 
 export function formatFileSize(bytes: number) {

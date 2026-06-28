@@ -43,6 +43,26 @@ export default function SecurityPage() {
           ],
         },
         {
+          title: 'Senhas, frases e chaves',
+          items: [
+            {
+              title: 'Geração segura e totalmente local',
+              description:
+                'O gerador usa crypto.getRandomValues para criar frase-senha, senha aleatória ou uma chave de 32 bytes. Nada é enviado ou armazenado pelo CriptoVéu.',
+            },
+            {
+              title: 'Chave aleatória de 256 bits',
+              description:
+                'O modo máximo gera 32 bytes aleatórios e os mostra em hexadecimal. Em links e QRs, essa chave continua fora do payload e deve ser enviada por outro canal.',
+            },
+            {
+              title: 'Medidor sem falsa precisão',
+              description:
+                'Valores digitados recebem uma avaliação heurística de comprimento, variedade e padrões previsíveis. A classificação ajuda, mas não prova entropia.',
+            },
+          ],
+        },
+        {
           title: 'Formatos criptográficos',
           items: [
             {

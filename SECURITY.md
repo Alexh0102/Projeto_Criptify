@@ -29,6 +29,8 @@ CriptoVéu é um app 100% client-side. Isso significa que:
 - O inspetor sem senha verifica somente a estrutura e nunca apresenta essa etapa como autenticação
 - A recuperação extrai parâmetros do próprio pacote, sem depender de cache local
 - Pacotes `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1` permanecem compatíveis para leitura
+- Frases, senhas aleatorias e chaves de 256 bits usam apenas `crypto.getRandomValues`, sem API externa ou persistencia
+- O medidor de senha detecta padroes previsiveis, mas e uma orientacao heuristica e nao uma prova de entropia
 
 ## Limites
 
@@ -37,6 +39,7 @@ CriptoVéu é um app 100% client-side. Isso significa que:
 - qualquer segredo deve ficar fora do frontend
 - Argon2id aumenta o custo de força bruta, mas nao compensa senha fraca nem constitui garantia absoluta contra ataques quanticos
 - SHA-256 nao recupera arquivos corrompidos e nao substitui autenticacao AES-GCM; ele detecta divergencias no conteudo recuperado
+- Uma credencial forte ainda pode ser exposta por malware, captura de tela, clipboard comprometido ou compartilhamento inseguro
 
 ## Recomendacoes de deploy
 

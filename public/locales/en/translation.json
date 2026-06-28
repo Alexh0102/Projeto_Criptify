@@ -16,6 +16,60 @@
     "copied": "Copied",
     "localBadge": "100% local"
   },
+  "passwordSecurity": {
+    "strength": {
+      "title": "Password or key strength",
+      "levels": {
+        "empty": "Waiting",
+        "veryWeak": "Very weak",
+        "weak": "Weak",
+        "reasonable": "Reasonable",
+        "strong": "Strong",
+        "veryStrong": "Very strong"
+      }
+    },
+    "generatedEntropy": "Local generation entropy: at least {{bits}} bits.",
+    "heuristicNote": "Heuristic estimate: length alone does not guarantee an unpredictable password.",
+    "warningTitle": "This password may be easy to guess",
+    "adviceTitle": "This password could be stronger",
+    "warnings": {
+      "tooShort": "Use at least 12 characters; 16 or more is recommended.",
+      "recommendedLength": "For stronger protection, prefer 16 characters or more.",
+      "commonPattern": "The password contains a very common word or pattern.",
+      "projectName": "Do not use CriptoVéu, “crypto”, or the service name in the password.",
+      "year": "Years are predictable patterns and reduce resistance to guessing.",
+      "sequence": "Keyboard, letter, or number sequences are easy to test.",
+      "repetition": "Repeated patterns greatly reduce the password's real variety.",
+      "lowVariety": "There are too few distinct characters for this length.",
+      "misleadingSymbols": "A short password does not become strong merely by adding symbols."
+    },
+    "generator": {
+      "title": "Generate password, phrase, or key",
+      "helper": "Use the browser's secure randomness to create a stronger credential.",
+      "modes": {
+        "passphrase": {
+          "label": "Memorable passphrase",
+          "description": "Eight random words and a number, easier to type and keep."
+        },
+        "password": {
+          "label": "Random password",
+          "description": "24 characters with letters, numbers, and symbols."
+        },
+        "key": {
+          "label": "Random 256-bit key",
+          "description": "Maximum mode: 32 random bytes in hexadecimal format."
+        }
+      },
+      "localOnly": "Generation happens only on this device and is not stored by CriptoVéu.",
+      "noRecovery": "Keep the credential safe: there is no recovery if you lose it.",
+      "separateChannel": "Send the credential through another channel; it is never included in the link or QR.",
+      "generatedLabel": "Credential generated on this device",
+      "show": "Show",
+      "hide": "Hide",
+      "copy": "Copy password or key",
+      "copied": "Copied"
+    }
+  },
   "language": {
     "selectLabel": "Select language",
     "changeTo": "Change language to {{language}}",

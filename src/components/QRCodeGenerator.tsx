@@ -32,6 +32,7 @@ import {
 } from '../lib/premium'
 import FreeUsageCounter from './ui/FreeUsageCounter'
 import MobileStickyCTA from './ui/MobileStickyCTA'
+import PasswordSecurityPanel from './ui/PasswordSecurityPanel'
 import ResultPanel from './ui/ResultPanel'
 import SegmentedMode from './ui/SegmentedMode'
 
@@ -369,6 +370,13 @@ export default function QRCodeGenerator({
                   onChange={(event) => setGeneratePassword(event.target.value)}
                   placeholder="Digite a senha da mensagem"
                   className="tool-input mt-4"
+                />
+
+                <PasswordSecurityPanel
+                  value={generatePassword}
+                  onChange={setGeneratePassword}
+                  context="qr"
+                  disabled={isSubmittingGenerate || isGenerating}
                 />
 
                 <button

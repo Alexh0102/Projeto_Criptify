@@ -92,6 +92,31 @@ export default function TechnicalDetailsPage() {
             },
           ],
         },
+        {
+          title: 'Segurança prática de credenciais',
+          items: [
+            {
+              title: 'Amostragem sem viés de módulo',
+              description:
+                'Palavras e caracteres são escolhidos com crypto.getRandomValues e rejeição dos bytes fora do maior múltiplo válido para cada intervalo.',
+            },
+            {
+              title: 'Três modos com objetivos distintos',
+              description:
+                'A frase prioriza memorização, a senha de 24 caracteres equilibra uso e aleatoriedade, e a chave hexadecimal representa 32 bytes aleatórios.',
+            },
+            {
+              title: 'Heurística para entrada humana',
+              description:
+                'O analisador penaliza termos comuns, nome do projeto, anos, sequências, repetições, pouca variedade e senhas curtas com símbolos.',
+            },
+            {
+              title: 'Testes de propriedades',
+              description:
+                'A suíte valida formato, tamanho, classes, unicidade amostral, fonte Web Crypto e ausência de Math.random sem fixar valores secretos.',
+            },
+          ],
+        },
       ]}
     />
   )
