@@ -64,6 +64,7 @@ Principais recursos:
 
 | Ferramenta | Criptografia | Derivação de chave | Armazenamento / saída |
 |---|---|---|---|
+| Arquivos V5 com proteção dupla | AES-256-GCM + manifesto SHA-256 cifrado | SHA-256 de senha + arquivo-chave, seguido de Argon2id | Arquivo `.criptoveu` |
 | Arquivos V4 | AES-256-GCM + manifesto SHA-256 cifrado | Argon2id v1.3 via WASM em Web Worker | Arquivo `.criptoveu` |
 | Arquivos legados | AES-GCM | Argon2id no `CRIPTOVEU3`; PBKDF2/SHA-256 nos anteriores | Pacotes `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1` |
 | Mensagens `MSG2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVM2` |
@@ -128,6 +129,44 @@ Detalhes técnicos:
 - Limite recomendado de arquivo: **2 GB**.
 
 > Observação: o SHA-256 do manifesto complementa a autenticação AES-GCM e permite verificação explícita pós-recuperação. Ele não substitui AES-GCM nem torna uma estrutura sem senha “verificada”.
+
+#### Proteção dupla com arquivo-chave
+
+Quando a opção **Senha + arquivo-chave** é ativada, novos arquivos usam a
+assinatura `CRIPTOVEU5`. O restante da estrutura de blocos, AAD e manifesto
+segue o desenho autenticado do V4, mas a chave Argon2id depende dos dois
+fatores.
+
+O material da KDF é construído localmente desta forma:
+
+```text
+key_file_hash = SHA-256(bytes_exatos_do_arquivo_chave)
+material = SHA-256(
+  "CriptoVeu:password-key-file:v1"
+  || 0x00
+  || tamanho_da_senha_utf8_em_uint32_be
+  || senha_utf8
+  || key_file_hash
+)
+chave_aes = Argon2id(material_hex, salt_do_pacote, parâmetros_do_cabeçalho)
+```
+
+Regras de segurança:
+
+- o arquivo-chave deve ter entre 1 byte e 32 MB;
+- o nome do arquivo não participa da derivação; somente os bytes exatos;
+- arquivo, nome, hash e material combinado **não são incorporados** ao pacote
+  nem ao relatório;
+- a assinatura V5 informa apenas que um arquivo-chave é obrigatório;
+- o mesmo arquivo-chave pode ser renomeado, mas qualquer alteração em seus
+  bytes impede a abertura;
+- senha e arquivo-chave devem ser guardados e compartilhados separadamente;
+- perder qualquer um dos dois fatores torna a recuperação impossível;
+- um arquivo público ou previsível oferece pouco ganho contra um atacante que
+  já tenha acesso a ele.
+
+Pacotes sem proteção dupla continuam sendo criados como `CRIPTOVEU4`. A leitura
+de V4 e de todos os formatos anteriores permanece compatível.
 
 ---
 
@@ -259,6 +298,7 @@ O CriptoVéu foi projetado para reduzir a exposição de dados sensíveis em fer
 
 - Dispositivos comprometidos por malware, keylogger, screen recorder ou extensão maliciosa.
 - Senhas fracas, reutilizadas ou compartilhadas por canais inseguros.
+- Arquivos-chave públicos, previsíveis, perdidos ou copiados junto do pacote e da senha.
 - Comprometimento do domínio, pipeline de build, provedor de hospedagem, conta de deploy ou JavaScript servido ao navegador.
 - Phishing com cópias falsas da aplicação.
 - Recuperação de conteúdo quando a senha é perdida.
@@ -376,6 +416,7 @@ Ideias e melhorias futuras planejadas ou em estudo:
 - [x] Migração de mensagens, QR Codes, links e VéuNotes para Argon2id, mantendo leitura dos payloads V1.
 - [x] Escudo de Integridade para arquivos com `CRIPTOVEU4`, manifesto cifrado, verificação pós-recuperação, inspetor estrutural e relatório local.
 - [x] Gerador local de frase, senha e chave de 256 bits, com medidor heurístico e avisos de padrões fracos.
+- [x] Proteção dupla de arquivos com senha + arquivo-chave no formato `CRIPTOVEU5`.
 
 > Observação sobre o futuro chat: mesmo sem armazenar mensagens, um servidor de sinalização ou relay poderá observar metadados como IP, horário, duração da sessão e tamanho aproximado dos pacotes. Isso deve ser documentado claramente quando o recurso for implementado.
 

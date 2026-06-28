@@ -63,6 +63,26 @@ export default function SecurityPage() {
           ],
         },
         {
+          title: 'Proteção dupla de arquivos',
+          items: [
+            {
+              title: 'Senha e arquivo-chave são obrigatórios',
+              description:
+                'Pacotes CRIPTOVEU5 combinam a senha e o SHA-256 dos bytes do arquivo-chave antes do Argon2id. Sem qualquer um dos fatores, o AES-GCM não autentica.',
+            },
+            {
+              title: 'O arquivo-chave fica fora do pacote',
+              description:
+                'Nome, conteúdo, hash e material combinado não são gravados no .criptoveu nem no relatório. A assinatura revela apenas que o segundo fator é exigido.',
+            },
+            {
+              title: 'Backup separado é indispensável',
+              description:
+                'O mesmo conteúdo pode ser renomeado, mas alterar um único byte impede a abertura. Guarde senha, pacote e arquivo-chave em locais separados.',
+            },
+          ],
+        },
+        {
           title: 'Formatos criptográficos',
           items: [
             {

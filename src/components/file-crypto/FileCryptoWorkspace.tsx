@@ -23,6 +23,7 @@ import ResultPanel from '../ui/ResultPanel'
 import SegmentedMode from '../ui/SegmentedMode'
 import PasswordSecurityPanel from '../ui/PasswordSecurityPanel'
 import UniversalPreview from './UniversalPreview'
+import KeyFileProtectionPanel from './KeyFileProtectionPanel'
 import { usePremium } from '../../context/premium'
 import {
   getUniversalPreviewMetadata,
@@ -44,6 +45,7 @@ import {
   type FileSecurityProfileId,
 } from '../../lib/criptoveu'
 import { FREE_FILE_SIZE_BYTES } from '../../lib/premium'
+import { MAX_KEY_FILE_SIZE_BYTES } from '../../lib/key-file-protection'
 
 type Mode = 'encrypt' | 'decrypt'
 type StatusTone = 'info' | 'success' | 'error'
@@ -126,6 +128,8 @@ export default function FileCryptoWorkspace() {
   const [mode, setMode] = useState<Mode>('encrypt')
   const [files, setFiles] = useState<File[]>([])
   const [password, setPassword] = useState('')
+  const [useKeyFile, setUseKeyFile] = useState(false)
+  const [keyFile, setKeyFile] = useState<File | null>(null)
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState(() => t('files.workspace.status.ready'))
   const [status, setStatus] = useState<StatusState>({
@@ -144,6 +148,7 @@ export default function FileCryptoWorkspace() {
   const [securityProfileId, setSecurityProfileId] =
     useState<FileSecurityProfileId>(loadSecurityProfileId)
   const fileInputId = useId()
+  const keyFileInputId = useId()
   const passwordInputId = useId()
   const resultUrlRef = useRef<string[]>([])
   const resultPanelRef = useRef<HTMLDivElement | null>(null)
@@ -155,6 +160,13 @@ export default function FileCryptoWorkspace() {
   const securityProfile =
     FILE_SECURITY_PROFILES.find((profile) => profile.id === securityProfileId) ??
     FILE_SECURITY_PROFILES[1]
+  const packageRequiresKeyFile =
+    mode === 'decrypt' &&
+    Object.values(packageInspections).some(
+      (inspection) => inspection.keyFileRequired === true,
+    )
+  const keyFileIsRequired =
+    (mode === 'encrypt' && useKeyFile) || packageRequiresKeyFile
 
   useEffect(() => {
     let cancelled = false
@@ -317,6 +329,8 @@ export default function FileCryptoWorkspace() {
     }
 
     setMode(resolvedMode)
+    setUseKeyFile(false)
+    setKeyFile(null)
     setProgress(0)
     setProgressLabel(t('files.workspace.status.ready'))
     setStatus({
@@ -332,6 +346,10 @@ export default function FileCryptoWorkspace() {
 
     if (nextFiles.length === 0) {
       return
+    }
+
+    if (mode === 'decrypt') {
+      setKeyFile(null)
     }
 
     const validFiles =
@@ -414,6 +432,38 @@ export default function FileCryptoWorkspace() {
     downloadBlobUrl(result.url, result.name)
   }
 
+  function handleKeyFileInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const selectedKeyFile = event.target.files?.[0] ?? null
+    event.target.value = ''
+
+    if (!selectedKeyFile) {
+      return
+    }
+
+    if (
+      selectedKeyFile.size === 0 ||
+      selectedKeyFile.size > MAX_KEY_FILE_SIZE_BYTES
+    ) {
+      setKeyFile(null)
+      setStatus({
+        tone: 'error',
+        message:
+          selectedKeyFile.size === 0
+            ? t('files.workspace.keyFile.emptyError')
+            : t('files.workspace.keyFile.tooLargeError', {
+                size: formatFileSize(MAX_KEY_FILE_SIZE_BYTES),
+              }),
+      })
+      return
+    }
+
+    setKeyFile(selectedKeyFile)
+    setStatus({
+      tone: 'info',
+      message: t('files.workspace.keyFile.selected'),
+    })
+  }
+
   function handleDownloadSecurityReport(result: ResultItem) {
     const reportBlob = new Blob(
       [JSON.stringify(result.securityReport, null, 2)],
@@ -480,6 +530,14 @@ export default function FileCryptoWorkspace() {
       setStatus({
         tone: 'error',
         message: t('files.workspace.status.missingFilesOrPassword'),
+      })
+      return
+    }
+
+    if (keyFileIsRequired && !keyFile) {
+      setStatus({
+        tone: 'error',
+        message: t('files.workspace.keyFile.requiredError'),
       })
       return
     }
@@ -553,6 +611,12 @@ export default function FileCryptoWorkspace() {
                   mode === 'encrypt' ? securityProfile.memoryMb : undefined,
                 argon2Iterations:
                   mode === 'encrypt' ? ARGON2_FILE_ITERATIONS : undefined,
+                keyFile:
+                  mode === 'encrypt'
+                    ? useKeyFile
+                      ? keyFile
+                      : null
+                    : keyFile,
               },
             )
 
@@ -884,6 +948,13 @@ export default function FileCryptoWorkspace() {
                                       )}
                                 </span>
                               ) : null}
+                              {inspection.keyFileRequired ? (
+                                <span className="font-medium text-amber-200">
+                                  {t(
+                                    'files.workspace.inspector.keyFileRequired',
+                                  )}
+                                </span>
+                              ) : null}
                             </div>
                           </>
                         ) : (
@@ -937,6 +1008,24 @@ export default function FileCryptoWorkspace() {
                 />
               ) : null}
             </div>
+
+            <KeyFileProtectionPanel
+              mode={mode}
+              enabled={useKeyFile}
+              required={packageRequiresKeyFile}
+              keyFile={keyFile}
+              inputId={keyFileInputId}
+              disabled={isProcessing}
+              onEnabledChange={(enabled) => {
+                setUseKeyFile(enabled)
+
+                if (!enabled) {
+                  setKeyFile(null)
+                }
+              }}
+              onFileChange={handleKeyFileInputChange}
+              onClear={() => setKeyFile(null)}
+            />
 
             {mode === 'encrypt' ? (
               <AdvancedOptions
@@ -996,7 +1085,13 @@ export default function FileCryptoWorkspace() {
                 <button
                   type="button"
                   onClick={handleProcess}
-                  disabled={files.length === 0 || !password || isProcessing || !canUseSecureProcessing}
+                  disabled={
+                    files.length === 0 ||
+                    !password ||
+                    (keyFileIsRequired && !keyFile) ||
+                    isProcessing ||
+                    !canUseSecureProcessing
+                  }
                   className="btn-primary hidden lg:inline-flex"
                 >
                   {isProcessing ? (
@@ -1213,6 +1308,13 @@ export default function FileCryptoWorkspace() {
                                       'files.workspace.securityReport.legacyNote',
                                     )}
                             </p>
+                            {result.securityReport.keyFileProtection.required ? (
+                              <p className="mt-1 text-xs leading-6 text-amber-100">
+                                {t(
+                                  'files.workspace.securityReport.keyFileProtection',
+                                )}
+                              </p>
+                            ) : null}
                           </div>
                         </div>
 
@@ -1249,6 +1351,13 @@ export default function FileCryptoWorkspace() {
                         <span>
                           {t('files.workspace.securityReport.upload')}
                         </span>
+                        {result.securityReport.keyFileProtection.required ? (
+                          <span>
+                            {t(
+                              'files.workspace.securityReport.keyFileNotEmbedded',
+                            )}
+                          </span>
+                        ) : null}
                       </div>
 
                       {result.securityReport.fileHashSha256 ? (
@@ -1283,7 +1392,13 @@ export default function FileCryptoWorkspace() {
         label={t(currentMode.action)}
         icon={mode === 'encrypt' ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
         onClick={handleProcess}
-        disabled={files.length === 0 || !password || isProcessing || !canUseSecureProcessing}
+        disabled={
+          files.length === 0 ||
+          !password ||
+          (keyFileIsRequired && !keyFile) ||
+          isProcessing ||
+          !canUseSecureProcessing
+        }
         loading={isProcessing}
       />
 

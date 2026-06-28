@@ -436,6 +436,25 @@
         "strength": "Segurança da senha",
         "keepPassword": "Guarde a senha: você vai precisar dela para recuperar o conteúdo."
       },
+      "keyFile": {
+        "title": "Proteção dupla: senha + arquivo-chave",
+        "helper": "Exija a senha e um arquivo local para abrir novos pacotes CRIPTOVEU5.",
+        "enable": "Exigir também um arquivo-chave",
+        "enableDescription": "Os dois fatores serão combinados antes do Argon2id. O arquivo-chave não será incorporado ao pacote.",
+        "requiredTitle": "Este pacote exige um arquivo-chave",
+        "requiredHelper": "Selecione o mesmo conteúdo de arquivo usado na proteção. O nome do arquivo pode ser diferente.",
+        "choose": "Escolher arquivo-chave",
+        "change": "Trocar arquivo-chave",
+        "remove": "Remover arquivo-chave",
+        "limit": "Qualquer arquivo não vazio de até 32 MB.",
+        "selected": "Arquivo-chave selecionado somente para esta operação.",
+        "emptyError": "O arquivo-chave não pode estar vazio.",
+        "tooLargeError": "O arquivo-chave excede o limite de {{size}}.",
+        "requiredError": "Selecione o arquivo-chave necessário para continuar.",
+        "noRecovery": "Se perder o arquivo-chave, não há como recuperar o conteúdo.",
+        "notEmbedded": "O arquivo, seu nome e sua impressão SHA-256 não são salvos no pacote.",
+        "exactBytes": "Guarde uma cópia com os mesmos bytes e compartilhe-a separadamente da senha e do pacote."
+      },
       "advanced": {
         "title": "Configurações Avançadas",
         "helper": "Argon2id: {{memory}} MB de RAM, {{iterations}} passes",
@@ -471,7 +490,8 @@
         "memory": "Argon2id: {{memory}} MB",
         "blocks": "Blocos observados: {{count}}",
         "manifestPresent": "Manifesto presente",
-        "manifestAbsent": "Sem manifesto"
+        "manifestAbsent": "Sem manifesto",
+        "keyFileRequired": "Arquivo-chave obrigatório"
       },
       "securityReport": {
         "preparedTitle": "Escudo de Integridade preparado",
@@ -484,7 +504,9 @@
         "format": "Formato: {{format}}",
         "kdf": "KDF: {{kdf}}",
         "blocks": "Blocos: {{count}}",
-        "upload": "Envio ao servidor: não"
+        "upload": "Envio ao servidor: não",
+        "keyFileProtection": "Proteção dupla confirmada: senha e arquivo-chave foram necessários.",
+        "keyFileNotEmbedded": "Arquivo-chave incorporado: não"
       },
       "quickGuide": {
         "eyebrow": "Guia rápido",
