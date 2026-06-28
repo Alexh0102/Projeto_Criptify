@@ -113,6 +113,26 @@ export default function SecurityPage() {
           ],
         },
         {
+          title: 'Cofre portátil VéuNotes',
+          items: [
+            {
+              title: 'Metadados também ficam cifrados',
+              description:
+                'Títulos, etiquetas, textos e identificadores das notas ficam dentro do NOTE2 autenticado. A busca local só funciona depois do desbloqueio.',
+            },
+            {
+              title: 'Backup não contém a senha',
+              description:
+                'O arquivo .criptoveu-note contém apenas o envelope cifrado e parâmetros públicos. Sem a senha mestre correta, não há recuperação.',
+            },
+            {
+              title: 'Troca de senha não altera backups antigos',
+              description:
+                'A troca recriptografa o cofre local com novo salt. Arquivos exportados antes dela continuam protegidos pela senha anterior e devem ser substituídos manualmente.',
+            },
+          ],
+        },
+        {
           title: 'Limites realistas',
           items: [
             {

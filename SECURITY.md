@@ -34,6 +34,10 @@ CriptoVéu é um app 100% client-side. Isso significa que:
 - Pacotes `CRIPTOVEU5` combinam senha e SHA-256 do arquivo-chave com separacao de dominio antes do Argon2id
 - Nome, conteudo, hash e material derivado do arquivo-chave nao sao serializados no pacote nem no relatorio
 - A assinatura V5 indica somente que o arquivo-chave e obrigatorio; pacotes V4 continuam compativeis
+- Cofres portateis usam NOTE2 como envelope Argon2id + AES-256-GCM e PORTABLE_VAULT1 como documento interno
+- Titulos, etiquetas, textos e identificadores do cofre ficam cifrados; a busca ocorre somente apos o desbloqueio
+- A importacao valida o envelope e o documento antes de substituir o cofre local
+- A troca de senha exige a senha atual, cria novo salt e nao altera backups exportados anteriormente
 
 ## Limites
 
@@ -44,6 +48,8 @@ CriptoVéu é um app 100% client-side. Isso significa que:
 - SHA-256 nao recupera arquivos corrompidos e nao substitui autenticacao AES-GCM; ele detecta divergencias no conteudo recuperado
 - Uma credencial forte ainda pode ser exposta por malware, captura de tela, clipboard comprometido ou compartilhamento inseguro
 - Um arquivo-chave conhecido pelo atacante oferece pouco ganho; perder ou alterar qualquer byte impede a recuperacao
+- Perder a senha do cofre portatil impede a recuperacao; localStorage e arquivos de backup podem ser apagados ou corrompidos
+- O bloqueio automatico reduz exposicao acidental, mas nao protege contra malware ou dispositivo comprometido durante a sessao aberta
 
 ## Recomendacoes de deploy
 

@@ -559,25 +559,25 @@
   "notes": {
     "page": {
       "eyebrow": "VéuNotes",
-      "title": "Guarde uma nota protegida por senha mestre, só neste navegador.",
-      "description": "Crie um cofre local de texto com AES-256-GCM, backup criptografado e bloqueio automático sem depender de servidor.",
+      "title": "Organize várias notas em um cofre criptografado e portátil.",
+      "description": "Crie, pesquise e organize notas localmente; exporte tudo como um arquivo .criptoveu-note protegido por Argon2id e AES-256-GCM.",
       "badge": "100% client-side",
       "help": {
         "how": {
           "title": "Como funciona",
-          "content": "No primeiro uso, você cria uma senha mestre. Depois disso, a nota é descriptografada apenas em memória quando o cofre é destrancado."
+          "content": "No primeiro uso, você cria uma senha mestre. Títulos, etiquetas e textos só são descriptografados em memória depois que o cofre é destrancado."
         },
         "saved": {
           "title": "O que fica salvo no navegador",
-          "content": "Apenas um JSON NOTE2 criptografado com versão, Argon2id, salt, IV e ciphertext. Texto puro, senha e chave não são persistidos. Cofres NOTE1 antigos são migrados somente após a senha correta."
+          "content": "Apenas um envelope NOTE2 criptografado com Argon2id, salt, IV e ciphertext. O documento PORTABLE_VAULT1, títulos, etiquetas e textos ficam dentro do ciphertext. Cofres antigos só são migrados após a senha correta."
         },
         "backup": {
           "title": "Backup e recuperação",
-          "content": "Você pode exportar um arquivo JSON criptografado e importar depois no mesmo ou em outro dispositivo, desde que use a mesma senha mestre."
+          "content": "Você pode exportar um arquivo .criptoveu-note e importá-lo no mesmo ou em outro dispositivo. Backups antigos em JSON continuam aceitos."
         },
         "forgot": {
           "title": "Se eu esquecer a senha",
-          "content": "Não há recuperação. Por isso, use uma senha forte e guarde um backup do cofre em local seguro."
+          "content": "Não há recuperação. Guarde a senha e o arquivo .criptoveu-note separadamente. Backups anteriores a uma troca de senha continuam usando a senha antiga."
         }
       }
     }

@@ -2,20 +2,27 @@ import {
   AlertTriangle,
   Clock3,
   Download,
-  Eye,
+  FilePlus2,
   FileUp,
-  HardDriveDownload,
   KeyRound,
   Lock,
   LockKeyhole,
   Save,
+  Search,
   ShieldCheck,
+  Tags,
+  Trash2,
   Unlock,
+  X,
 } from 'lucide-react'
 import { useId, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 
 import useVeuNotes from '../hooks/useVeuNotes'
+import {
+  PORTABLE_VAULT_MAX_CONTENT_LENGTH,
+  PORTABLE_VAULT_MAX_TITLE_LENGTH,
+} from '../lib/portable-vault'
 import { VEU_NOTES_MIN_PASSWORD_LENGTH } from '../lib/veunotes-crypto'
 import FieldBlock from './ui/FieldBlock'
 import MobileStickyCTA from './ui/MobileStickyCTA'
@@ -40,19 +47,68 @@ function formatDateTime(value: number | null) {
   }).format(value)
 }
 
+function getNotePreview(content: string) {
+  const compact = content.replace(/\s+/g, ' ').trim()
+  return compact || 'Nota vazia'
+}
+
+type NoteTagsInputProps = {
+  id: string
+  tags: string[]
+  onChange: (tags: string[]) => void
+}
+
+function NoteTagsInput({ id, tags, onChange }: NoteTagsInputProps) {
+  const [draft, setDraft] = useState(() => tags.join(', '))
+
+  return (
+    <div className="relative">
+      <Tags className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+      <input
+        id={id}
+        type="text"
+        value={draft}
+        onChange={(event) => {
+          const nextDraft = event.target.value
+          setDraft(nextDraft)
+          onChange(nextDraft.split(','))
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            event.currentTarget.blur()
+          }
+        }}
+        placeholder="trabalho, pessoal, recuperação"
+        className="tool-input pl-10"
+      />
+    </div>
+  )
+}
+
 export default function VeuNotesVault() {
   const fileInputId = useId()
-  const noteInputId = useId()
   const createPasswordId = useId()
   const createConfirmId = useId()
   const unlockPasswordId = useId()
   const importPasswordId = useId()
+  const currentPasswordId = useId()
+  const newPasswordId = useId()
+  const newPasswordConfirmId = useId()
+  const noteTitleId = useId()
+  const noteTagsId = useId()
+  const noteContentId = useId()
   const importInputRef = useRef<HTMLInputElement | null>(null)
 
   const {
     vaultState,
-    note,
-    setNote,
+    notes,
+    visibleNotes,
+    selectedNote,
+    selectedNoteId,
+    setSelectedNoteId,
+    searchQuery,
+    setSearchQuery,
     isBusy,
     isDirty,
     isUnlocked,
@@ -63,9 +119,13 @@ export default function VeuNotesVault() {
     toast,
     createVault,
     unlockVault,
-    saveNote,
+    saveVault,
     exportVault,
     importBackup,
+    changePassword,
+    createNote,
+    updateNote,
+    deleteNote,
     lockVault,
     clearBrokenVault,
     dismissToast,
@@ -77,6 +137,10 @@ export default function VeuNotesVault() {
   const [unlockPassword, setUnlockPassword] = useState('')
   const [importPassword, setImportPassword] = useState('')
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null)
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [newPasswordConfirmation, setNewPasswordConfirmation] = useState('')
 
   function triggerImportPicker() {
     importInputRef.current?.click()
@@ -106,14 +170,6 @@ export default function VeuNotesVault() {
     }
   }
 
-  async function handleSaveNote() {
-    await saveNote()
-  }
-
-  async function handleExportVault() {
-    await exportVault()
-  }
-
   async function handleImportBackup() {
     if (!pendingImportFile) {
       return
@@ -127,24 +183,27 @@ export default function VeuNotesVault() {
     }
   }
 
-  const createActions = (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <button
-        type="button"
-        onClick={handleCreateVault}
-        disabled={isBusy}
-        className="btn-primary"
-      >
-        <Lock className="h-4 w-4" />
-        Criar cofre
-      </button>
+  async function handleChangePassword() {
+    const result = await changePassword(
+      currentPassword,
+      newPassword,
+      newPasswordConfirmation,
+    )
 
-      <button type="button" onClick={triggerImportPicker} className="btn-secondary" disabled={isBusy}>
-        <FileUp className="h-4 w-4" />
-        Importar cofre
-      </button>
-    </div>
-  )
+    if (result !== null) {
+      setCurrentPassword('')
+      setNewPassword('')
+      setNewPasswordConfirmation('')
+      setShowPasswordChange(false)
+    }
+  }
+
+  function handleDeleteNote(noteId: string, title: string) {
+    const label = title.trim() || 'esta nota'
+    if (window.confirm(`Remover "${label}" do cofre?`)) {
+      deleteNote(noteId)
+    }
+  }
 
   return (
     <>
@@ -173,7 +232,7 @@ export default function VeuNotesVault() {
         id={fileInputId}
         ref={importInputRef}
         type="file"
-        accept="application/json,.json"
+        accept=".criptoveu-note,.json,application/json,application/vnd.criptoveu.note+json"
         className="hidden"
         onChange={handleImportFileChange}
       />
@@ -186,17 +245,28 @@ export default function VeuNotesVault() {
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-200" />
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm font-semibold text-white">O cofre local não pôde ser lido</p>
-                    <p className="mt-2 text-sm leading-7 text-rose-50/90">{storageError}</p>
+                    <p className="text-sm font-semibold text-white">
+                      O cofre local não pôde ser lido
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-rose-50/90">
+                      {storageError}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap gap-3">
-                    <button type="button" onClick={triggerImportPicker} className="btn-secondary">
+                    <button
+                      type="button"
+                      onClick={triggerImportPicker}
+                      className="btn-secondary"
+                    >
                       <FileUp className="h-4 w-4" />
                       Importar backup
                     </button>
-
-                    <button type="button" onClick={clearBrokenVault} className="btn-secondary">
+                    <button
+                      type="button"
+                      onClick={clearBrokenVault}
+                      className="btn-secondary"
+                    >
                       Limpar cofre local
                     </button>
                   </div>
@@ -207,29 +277,51 @@ export default function VeuNotesVault() {
 
           {pendingImportFile ? (
             <div className="surface-secondary rounded-[28px] p-5">
-              <p className="text-sm font-semibold text-white">
-                {isUnlocked ? 'Importar e substituir o cofre atual' : 'Restaurar backup local'}
-              </p>
-              <p className="mt-2 text-sm leading-7 text-zinc-400">
-                Arquivo selecionado:{' '}
-                <span className="font-medium text-white">{pendingImportFile.name}</span>
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    {isUnlocked
+                      ? 'Importar e substituir o cofre atual'
+                      : 'Abrir cofre portátil'}
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-zinc-400">
+                    Arquivo: <span className="text-white">{pendingImportFile.name}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPendingImportFile(null)}
+                  className="rounded-full p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                  aria-label="Cancelar importação"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
 
-              <FieldBlock
-                label="Senha mestre do backup"
-                htmlFor={importPasswordId}
-                helper="A importação só continua se a descriptografia do arquivo funcionar."
-              >
-                <input
-                  id={importPasswordId}
-                  type="password"
-                  value={importPassword}
-                  onChange={(event) => setImportPassword(event.target.value)}
-                  placeholder="Digite a senha do backup"
-                  className="tool-input"
-                  autoComplete="off"
-                />
-              </FieldBlock>
+              {isUnlocked ? (
+                <p className="mt-3 rounded-[20px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm leading-6 text-amber-50">
+                  A importação substituirá o cofre salvo neste navegador. Exporte
+                  o cofre atual antes de continuar.
+                </p>
+              ) : null}
+
+              <div className="mt-4">
+                <FieldBlock
+                  label="Senha mestre do arquivo"
+                  htmlFor={importPasswordId}
+                  helper="O arquivo só será salvo localmente após a autenticação AES-GCM."
+                >
+                  <input
+                    id={importPasswordId}
+                    type="password"
+                    value={importPassword}
+                    onChange={(event) => setImportPassword(event.target.value)}
+                    placeholder="Digite a senha do cofre"
+                    className="tool-input"
+                    autoComplete="off"
+                  />
+                </FieldBlock>
+              </div>
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
@@ -238,10 +330,9 @@ export default function VeuNotesVault() {
                   disabled={!importPassword || isBusy}
                   className="btn-primary"
                 >
-                  <HardDriveDownload className="h-4 w-4" />
-                  Importar cofre
+                  <FileUp className="h-4 w-4" />
+                  Autenticar e importar
                 </button>
-
                 <button
                   type="button"
                   onClick={() => {
@@ -265,14 +356,14 @@ export default function VeuNotesVault() {
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">
-                      VéuNotes – Cofre de notas
+                      VéuNotes · Cofre portátil
                     </p>
                     <h2 className="mt-2 text-2xl font-semibold text-white">
-                      Defina a senha mestre do seu cofre local
+                      Crie seu cofre local de várias notas
                     </h2>
                     <p className="mt-3 text-sm leading-7 text-zinc-300">
-                      Suas notas ficam guardadas apenas neste navegador, protegidas por uma senha
-                      mestre.
+                      O cofre usa Argon2id e AES-256-GCM. Depois, você pode
+                      exportá-lo como um arquivo <code>.criptoveu-note</code>.
                     </p>
                   </div>
                 </div>
@@ -310,40 +401,66 @@ export default function VeuNotesVault() {
                       id={createConfirmId}
                       type="password"
                       value={createConfirmPassword}
-                      onChange={(event) => setCreateConfirmPassword(event.target.value)}
+                      onChange={(event) =>
+                        setCreateConfirmPassword(event.target.value)
+                      }
                       placeholder="Repita a senha mestre"
                       className="tool-input"
                       autoComplete="new-password"
                     />
                   </FieldBlock>
 
-                  <div className="cv-note-warning rounded-[24px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm leading-7 text-amber-50">
-                    Use uma senha forte. Se você esquecer, não há como recuperar o conteúdo deste cofre.
+                  <div className="rounded-[24px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm leading-7 text-amber-50">
+                    Sem a senha não há recuperação. Depois de criar notas,
+                    exporte um backup e guarde-o separadamente da senha.
                   </div>
 
-                  {createActions}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={handleCreateVault}
+                      disabled={isBusy}
+                      className="btn-primary"
+                    >
+                      <Lock className="h-4 w-4" />
+                      Criar cofre
+                    </button>
+                    <button
+                      type="button"
+                      onClick={triggerImportPicker}
+                      className="btn-secondary"
+                      disabled={isBusy}
+                    >
+                      <FileUp className="h-4 w-4" />
+                      Importar cofre
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="surface-secondary rounded-[28px] p-5">
-                  <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">Primeiro uso</p>
+                  <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">
+                    Portabilidade real
+                  </p>
                   <p className="mt-2 text-lg font-semibold text-white">
-                    O VéuNotes começa vazio e totalmente local
+                    Um arquivo, várias notas
                   </p>
                   <div className="mt-4 space-y-3 text-sm leading-7 text-zinc-400">
-                    <p>1. Você define uma senha mestre.</p>
-                    <p>2. O cofre é criado com AES-256-GCM e salvo só no navegador.</p>
-                    <p>3. A nota fica destrancada apenas em memória durante a sessão.</p>
+                    <p>Crie notas independentes e organize-as com etiquetas.</p>
+                    <p>Pesquise apenas depois de desbloquear o cofre.</p>
+                    <p>Leve o arquivo criptografado para outro dispositivo.</p>
                   </div>
                 </div>
 
                 <div className="surface-secondary rounded-[28px] p-5">
-                  <p className="text-sm font-semibold text-white">Cuidados importantes</p>
-                  <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-400">
-                    <p>Exportar cofre gera um arquivo criptografado. Guarde em local seguro.</p>
-                    <p>Limpar os dados do navegador apaga o cofre. Exporte um backup antes de trocar de dispositivo.</p>
-                  </div>
+                  <p className="text-sm font-semibold text-white">
+                    Compatível com seus backups
+                  </p>
+                  <p className="mt-3 text-sm leading-7 text-zinc-400">
+                    Backups JSON antigos continuam aceitos. Após a senha correta,
+                    a nota única é migrada para o novo cofre sem perder conteúdo.
+                  </p>
                 </div>
               </div>
             </div>
@@ -358,11 +475,14 @@ export default function VeuNotesVault() {
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">
-                      VéuNotes – Cofre de notas
+                      VéuNotes · Cofre portátil
                     </p>
-                    <h2 className="mt-2 text-2xl font-semibold text-white">Estado trancado</h2>
+                    <h2 className="mt-2 text-2xl font-semibold text-white">
+                      Cofre local trancado
+                    </h2>
                     <p className="mt-3 text-sm leading-7 text-zinc-300">
-                      Suas notas são guardadas apenas neste navegador, protegidas por uma senha mestre.
+                      A lista, os títulos, as etiquetas e o conteúdo só existem
+                      em memória depois da senha correta.
                     </p>
                   </div>
                 </div>
@@ -371,7 +491,7 @@ export default function VeuNotesVault() {
                   <FieldBlock
                     label="Senha mestre"
                     htmlFor={unlockPasswordId}
-                    helper="Digite a senha correta para descriptografar a nota em memória."
+                    helper="Digite a senha para autenticar e descriptografar o cofre."
                   >
                     <input
                       id={unlockPasswordId}
@@ -394,8 +514,12 @@ export default function VeuNotesVault() {
                       <Unlock className="h-4 w-4" />
                       Desbloquear
                     </button>
-
-                    <button type="button" onClick={triggerImportPicker} className="btn-secondary" disabled={isBusy}>
+                    <button
+                      type="button"
+                      onClick={triggerImportPicker}
+                      className="btn-secondary"
+                      disabled={isBusy}
+                    >
                       <FileUp className="h-4 w-4" />
                       Importar cofre
                     </button>
@@ -403,21 +527,24 @@ export default function VeuNotesVault() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="surface-secondary rounded-[28px] p-5">
-                  <p className="text-sm font-semibold text-white">Cofre local detectado</p>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="surface-technical rounded-[22px] p-4">
-                      <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Uso aproximado</p>
-                      <p className="mt-2 text-sm text-white">{usageLabel}</p>
-                    </div>
-                    <div className="surface-technical rounded-[22px] p-4">
-                      <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Auto-lock</p>
-                      <p className="mt-2 text-sm text-white">{idleMinutes} minutos</p>
-                    </div>
+              <div className="surface-secondary rounded-[28px] p-5">
+                <p className="text-sm font-semibold text-white">
+                  Cofre criptografado detectado
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="surface-technical rounded-[22px] p-4">
+                    <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
+                      Tamanho local
+                    </p>
+                    <p className="mt-2 text-sm text-white">{usageLabel}</p>
+                  </div>
+                  <div className="surface-technical rounded-[22px] p-4">
+                    <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">
+                      Auto-lock
+                    </p>
+                    <p className="mt-2 text-sm text-white">{idleMinutes} minutos</p>
                   </div>
                 </div>
-
               </div>
             </div>
           ) : null}
@@ -425,122 +552,422 @@ export default function VeuNotesVault() {
           {isUnlocked ? (
             <div className="space-y-5">
               <section className="surface-primary rounded-[28px] p-5 sm:p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">
-                      VéuNotes – sessão segura ativa
+                      PORTABLE_VAULT1 · sessão ativa
                     </p>
                     <h2 className="mt-2 text-2xl font-semibold text-white">
-                      Cofre destrancado – lembre de bloquear ao sair
+                      Cofre portátil desbloqueado
                     </h2>
                     <p className="mt-3 text-sm leading-7 text-zinc-300">
-                      A nota fica em texto puro apenas na memória desta aba. O cofre salvo continua
-                      criptografado localmente.
+                      {notes.length} {notes.length === 1 ? 'nota' : 'notas'} em
+                      memória. O arquivo salvo continua criptografado.
                     </p>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[340px]">
-                    <div className="surface-technical rounded-[22px] p-4">
-                      <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Uso aproximado</p>
-                      <p className="mt-2 text-sm text-white">{usageLabel}</p>
-                    </div>
-                    <div className="surface-technical rounded-[22px] p-4">
-                      <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Último salvamento</p>
-                      <p className="mt-2 text-sm text-white">{formatDateTime(lastSavedAt)}</p>
-                    </div>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => void exportVault()}
+                      disabled={isBusy}
+                      className="btn-secondary"
+                    >
+                      <Download className="h-4 w-4" />
+                      Exportar .criptoveu-note
+                    </button>
+                    <button
+                      type="button"
+                      onClick={triggerImportPicker}
+                      disabled={isBusy}
+                      className="btn-secondary"
+                    >
+                      <FileUp className="h-4 w-4" />
+                      Importar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordChange((current) => !current)}
+                      disabled={isBusy}
+                      className="btn-secondary"
+                    >
+                      <KeyRound className="h-4 w-4" />
+                      Trocar senha
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => lockVault()}
+                      className="btn-secondary"
+                    >
+                      <Lock className="h-4 w-4" />
+                      Bloquear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="surface-technical rounded-[22px] p-4">
+                    <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
+                      Armazenamento
+                    </p>
+                    <p className="mt-2 text-sm text-white">{usageLabel}</p>
+                  </div>
+                  <div className="surface-technical rounded-[22px] p-4">
+                    <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
+                      Último salvamento
+                    </p>
+                    <p className="mt-2 text-sm text-white">
+                      {formatDateTime(lastSavedAt)}
+                    </p>
+                  </div>
+                  <div className="surface-technical rounded-[22px] p-4">
+                    <p className="text-xs uppercase tracking-[0.26em] text-zinc-500">
+                      Bloqueio automático
+                    </p>
+                    <p className="mt-2 text-sm text-white">{idleMinutes} minutos</p>
                   </div>
                 </div>
 
                 {storageWarning ? (
-                  <div className="cv-note-warning mt-4 rounded-[24px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm leading-7 text-amber-50">
+                  <div className="mt-4 rounded-[24px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm leading-7 text-amber-50">
                     {storageWarning}
                   </div>
                 ) : null}
               </section>
 
-              <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-                <div className="surface-primary rounded-[28px] p-5 sm:p-6">
-                  <div className="flex items-center justify-between gap-3">
+              {showPasswordChange ? (
+                <section className="surface-secondary rounded-[28px] p-5 sm:p-6">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-white">Nota protegida</p>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        Sessão segura ativa com bloqueio automático em {idleMinutes} minutos.
+                      <p className="text-sm font-semibold text-white">
+                        Trocar senha mestre
+                      </p>
+                      <p className="mt-2 text-sm leading-7 text-zinc-400">
+                        O cofre será recriptografado com novo salt e nova chave.
+                        Backups já exportados não são alterados.
                       </p>
                     </div>
-                    <div className="icon-chip p-2">
-                      <ShieldCheck className="h-5 w-5" />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordChange(false)}
+                      className="rounded-full p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                      aria-label="Fechar troca de senha"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
 
-                  <textarea
-                    id={noteInputId}
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    placeholder="Escreva sua nota protegida aqui. Nada é enviado para servidor."
-                    className="tool-textarea mt-5 min-h-[340px] font-mono text-[15px] leading-7 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_0_8px_rgba(34,211,238,0.04)]"
-                    spellCheck={false}
-                  />
+                  <div className="mt-5 grid gap-5 lg:grid-cols-3">
+                    <FieldBlock
+                      label="Senha atual"
+                      htmlFor={currentPasswordId}
+                      helper="Confirma que você pode abrir o cofre atual."
+                    >
+                      <input
+                        id={currentPasswordId}
+                        type="password"
+                        value={currentPassword}
+                        onChange={(event) => setCurrentPassword(event.target.value)}
+                        className="tool-input"
+                        autoComplete="current-password"
+                      />
+                    </FieldBlock>
+                    <FieldBlock
+                      label="Nova senha"
+                      htmlFor={newPasswordId}
+                      helper={`Mínimo de ${VEU_NOTES_MIN_PASSWORD_LENGTH} caracteres.`}
+                    >
+                      <input
+                        id={newPasswordId}
+                        type="password"
+                        value={newPassword}
+                        onChange={(event) => setNewPassword(event.target.value)}
+                        className="tool-input"
+                        autoComplete="new-password"
+                      />
+                    </FieldBlock>
+                    <FieldBlock
+                      label="Confirmar nova senha"
+                      htmlFor={newPasswordConfirmId}
+                      helper="Repita exatamente a nova senha."
+                    >
+                      <input
+                        id={newPasswordConfirmId}
+                        type="password"
+                        value={newPasswordConfirmation}
+                        onChange={(event) =>
+                          setNewPasswordConfirmation(event.target.value)
+                        }
+                        className="tool-input"
+                        autoComplete="new-password"
+                      />
+                    </FieldBlock>
+                  </div>
 
-                  <p className="mt-3 text-xs leading-6 text-zinc-500">
-                    Autosave local após alguns segundos sem digitação. Salvar manualmente atualiza o backup de forma imediata.
-                  </p>
-                </div>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleChangePassword}
+                      disabled={
+                        isBusy ||
+                        !currentPassword ||
+                        !newPassword ||
+                        !newPasswordConfirmation
+                      }
+                      className="btn-primary"
+                    >
+                      <KeyRound className="h-4 w-4" />
+                      Recriptografar com nova senha
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordChange(false)}
+                      className="btn-secondary"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </section>
+              ) : null}
 
-                <div className="space-y-4">
-                  <div className="surface-secondary rounded-[28px] p-5">
-                    <p className="text-sm font-semibold text-white">Ações do cofre</p>
-                    <div className="mt-4 grid gap-3">
+              <section className="grid gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+                <aside className="surface-secondary rounded-[28px] p-4 sm:p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">Notas</p>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Títulos e etiquetas também são criptografados.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={createNote}
+                      className="icon-chip p-2"
+                      aria-label="Criar nova nota"
+                      title="Criar nova nota"
+                    >
+                      <FilePlus2 className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="relative mt-4">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      type="search"
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Buscar título, texto ou etiqueta"
+                      className="tool-input pl-10"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={createNote}
+                    className="btn-primary mt-4 w-full"
+                  >
+                    <FilePlus2 className="h-4 w-4" />
+                    Nova nota
+                  </button>
+
+                  <div className="mt-4 max-h-[560px] space-y-2 overflow-y-auto pr-1">
+                    {visibleNotes.map((note) => {
+                      const isSelected = note.id === selectedNoteId
+
+                      return (
+                        <div
+                          key={note.id}
+                          className={`rounded-[22px] border p-3 transition ${
+                            isSelected
+                              ? 'border-cyan-400/30 bg-cyan-400/10'
+                              : 'border-white/8 bg-black/10 hover:border-white/15'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedNoteId(note.id)}
+                              className="min-w-0 flex-1 text-left"
+                            >
+                              <p className="truncate text-sm font-medium text-white">
+                                {note.title.trim() || 'Sem título'}
+                              </p>
+                              <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500">
+                                {getNotePreview(note.content)}
+                              </p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteNote(note.id, note.title)}
+                              className="shrink-0 rounded-full p-1.5 text-zinc-600 transition hover:bg-rose-500/10 hover:text-rose-300"
+                              aria-label={`Excluir ${note.title || 'nota sem título'}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          {note.tags.length > 0 ? (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {note.tags.slice(0, 3).map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-zinc-400"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      )
+                    })}
+
+                    {visibleNotes.length === 0 ? (
+                      <div className="rounded-[22px] border border-dashed border-white/10 px-4 py-8 text-center">
+                        <p className="text-sm text-zinc-400">
+                          {notes.length === 0
+                            ? 'Seu cofre está vazio.'
+                            : 'Nenhuma nota corresponde à busca.'}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                </aside>
+
+                <div className="surface-primary rounded-[28px] p-5 sm:p-6">
+                  {selectedNote ? (
+                    <>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/70">
+                            Editor protegido
+                          </p>
+                          <p className="mt-2 text-xs text-zinc-500">
+                            Autosave criptografado após alguns segundos.
+                          </p>
+                        </div>
+                        <div className="icon-chip p-2">
+                          <ShieldCheck className="h-5 w-5" />
+                        </div>
+                      </div>
+
+                      <div className="mt-5 space-y-5">
+                        <FieldBlock
+                          label="Título"
+                          htmlFor={noteTitleId}
+                          helper={`${selectedNote.title.length}/${PORTABLE_VAULT_MAX_TITLE_LENGTH} caracteres`}
+                        >
+                          <input
+                            id={noteTitleId}
+                            type="text"
+                            value={selectedNote.title}
+                            maxLength={PORTABLE_VAULT_MAX_TITLE_LENGTH}
+                            onChange={(event) =>
+                              updateNote(selectedNote.id, {
+                                title: event.target.value,
+                              })
+                            }
+                            placeholder="Título da nota"
+                            className="tool-input text-lg font-semibold"
+                          />
+                        </FieldBlock>
+
+                        <FieldBlock
+                          label="Etiquetas"
+                          htmlFor={noteTagsId}
+                          helper="Separe por vírgulas. Elas ficam dentro do conteúdo criptografado."
+                        >
+                          <NoteTagsInput
+                            key={selectedNote.id}
+                            id={noteTagsId}
+                            tags={selectedNote.tags}
+                            onChange={(tags) =>
+                              updateNote(selectedNote.id, { tags })
+                            }
+                          />
+                        </FieldBlock>
+
+                        <FieldBlock
+                          label="Conteúdo"
+                          htmlFor={noteContentId}
+                          helper={`${selectedNote.content.length.toLocaleString('pt-BR')}/${PORTABLE_VAULT_MAX_CONTENT_LENGTH.toLocaleString('pt-BR')} caracteres`}
+                        >
+                          <textarea
+                            id={noteContentId}
+                            value={selectedNote.content}
+                            maxLength={PORTABLE_VAULT_MAX_CONTENT_LENGTH}
+                            onChange={(event) =>
+                              updateNote(selectedNote.id, {
+                                content: event.target.value,
+                              })
+                            }
+                            placeholder="Escreva sua nota. Nada é enviado para servidor."
+                            className="tool-textarea min-h-[360px] font-mono text-[15px] leading-7 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_0_8px_rgba(34,211,238,0.04)]"
+                            spellCheck={false}
+                          />
+                        </FieldBlock>
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-xs leading-6 text-zinc-500">
+                          Editada em {formatDateTime(selectedNote.updatedAt)}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void saveVault()}
+                          disabled={isBusy || !isDirty}
+                          className="btn-primary"
+                        >
+                          <Save className="h-4 w-4" />
+                          {isDirty ? 'Salvar agora' : 'Cofre salvo'}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex min-h-[460px] flex-col items-center justify-center text-center">
+                      <div className="icon-chip p-4">
+                        <FilePlus2 className="h-7 w-7" />
+                      </div>
+                      <h3 className="mt-4 text-xl font-semibold text-white">
+                        Crie a primeira nota
+                      </h3>
+                      <p className="mt-2 max-w-md text-sm leading-7 text-zinc-400">
+                        Cada nota pode ter título, conteúdo e etiquetas. Tudo é
+                        criptografado junto dentro do cofre portátil.
+                      </p>
                       <button
                         type="button"
-                        onClick={handleSaveNote}
-                        disabled={isBusy || !isDirty}
-                        className="btn-primary w-full"
+                        onClick={createNote}
+                        className="btn-primary mt-5"
                       >
-                        <Save className="h-4 w-4" />
-                        Salvar nota localmente
-                      </button>
-
-                      <button type="button" onClick={handleExportVault} disabled={isBusy} className="btn-secondary w-full">
-                        <Download className="h-4 w-4" />
-                        Exportar cofre
-                      </button>
-
-                      <button type="button" onClick={triggerImportPicker} disabled={isBusy} className="btn-secondary w-full">
-                        <FileUp className="h-4 w-4" />
-                        Importar cofre
-                      </button>
-
-                      <button type="button" onClick={() => lockVault()} className="btn-secondary w-full">
-                        <Lock className="h-4 w-4" />
-                        Bloquear cofre
+                        <FilePlus2 className="h-4 w-4" />
+                        Criar nota
                       </button>
                     </div>
-                  </div>
+                  )}
+                </div>
+              </section>
 
-                  <div className="surface-secondary rounded-[28px] p-5">
-                    <p className="text-sm font-semibold text-white">Estado do cofre</p>
-                    <div className="mt-4 grid gap-3">
-                      <div className="surface-technical rounded-[22px] p-4">
-                        <div className="flex items-center gap-2 text-zinc-300">
-                          <Clock3 className="h-4 w-4" />
-                          <span className="text-sm">Bloqueio automático</span>
-                        </div>
-                        <p className="mt-2 text-sm leading-7 text-zinc-400">
-                          A sessão é encerrada após {idleMinutes} minutos de inatividade ou após algum tempo com a aba oculta.
-                        </p>
-                      </div>
-
-                      <div className="surface-technical rounded-[22px] p-4">
-                        <div className="flex items-center gap-2 text-zinc-300">
-                          <Eye className="h-4 w-4" />
-                          <span className="text-sm">Armazenamento local</span>
-                        </div>
-                        <p className="mt-2 text-sm leading-7 text-zinc-400">
-                          Apenas o blob criptografado é salvo. Texto puro, senha e chave não são persistidos.
-                        </p>
-                      </div>
-                    </div>
+              <section className="grid gap-4 md:grid-cols-2">
+                <div className="surface-secondary rounded-[28px] p-5">
+                  <div className="flex items-center gap-2 text-zinc-200">
+                    <Clock3 className="h-4 w-4" />
+                    <p className="text-sm font-semibold">Bloqueio automático</p>
                   </div>
+                  <p className="mt-3 text-sm leading-7 text-zinc-400">
+                    A sessão é encerrada após {idleMinutes} minutos sem atividade
+                    ou após algum tempo com a aba oculta.
+                  </p>
+                </div>
+                <div className="surface-secondary rounded-[28px] p-5">
+                  <div className="flex items-center gap-2 text-zinc-200">
+                    <Download className="h-4 w-4" />
+                    <p className="text-sm font-semibold">Backup portátil</p>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-zinc-400">
+                    O arquivo exportado contém apenas NOTE2 criptografado. Senha,
+                    títulos, etiquetas e textos não aparecem em claro.
+                  </p>
                 </div>
               </section>
             </div>
@@ -550,29 +977,23 @@ export default function VeuNotesVault() {
 
       {isUnlocked ? (
         <MobileStickyCTA
-          label={isDirty ? 'Salvar nota localmente' : 'Nota salva localmente'}
+          label={isDirty ? 'Salvar cofre' : 'Cofre salvo'}
           icon={<Save className="h-5 w-5" />}
-          onClick={() => {
-            void handleSaveNote()
-          }}
+          onClick={() => void saveVault()}
           disabled={isBusy || !isDirty}
         />
       ) : vaultState === 'create' ? (
         <MobileStickyCTA
           label="Criar cofre"
           icon={<KeyRound className="h-5 w-5" />}
-          onClick={() => {
-            void handleCreateVault()
-          }}
+          onClick={() => void handleCreateVault()}
           disabled={isBusy || !createPassword || !createConfirmPassword}
         />
       ) : !storageError ? (
         <MobileStickyCTA
           label="Desbloquear"
           icon={<Unlock className="h-5 w-5" />}
-          onClick={() => {
-            void handleUnlockVault()
-          }}
+          onClick={() => void handleUnlockVault()}
           disabled={isBusy || !unlockPassword}
         />
       ) : null}
