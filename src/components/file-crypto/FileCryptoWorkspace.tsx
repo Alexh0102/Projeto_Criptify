@@ -1,7 +1,6 @@
 ﻿import {
   AlertCircle,
   CheckCircle2,
-  Copy,
   Download,
   FileArchive,
   FileSearch,
@@ -22,6 +21,7 @@ import AdvancedOptions from '../ui/AdvancedOptions'
 import MobileStickyCTA from '../ui/MobileStickyCTA'
 import ResultPanel from '../ui/ResultPanel'
 import SegmentedMode from '../ui/SegmentedMode'
+import PasswordSecurityPanel from '../ui/PasswordSecurityPanel'
 import UniversalPreview from './UniversalPreview'
 import { usePremium } from '../../context/premium'
 import {
@@ -38,8 +38,6 @@ import {
   STREAMING_CHUNK_SIZE_BYTES,
   CriptoveuError,
   formatFileSize,
-  generateWhatsappStyleKey,
-  getPasswordStrength,
   inspectCriptoveuPackage,
   type FilePackageInspection,
   type FileSecurityReport,
@@ -95,7 +93,6 @@ const STATUS_STYLES: Record<StatusTone, string> = {
   error: 'border-rose-500/25 bg-rose-500/10 text-rose-50',
 }
 
-const STRENGTH_SLOTS = [1, 2, 3, 4, 5]
 const FILE_SECURITY_PROFILE_STORAGE_KEY = 'criptoveu-file-security-profile-v3'
 
 function loadSecurityProfileId(): FileSecurityProfileId {
@@ -144,7 +141,6 @@ export default function FileCryptoWorkspace() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [securityProfileId, setSecurityProfileId] =
     useState<FileSecurityProfileId>(loadSecurityProfileId)
   const fileInputId = useId()
@@ -156,7 +152,6 @@ export default function FileCryptoWorkspace() {
   const { isPremium, tier, requestPremiumAccess } = usePremium()
   const canUseSecureProcessing =
     window.isSecureContext && typeof window.crypto?.subtle !== 'undefined'
-  const hasClipboardSupport = typeof navigator.clipboard?.writeText === 'function'
   const securityProfile =
     FILE_SECURITY_PROFILES.find((profile) => profile.id === securityProfileId) ??
     FILE_SECURITY_PROFILES[1]
@@ -194,7 +189,6 @@ export default function FileCryptoWorkspace() {
     }
   }, [files, mode])
 
-  const strength = getPasswordStrength(password)
   const currentMode = MODE_COPY[mode]
   const totalSelectedSize = files.reduce((sum, currentFile) => sum + currentFile.size, 0)
   const activeFileLimit = isPremium
@@ -264,15 +258,6 @@ export default function FileCryptoWorkspace() {
       // A seleção em memória continua válida quando o armazenamento é bloqueado.
     }
   }, [securityProfileId])
-
-  useEffect(() => {
-    if (!copied) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => setCopied(false), 1600)
-    return () => window.clearTimeout(timeoutId)
-  }, [copied])
 
   useEffect(() => {
     if (results.length === 0) {
@@ -423,47 +408,6 @@ export default function FileCryptoWorkspace() {
     }
 
     setIsDragging(false)
-  }
-
-  async function handleCopyKey() {
-    if (!password) {
-      setStatus({
-        tone: 'error',
-        message: t('files.workspace.status.copyNeedsPassword'),
-      })
-      return
-    }
-
-    if (!hasClipboardSupport) {
-      setStatus({
-        tone: 'error',
-        message: t('files.workspace.status.clipboardUnavailable'),
-      })
-      return
-    }
-
-    try {
-      await navigator.clipboard.writeText(password)
-      setCopied(true)
-      setStatus({
-        tone: 'success',
-        message: t('files.workspace.status.copied'),
-      })
-    } catch {
-      setStatus({
-        tone: 'error',
-        message: t('files.workspace.status.clipboardDenied'),
-      })
-    }
-  }
-
-  function handleGenerateKey() {
-    setPassword(generateWhatsappStyleKey())
-    setCopied(false)
-    setStatus({
-      tone: 'info',
-      message: t('files.workspace.status.keyGenerated'),
-    })
   }
 
   function handleDownloadResult(result: ResultItem) {
@@ -978,51 +922,20 @@ export default function FileCryptoWorkspace() {
                     className="tool-input w-full"
                   />
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={handleGenerateKey}
-                      disabled={isProcessing}
-                      className="btn-accent"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      {t('files.workspace.password.generate')}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleCopyKey}
-                      disabled={!password || isProcessing || !hasClipboardSupport}
-                      className="btn-secondary"
-                    >
-                      <Copy className="h-4 w-4" />
-                      {copied ? t('common.copied') : t('files.workspace.password.copy')}
-                    </button>
-                  </div>
-
                   <p className="text-xs leading-6 text-zinc-500">
                     {t('files.workspace.password.reuseHint')}
                   </p>
                 </div>
               </FieldBlock>
 
-              <div className="mt-5 surface-technical rounded-2xl p-4">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-zinc-300">{t('files.workspace.password.strength')}</span>
-                  <span className={strength.textClass}>{strength.label}</span>
-                </div>
-
-                <div className="mt-3 grid grid-cols-5 gap-2">
-                  {STRENGTH_SLOTS.map((slot) => (
-                    <span
-                      key={slot}
-                      className={`h-2 rounded-full transition ${
-                        slot <= strength.level ? strength.barClass : 'bg-zinc-800'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
+              {mode === 'encrypt' ? (
+                <PasswordSecurityPanel
+                  value={password}
+                  onChange={setPassword}
+                  context="file"
+                  disabled={isProcessing}
+                />
+              ) : null}
             </div>
 
             {mode === 'encrypt' ? (

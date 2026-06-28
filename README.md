@@ -154,6 +154,31 @@ Importante:
 - Alterar ciphertext, IV, salt ou metadados autenticados faz a abertura falhar.
 - Payloads V1 anteriores com **PBKDF2/SHA-256 e 600.000 iterações** continuam legíveis, mas não são mais gerados.
 
+#### Gerador e medidor de credenciais
+
+Os fluxos de criação de arquivos, links, QR Codes e VéuNotes compartilham um
+painel local de segurança com três opções:
+
+- frase-senha com oito palavras escolhidas sem repetição e sufixo numérico;
+- senha aleatória de 24 caracteres com letras, números e símbolos;
+- chave máxima com **32 bytes aleatórios**, exibida como 64 caracteres
+  hexadecimais, totalizando **256 bits**.
+
+Toda escolha aleatória usa `crypto.getRandomValues`, com rejeição de valores
+para evitar viés de módulo. Não há `Math.random`, biblioteca externa, API,
+telemetria ou persistência da credencial.
+
+O medidor de valores digitados manualmente é deliberadamente heurístico. Ele
+considera comprimento e variedade, mas também penaliza palavras comuns,
+sequências, repetições, anos, baixa diversidade, o nome do projeto e senhas
+curtas mascaradas por símbolos. Sua classificação orienta o usuário, mas não é
+uma prova matemática de entropia.
+
+Quando o próprio CriptoVéu gera a credencial, a interface identifica a
+aleatoriedade conhecida do processo separadamente da estimativa humana. A
+credencial pode ser revelada e copiada localmente, nunca é armazenada e, em
+links ou QR Codes, nunca entra no payload compartilhado.
+
 #### Sobre expiração e limite de visualizações
 
 Como o CriptoVéu não usa banco de dados para controlar estado global, o limite de visualizações do link protegido é controlado localmente pelo navegador que abre o link.
@@ -209,6 +234,10 @@ Salt e IV fixos existem apenas nesses vetores. A produção sempre usa
 A suíte automatizada verifica compatibilidade V1, migração de `NOTE1`, senha
 incorreta, payload truncado e adulterações de ciphertext, IV, salt, tipo,
 versão, KDF, parâmetros Argon2id, expiração e limite.
+
+Os testes do gerador verificam o tamanho real da chave de 256 bits, as classes
+da senha aleatória, a estrutura da frase-senha, unicidade amostral, uso de Web
+Crypto e detecção de padrões fracos.
 
 > Atenção: o `localStorage` pertence ao navegador atual e pode ser apagado pelo usuário, pelo sistema, por extensões, por limpeza de dados ou por políticas do navegador. Faça backup quando necessário.
 
@@ -346,6 +375,7 @@ Ideias e melhorias futuras planejadas ou em estudo:
 - [ ] Verificação manual de fingerprint da sessão.
 - [x] Migração de mensagens, QR Codes, links e VéuNotes para Argon2id, mantendo leitura dos payloads V1.
 - [x] Escudo de Integridade para arquivos com `CRIPTOVEU4`, manifesto cifrado, verificação pós-recuperação, inspetor estrutural e relatório local.
+- [x] Gerador local de frase, senha e chave de 256 bits, com medidor heurístico e avisos de padrões fracos.
 
 > Observação sobre o futuro chat: mesmo sem armazenar mensagens, um servidor de sinalização ou relay poderá observar metadados como IP, horário, duração da sessão e tamanho aproximado dos pacotes. Isso deve ser documentado claramente quando o recurso for implementado.
 

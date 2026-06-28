@@ -33,6 +33,7 @@ import {
 import AdvancedOptions from './ui/AdvancedOptions'
 import FreeUsageCounter from './ui/FreeUsageCounter'
 import MobileStickyCTA from './ui/MobileStickyCTA'
+import PasswordSecurityPanel from './ui/PasswordSecurityPanel'
 import ResultPanel from './ui/ResultPanel'
 import SegmentedMode from './ui/SegmentedMode'
 
@@ -485,6 +486,13 @@ export default function AutoDestructLink({
                   onChange={(event) => setGeneratePassword(event.target.value)}
                   placeholder="Digite a senha da mensagem"
                   className="tool-input mt-4"
+                />
+
+                <PasswordSecurityPanel
+                  value={generatePassword}
+                  onChange={setGeneratePassword}
+                  context="link"
+                  disabled={isGeneratingLink}
                 />
 
                 <button

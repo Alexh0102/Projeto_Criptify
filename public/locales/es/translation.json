@@ -16,6 +16,60 @@
     "copied": "Copiado",
     "localBadge": "100% local"
   },
+  "passwordSecurity": {
+    "strength": {
+      "title": "Seguridad de la contraseña o clave",
+      "levels": {
+        "empty": "En espera",
+        "veryWeak": "Muy débil",
+        "weak": "Débil",
+        "reasonable": "Razonable",
+        "strong": "Fuerte",
+        "veryStrong": "Muy fuerte"
+      }
+    },
+    "generatedEntropy": "Entropía de la generación local: al menos {{bits}} bits.",
+    "heuristicNote": "Estimación heurística: la longitud por sí sola no garantiza una contraseña impredecible.",
+    "warningTitle": "Esta contraseña puede ser fácil de adivinar",
+    "adviceTitle": "Conviene reforzar esta contraseña",
+    "warnings": {
+      "tooShort": "Usa al menos 12 caracteres; se recomiendan 16 o más.",
+      "recommendedLength": "Para mayor seguridad, prefiere 16 caracteres o más.",
+      "commonPattern": "La contraseña contiene una palabra o patrón muy común.",
+      "projectName": "No uses CriptoVéu, “cripto” ni el nombre del servicio en la contraseña.",
+      "year": "Los años son patrones previsibles y reducen la resistencia a intentos.",
+      "sequence": "Las secuencias de teclado, letras o números son fáciles de probar.",
+      "repetition": "Las repeticiones reducen mucho la variedad real de la contraseña.",
+      "lowVariety": "Hay pocos caracteres diferentes para esta longitud.",
+      "misleadingSymbols": "Una contraseña corta no se vuelve fuerte solo por incluir símbolos."
+    },
+    "generator": {
+      "title": "Generar contraseña, frase o clave",
+      "helper": "Usa la aleatoriedad segura del navegador para crear una credencial más fuerte.",
+      "modes": {
+        "passphrase": {
+          "label": "Frase de contraseña memorable",
+          "description": "Ocho palabras aleatorias y un número, más fácil de escribir y guardar."
+        },
+        "password": {
+          "label": "Contraseña aleatoria",
+          "description": "24 caracteres con letras, números y símbolos."
+        },
+        "key": {
+          "label": "Clave aleatoria de 256 bits",
+          "description": "Modo máximo: 32 bytes aleatorios en formato hexadecimal."
+        }
+      },
+      "localOnly": "La generación ocurre solo en este dispositivo y CriptoVéu no la almacena.",
+      "noRecovery": "Guarda la credencial: si la pierdes, no existe recuperación.",
+      "separateChannel": "Envía la credencial por otro canal; nunca se incluye en el enlace o QR.",
+      "generatedLabel": "Credencial generada en este dispositivo",
+      "show": "Mostrar",
+      "hide": "Ocultar",
+      "copy": "Copiar contraseña o clave",
+      "copied": "Copiado"
+    }
+  },
   "language": {
     "selectLabel": "Seleccionar idioma",
     "changeTo": "Cambiar idioma a {{language}}",
