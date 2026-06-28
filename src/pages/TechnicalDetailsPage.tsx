@@ -56,6 +56,11 @@ export default function TechnicalDetailsPage() {
                 'CVM2 identifica MSG2, CVQ2 identifica QR2 e CVL2 identifica LINK2. O VéuNotes grava um objeto NOTE2 versionado.',
             },
             {
+              title: 'Documento portátil PORTABLE_VAULT1',
+              description:
+                'O plaintext autenticado do NOTE2 é um documento estritamente validado com várias notas e etiquetas. Backups usam a extensão .criptoveu-note sem expor seus metadados.',
+            },
+            {
               title: 'Argon2id fora da thread da interface',
               description:
                 'A derivação usa hash-wasm em WebAssembly dentro de Web Worker. O navegador principal recebe apenas os 32 bytes derivados para importar uma chave AES-GCM não extraível.',
@@ -63,7 +68,7 @@ export default function TechnicalDetailsPage() {
             {
               title: 'Leitura V1 preservada',
               description:
-                'Os parsers preservam arquivos CRIPTOVEU3 e formatos PBKDF2 anteriores. Links, QRs, mensagens e cofres antigos também continuam utilizáveis.',
+                'Os parsers preservam arquivos CRIPTOVEU3 e formatos PBKDF2 anteriores. Cofres de nota única são migrados para PORTABLE_VAULT1 somente após autenticação bem-sucedida.',
             },
           ],
         },

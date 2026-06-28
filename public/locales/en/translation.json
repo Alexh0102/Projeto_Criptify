@@ -501,14 +501,14 @@
   "notes": {
     "page": {
       "eyebrow": "VéuNotes",
-      "title": "Keep a note protected by a master password, only in this browser.",
-      "description": "Create a local text vault with AES-256-GCM, encrypted backup, and automatic lock without relying on a server.",
+      "title": "Organize multiple notes in an encrypted portable vault.",
+      "description": "Create, search, and organize notes locally, then export them as an Argon2id and AES-256-GCM protected .criptoveu-note file.",
       "badge": "100% client-side",
       "help": {
-        "how": { "title": "How it works", "content": "On first use, you create a master password. After that, the note is decrypted only in memory when the vault is unlocked." },
-        "saved": { "title": "What stays saved in the browser", "content": "Only an encrypted NOTE2 JSON with version, Argon2id, salt, IV, and ciphertext. Plain text, password, and key are not persisted. Legacy NOTE1 vaults migrate only after the correct password." },
-        "backup": { "title": "Backup and recovery", "content": "You can export an encrypted JSON file and import it later on the same or another device, as long as you use the same master password." },
-        "forgot": { "title": "If I forget the password", "content": "There is no recovery. Use a strong password and keep a backup of the vault in a safe place." }
+        "how": { "title": "How it works", "content": "On first use, you create a master password. Titles, tags, and text are decrypted only in memory after the vault is unlocked." },
+        "saved": { "title": "What stays saved in the browser", "content": "Only an encrypted NOTE2 envelope with Argon2id, salt, IV, and ciphertext. The PORTABLE_VAULT1 document, titles, tags, and text remain inside the ciphertext. Legacy vaults migrate only after the correct password." },
+        "backup": { "title": "Backup and recovery", "content": "You can export a .criptoveu-note file and import it on the same or another device. Legacy JSON backups remain supported." },
+        "forgot": { "title": "If I forget the password", "content": "There is no recovery. Store the password separately from the .criptoveu-note file. Backups made before a password change still use the previous password." }
       }
     }
   }

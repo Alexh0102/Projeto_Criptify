@@ -25,7 +25,7 @@ Principais recursos:
 - QR Code protegido por senha.
 - Link protegido com expiração embutida no payload e limite de visualizações controlado localmente no navegador.
 - Esteganografia para esconder mensagens protegidas dentro de imagens.
-- VéuNotes, um cofre local de notas criptografadas.
+- VéuNotes, um cofre portátil de várias notas criptografadas.
 - PWA com service worker para cache controlado do shell da aplicação.
 
 ---
@@ -38,7 +38,7 @@ Principais recursos:
 | `/qr-secreto` | QR protegido | Cria e lê QR Codes com mensagens criptografadas. |
 | `/link-secreto` | Link protegido | Gera links com mensagem criptografada no hash da URL. |
 | `/esteganografia` | Mensagem oculta | Esconde ou revela mensagens protegidas em imagens. |
-| `/veu-notes` | VéuNotes | Mantém uma nota criptografada no `localStorage` do navegador. |
+| `/veu-notes` | VéuNotes | Organiza várias notas em um cofre local exportável como `.criptoveu-note`. |
 | `/seguranca` | Segurança | Explica o modelo de segurança adotado pelo projeto. |
 | `/detalhes-tecnicos` | Detalhes técnicos | Apresenta informações técnicas da implementação. |
 
@@ -71,7 +71,7 @@ Principais recursos:
 | QR protegido `QR2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVQ2` no hash da URL |
 | Link protegido `LINK2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVL2` no hash da URL |
 | Esteganografia | Mensagem `MSG2` protegida antes da ocultação | Argon2id, 64 MB, `t=2`, `p=1` | Imagem PNG com dados ocultos |
-| VéuNotes `NOTE2` | AES-256-GCM | Argon2id, 128 MB, `t=2`, `p=1` | `localStorage` do navegador |
+| VéuNotes `NOTE2` + `PORTABLE_VAULT1` | AES-256-GCM | Argon2id, 128 MB, `t=2`, `p=1` | `localStorage` e arquivo `.criptoveu-note` |
 | Formatos V1 legados | AES-GCM | PBKDF2/SHA-256 | Leitura compatível; novas criações usam V2 |
 
 ---
@@ -246,18 +246,35 @@ Limites aplicados:
 
 ### VéuNotes
 
-O VéuNotes salva um único cofre de texto criptografado no `localStorage` do navegador.
+O VéuNotes organiza várias notas em um cofre criptografado no `localStorage` e
+permite exportar o mesmo conteúdo como um arquivo portátil
+`.criptoveu-note`. Títulos, textos, etiquetas e identificadores ficam dentro
+do ciphertext; a busca só acontece localmente depois do desbloqueio.
 
-A nota é criptografada com AES-256-GCM e protegida por senha mestre. Novos cofres usam o formato `NOTE2`.
+O envelope é criptografado com AES-256-GCM e protegido por senha mestre. Novos
+cofres usam `NOTE2` por fora e o documento autenticado `PORTABLE_VAULT1` por
+dentro.
 
 Parâmetros principais:
 
 - Senha mínima: **12 caracteres**.
 - Argon2id em Web Worker com **128 MB**, `t=2` e `p=1`.
 - Tipo, versão e parâmetros da KDF são autenticados como AAD.
+- Até **500 notas**, com títulos, conteúdo e até 12 etiquetas por nota.
+- Busca local por título, texto ou etiqueta somente durante a sessão aberta.
+- Bloqueio automático por inatividade ou permanência da aba em segundo plano.
+- Troca de senha com confirmação da senha atual e novo salt Argon2id.
+- Exportação em `.criptoveu-note`; backups JSON antigos continuam aceitos.
 - Cofres `NOTE1` com PBKDF2 continuam legíveis.
-- Depois de uma abertura V1 bem-sucedida, o cofre é recriptografado como `NOTE2`; o blob antigo só é substituído após a nova criptografia terminar.
-- Backup em JSON com validação de formato antes da importação.
+- Depois de uma abertura legada bem-sucedida, a nota única é convertida em uma
+  nota do cofre portátil e recriptografada como `NOTE2`; o blob antigo só é
+  substituído após a nova criptografia terminar.
+- A importação valida tamanho, campos permitidos, limites e autenticação
+  AES-GCM antes de substituir o cofre local.
+
+O arquivo portátil não contém a senha e não oferece recuperação sem ela.
+Backups exportados antes de uma troca de senha continuam protegidos pela senha
+antiga.
 
 ---
 
@@ -417,6 +434,7 @@ Ideias e melhorias futuras planejadas ou em estudo:
 - [x] Escudo de Integridade para arquivos com `CRIPTOVEU4`, manifesto cifrado, verificação pós-recuperação, inspetor estrutural e relatório local.
 - [x] Gerador local de frase, senha e chave de 256 bits, com medidor heurístico e avisos de padrões fracos.
 - [x] Proteção dupla de arquivos com senha + arquivo-chave no formato `CRIPTOVEU5`.
+- [x] Cofre portátil VéuNotes com várias notas, etiquetas, busca local, troca de senha e arquivo `.criptoveu-note`.
 
 > Observação sobre o futuro chat: mesmo sem armazenar mensagens, um servidor de sinalização ou relay poderá observar metadados como IP, horário, duração da sessão e tamanho aproximado dos pacotes. Isso deve ser documentado claramente quando o recurso for implementado.
 

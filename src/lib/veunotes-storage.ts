@@ -5,9 +5,11 @@ import {
 } from './veunotes-crypto'
 
 export const VEU_NOTES_STORAGE_KEY = 'veunotes-v1'
-export const VEU_NOTES_BACKUP_FILE = 'veunotes-backup.json'
+export const VEU_NOTES_BACKUP_FILE = 'veunotes-cofre.criptoveu-note'
 export const VEU_NOTES_STORAGE_WARNING_BYTES = 500 * 1024
-export const VEU_NOTES_MAX_BACKUP_BYTES = 2 * 1024 * 1024
+export const VEU_NOTES_MAX_BACKUP_BYTES = 4 * 1024 * 1024
+export const VEU_NOTES_BACKUP_MIME_TYPE =
+  'application/vnd.criptoveu.note+json'
 
 export class VeuNotesStorageError extends Error {
   code: 'INVALID_JSON' | 'INVALID_SHAPE' | 'WRITE_FAILED' | 'FILE_TOO_LARGE'

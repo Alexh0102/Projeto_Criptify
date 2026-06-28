@@ -501,14 +501,14 @@
   "notes": {
     "page": {
       "eyebrow": "VéuNotes",
-      "title": "Guarda una nota protegida por una contraseña maestra, solo en este navegador.",
-      "description": "Crea una bóveda de texto local con AES-256-GCM, copia de seguridad cifrada y bloqueo automático sin depender de un servidor.",
+      "title": "Organiza varias notas en una bóveda cifrada y portátil.",
+      "description": "Crea, busca y organiza notas localmente; expórtalas como un archivo .criptoveu-note protegido con Argon2id y AES-256-GCM.",
       "badge": "100% client-side",
       "help": {
-        "how": { "title": "Cómo funciona", "content": "En el primer uso, creas una contraseña maestra. Después, la nota solo se descifra en memoria cuando la bóveda se desbloquea." },
-        "saved": { "title": "Qué queda guardado en el navegador", "content": "Solo un JSON NOTE2 cifrado con versión, Argon2id, salt, IV y ciphertext. El texto plano, la contraseña y la clave no se guardan. Los cofres NOTE1 antiguos se migran solo después de usar la contraseña correcta." },
-        "backup": { "title": "Copia de seguridad y recuperación", "content": "Puedes exportar un archivo JSON cifrado e importarlo después en el mismo u otro dispositivo, siempre que uses la misma contraseña maestra." },
-        "forgot": { "title": "Si olvido la contraseña", "content": "No hay recuperación. Por eso, usa una contraseña fuerte y guarda una copia de seguridad de la bóveda en un lugar seguro." }
+        "how": { "title": "Cómo funciona", "content": "En el primer uso, creas una contraseña maestra. Los títulos, etiquetas y textos solo se descifran en memoria después de desbloquear la bóveda." },
+        "saved": { "title": "Qué queda guardado en el navegador", "content": "Solo un sobre NOTE2 cifrado con Argon2id, salt, IV y ciphertext. El documento PORTABLE_VAULT1, los títulos, etiquetas y textos permanecen dentro del ciphertext. Las bóvedas antiguas solo se migran después de usar la contraseña correcta." },
+        "backup": { "title": "Copia de seguridad y recuperación", "content": "Puedes exportar un archivo .criptoveu-note e importarlo en el mismo u otro dispositivo. Las copias JSON antiguas siguen siendo compatibles." },
+        "forgot": { "title": "Si olvido la contraseña", "content": "No hay recuperación. Guarda la contraseña separada del archivo .criptoveu-note. Las copias anteriores a un cambio de contraseña siguen usando la contraseña anterior." }
       }
     }
   }

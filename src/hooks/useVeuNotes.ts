@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   VEU_NOTES_MIN_PASSWORD_LENGTH,
@@ -10,7 +10,22 @@ import {
   type VeuNotesSession,
 } from '../lib/veunotes-crypto'
 import {
+  PORTABLE_VAULT_MAX_NOTES,
+  PortableVaultError,
+  addPortableVaultNote,
+  createPortableVault,
+  createPortableVaultNote,
+  decodePortableVaultPlaintext,
+  removePortableVaultNote,
+  searchPortableVaultNotes,
+  serializePortableVault,
+  updatePortableVaultNote,
+  type PortableVaultDocument,
+  type PortableVaultNote,
+} from '../lib/portable-vault'
+import {
   VEU_NOTES_BACKUP_FILE,
+  VEU_NOTES_BACKUP_MIME_TYPE,
   VEU_NOTES_STORAGE_WARNING_BYTES,
   VeuNotesStorageError,
   assertSupportedBackupFile,
@@ -19,7 +34,7 @@ import {
   measureVaultBlobBytes,
   parseVaultBlob,
   saveVaultBlob,
-  } from '../lib/veunotes-storage'
+} from '../lib/veunotes-storage'
 
 export type VeuNotesVaultState = 'create' | 'locked' | 'unlocked'
 export type VeuNotesToastTone = 'success' | 'error' | 'info'
@@ -53,7 +68,11 @@ function createDownload(fileName: string, content: string, mimeType: string) {
 }
 
 function getFriendlyErrorMessage(error: unknown) {
-  if (error instanceof VeuNotesCryptoError || error instanceof VeuNotesStorageError) {
+  if (
+    error instanceof VeuNotesCryptoError ||
+    error instanceof VeuNotesStorageError ||
+    error instanceof PortableVaultError
+  ) {
     return error.message
   }
 
@@ -61,7 +80,7 @@ function getFriendlyErrorMessage(error: unknown) {
     return error.message
   }
 
-  return 'Ocorreu um erro inesperado ao processar o cofre local.'
+  return 'Ocorreu um erro inesperado ao processar o cofre portátil.'
 }
 
 export function formatStorageUsage(bytes: number) {
@@ -83,7 +102,9 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
   const idleMs = idleMinutes * 60_000
 
   const [vaultState, setVaultState] = useState<VeuNotesVaultState>('locked')
-  const [note, setNote] = useState('')
+  const [vault, setVault] = useState<PortableVaultDocument | null>(null)
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [storageBytes, setStorageBytes] = useState(0)
   const [vaultExists, setVaultExists] = useState(false)
   const [toast, setToast] = useState<VeuNotesToast>(null)
@@ -92,22 +113,33 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
   const [storageError, setStorageError] = useState<string | null>(null)
 
   const sessionRef = useRef<VeuNotesSession | null>(null)
-  const lastSavedNoteRef = useRef('')
+  const lastSavedVaultRef = useRef('')
   const idleTimerRef = useRef<number | null>(null)
   const hiddenTimerRef = useRef<number | null>(null)
   const toastTimerRef = useRef<number | null>(null)
 
-  const isUnlocked = vaultState === 'unlocked'
-  const isDirty = isUnlocked && note !== lastSavedNoteRef.current
+  const isUnlocked = vaultState === 'unlocked' && vault !== null
+  const serializedVault = vault ? serializePortableVault(vault) : ''
+  const isDirty =
+    isUnlocked && serializedVault !== lastSavedVaultRef.current
   const storageWarning =
     storageBytes > VEU_NOTES_STORAGE_WARNING_BYTES
-      ? 'O cofre está crescendo. Exporte um backup e evite usar o campo como arquivo de texto longo.'
+      ? 'O cofre está crescendo. Exporte um backup e mantenha uma cópia segura.'
       : null
   const usageLabel = formatStorageUsage(storageBytes)
+  const selectedNote =
+    vault?.notes.find((note) => note.id === selectedNoteId) ?? null
+  const visibleNotes = useMemo(
+    () => searchPortableVaultNotes(vault?.notes ?? [], searchQuery),
+    [searchQuery, vault?.notes],
+  )
 
   const clearSession = useCallback(() => {
     sessionRef.current = null
-    setNote('')
+    lastSavedVaultRef.current = ''
+    setVault(null)
+    setSelectedNoteId(null)
+    setSearchQuery('')
   }, [])
 
   const clearTimers = useCallback(() => {
@@ -152,24 +184,25 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
     return nextBytes
   }, [])
 
-  const saveNote = useCallback(
+  const saveVault = useCallback(
     async (options?: { silent?: boolean }) => {
-      if (!sessionRef.current) {
-        throw new Error('Não existe uma sessão ativa para salvar a nota.')
+      if (!sessionRef.current || !vault) {
+        throw new Error('Não existe uma sessão ativa para salvar o cofre.')
       }
 
-      const blob = await encryptNoteWithSession(note, sessionRef.current)
+      const plaintext = serializePortableVault(vault)
+      const blob = await encryptNoteWithSession(plaintext, sessionRef.current)
 
       persistBlob(blob)
-      lastSavedNoteRef.current = note
+      lastSavedVaultRef.current = plaintext
 
       if (!options?.silent) {
-        showToast('success', 'Nota salva localmente.')
+        showToast('success', 'Cofre portátil salvo localmente.')
       }
 
       return blob
     },
-    [note, persistBlob, showToast],
+    [persistBlob, showToast, vault],
   )
 
   const refreshStorageState = useCallback(() => {
@@ -186,7 +219,9 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
 
       setVaultExists(true)
       setStorageBytes(measureVaultBlobBytes(blob))
-      setVaultState((currentState) => (currentState === 'unlocked' ? currentState : 'locked'))
+      setVaultState((currentState) =>
+        currentState === 'unlocked' ? currentState : 'locked',
+      )
       setStorageError(null)
     } catch (error) {
       setVaultExists(true)
@@ -242,10 +277,7 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
       return
     }
 
-    const handleActivity = () => {
-      resetIdleTimer()
-    }
-
+    const handleActivity = () => resetIdleTimer()
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         hiddenTimerRef.current = window.setTimeout(() => {
@@ -263,7 +295,6 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
     }
 
     resetIdleTimer()
-
     window.addEventListener('pointerdown', handleActivity)
     window.addEventListener('keydown', handleActivity)
     window.addEventListener('mousemove', handleActivity)
@@ -286,11 +317,28 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
     }
 
     const autosaveTimer = window.setTimeout(() => {
-      void saveNote({ silent: true })
+      void saveVault({ silent: true })
     }, autosaveDelayMs)
 
     return () => window.clearTimeout(autosaveTimer)
-  }, [autosaveDelayMs, isBusy, isDirty, isUnlocked, saveNote])
+  }, [autosaveDelayMs, isBusy, isDirty, isUnlocked, saveVault])
+
+  const activateVault = useCallback(
+    (
+      nextVault: PortableVaultDocument,
+      session: VeuNotesSession,
+      savedPlaintext: string,
+    ) => {
+      sessionRef.current = session
+      lastSavedVaultRef.current = savedPlaintext
+      setVault(nextVault)
+      setSelectedNoteId(nextVault.notes[0]?.id ?? null)
+      setSearchQuery('')
+      setVaultState('unlocked')
+      setStorageError(null)
+    },
+    [],
+  )
 
   const createVault = useCallback(
     async (password: string, confirmation: string) => {
@@ -309,22 +357,24 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
       setIsBusy(true)
 
       try {
+        const nextVault = createPortableVault()
+        const plaintext = serializePortableVault(nextVault)
         const { blob, session } = await createVeuNotesVault(
-          '',
+          plaintext,
           normalizedPassword,
         )
 
         persistBlob(blob)
-        sessionRef.current = session
-        lastSavedNoteRef.current = ''
-        setNote('')
-        setVaultState('unlocked')
-        showToast('success', 'Cofre criado localmente. Sua sessão segura está ativa.')
+        activateVault(nextVault, session, plaintext)
+        showToast(
+          'success',
+          'Cofre portátil criado. Exporte um backup após adicionar suas notas.',
+        )
       } finally {
         setIsBusy(false)
       }
     },
-    [persistBlob, showToast],
+    [activateVault, persistBlob, showToast],
   )
 
   const unlockVault = useCallback(
@@ -340,33 +390,37 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
         }
 
         const unlocked = await unlockVeuNotesBlob(blob, password)
-        const activeBlob = unlocked.migratedBlob ?? blob
+        const decoded = decodePortableVaultPlaintext(unlocked.plaintext)
+        const plaintext = serializePortableVault(decoded.vault)
+        const requiresMigration =
+          decoded.migratedFromLegacyNote || unlocked.migratedBlob !== null
 
-        if (unlocked.migratedBlob) {
-          persistBlob(unlocked.migratedBlob)
+        if (requiresMigration) {
+          const migratedBlob = await encryptNoteWithSession(
+            plaintext,
+            unlocked.session,
+          )
+          persistBlob(migratedBlob)
+        } else {
+          setStorageBytes(measureVaultBlobBytes(blob))
         }
 
-        sessionRef.current = unlocked.session
-        lastSavedNoteRef.current = unlocked.plaintext
-        setNote(unlocked.plaintext)
-        setVaultState('unlocked')
-        setStorageBytes(measureVaultBlobBytes(activeBlob))
-        setStorageError(null)
+        activateVault(decoded.vault, unlocked.session, plaintext)
         showToast(
           'success',
-          unlocked.migratedBlob
-            ? 'Cofre destrancado e migrado com segurança para NOTE2.'
-            : 'Cofre destrancado com sucesso.',
+          requiresMigration
+            ? 'Cofre destrancado e migrado com segurança para o formato portátil.'
+            : 'Cofre portátil destrancado com sucesso.',
         )
       } finally {
         setIsBusy(false)
       }
     },
-    [persistBlob, showToast],
+    [activateVault, persistBlob, showToast],
   )
 
   const exportVault = useCallback(async () => {
-    const blob = isDirty ? await saveNote({ silent: true }) : loadVaultBlob()
+    const blob = isDirty ? await saveVault({ silent: true }) : loadVaultBlob()
 
     if (!blob) {
       throw new Error('Não existe cofre salvo para exportar.')
@@ -375,10 +429,13 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
     createDownload(
       VEU_NOTES_BACKUP_FILE,
       JSON.stringify(blob, null, 2),
-      'application/json',
+      VEU_NOTES_BACKUP_MIME_TYPE,
     )
-    showToast('success', 'Backup exportado com sucesso. Guarde em local seguro.')
-  }, [isDirty, saveNote, showToast])
+    showToast(
+      'success',
+      'Cofre .criptoveu-note exportado. Guarde o arquivo e a senha separadamente.',
+    )
+  }, [isDirty, saveVault, showToast])
 
   const importBackup = useCallback(
     async (file: File, password: string) => {
@@ -386,23 +443,130 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
 
       try {
         assertSupportedBackupFile(file)
-        const rawContent = await file.text()
-        const importedBlob = parseVaultBlob(rawContent)
+        const importedBlob = parseVaultBlob(await file.text())
         const unlocked = await unlockVeuNotesBlob(importedBlob, password)
-        const blobToPersist = unlocked.migratedBlob ?? importedBlob
+        const decoded = decodePortableVaultPlaintext(unlocked.plaintext)
+        const plaintext = serializePortableVault(decoded.vault)
+        const requiresMigration =
+          decoded.migratedFromLegacyNote || unlocked.migratedBlob !== null
+        const blobToPersist = requiresMigration
+          ? await encryptNoteWithSession(plaintext, unlocked.session)
+          : importedBlob
 
         persistBlob(blobToPersist)
-        sessionRef.current = unlocked.session
-        lastSavedNoteRef.current = unlocked.plaintext
-        setNote(unlocked.plaintext)
-        setVaultState('unlocked')
-        setStorageError(null)
-        showToast('success', 'Backup importado com sucesso.')
+        activateVault(decoded.vault, unlocked.session, plaintext)
+        showToast(
+          'success',
+          requiresMigration
+            ? 'Backup antigo importado e migrado para o cofre portátil.'
+            : 'Cofre portátil importado com sucesso.',
+        )
       } finally {
         setIsBusy(false)
       }
     },
-    [persistBlob, showToast],
+    [activateVault, persistBlob, showToast],
+  )
+
+  const changePassword = useCallback(
+    async (
+      currentPassword: string,
+      newPassword: string,
+      confirmation: string,
+    ) => {
+      if (!vault) {
+        throw new Error('Desbloqueie o cofre antes de trocar a senha.')
+      }
+
+      const normalizedPassword = newPassword.trim()
+      if (normalizedPassword.length < VEU_NOTES_MIN_PASSWORD_LENGTH) {
+        throw new Error(
+          `Use uma nova senha com pelo menos ${VEU_NOTES_MIN_PASSWORD_LENGTH} caracteres.`,
+        )
+      }
+      if (normalizedPassword !== confirmation) {
+        throw new Error('A confirmação da nova senha não confere.')
+      }
+      if (currentPassword === normalizedPassword) {
+        throw new Error('A nova senha deve ser diferente da senha atual.')
+      }
+
+      setIsBusy(true)
+
+      try {
+        const currentBlob = loadVaultBlob()
+        if (!currentBlob) {
+          throw new Error('O cofre local não está disponível.')
+        }
+
+        await unlockVeuNotesBlob(currentBlob, currentPassword)
+        const plaintext = serializePortableVault(vault)
+        const { blob, session } = await createVeuNotesVault(
+          plaintext,
+          normalizedPassword,
+        )
+
+        persistBlob(blob)
+        sessionRef.current = session
+        lastSavedVaultRef.current = plaintext
+        showToast(
+          'success',
+          'Senha alterada. Exporte um novo backup; arquivos antigos continuam usando a senha anterior.',
+        )
+      } finally {
+        setIsBusy(false)
+      }
+    },
+    [persistBlob, showToast, vault],
+  )
+
+  const createNote = useCallback(() => {
+    if (!vault) {
+      return
+    }
+
+    if (vault.notes.length >= PORTABLE_VAULT_MAX_NOTES) {
+      showToast(
+        'error',
+        `O cofre atingiu o limite de ${PORTABLE_VAULT_MAX_NOTES} notas.`,
+      )
+      return
+    }
+
+    const note = createPortableVaultNote()
+    setVault(addPortableVaultNote(vault, note))
+    setSelectedNoteId(note.id)
+    setSearchQuery('')
+  }, [showToast, vault])
+
+  const updateNote = useCallback(
+    (
+      noteId: string,
+      patch: Partial<Pick<PortableVaultNote, 'title' | 'content' | 'tags'>>,
+    ) => {
+      setVault((currentVault) =>
+        currentVault
+          ? updatePortableVaultNote(currentVault, noteId, patch)
+          : currentVault,
+      )
+    },
+    [],
+  )
+
+  const deleteNote = useCallback(
+    (noteId: string) => {
+      if (!vault) {
+        return
+      }
+
+      const nextVault = removePortableVaultNote(vault, noteId)
+      setVault(nextVault)
+      setSelectedNoteId((currentId) =>
+        currentId === noteId ? (nextVault.notes[0]?.id ?? null) : currentId,
+      )
+      showToast('info', 'Nota removida do cofre. O autosave registrará a alteração.')
+    },
+    [showToast, vault],
   )
 
   const removeBrokenVault = useCallback(() => {
@@ -412,7 +576,10 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
     setStorageBytes(0)
     setVaultState('create')
     setStorageError(null)
-    showToast('info', 'Cofre local removido. Agora você pode criar um novo cofre ou importar um backup.')
+    showToast(
+      'info',
+      'Cofre local removido. Agora você pode criar um novo ou importar um backup.',
+    )
   }, [clearSession, showToast])
 
   const safeAction = useCallback(
@@ -429,8 +596,14 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
 
   return {
     vaultState,
-    note,
-    setNote,
+    vault,
+    notes: vault?.notes ?? [],
+    visibleNotes,
+    selectedNote,
+    selectedNoteId,
+    setSelectedNoteId,
+    searchQuery,
+    setSearchQuery,
     vaultExists,
     isBusy,
     isDirty,
@@ -444,9 +617,22 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
     createVault: (password: string, confirmation: string) =>
       safeAction(() => createVault(password, confirmation)),
     unlockVault: (password: string) => safeAction(() => unlockVault(password)),
-    saveNote: (options?: { silent?: boolean }) => safeAction(() => saveNote(options)),
+    saveVault: (options?: { silent?: boolean }) =>
+      safeAction(() => saveVault(options)),
     exportVault: () => safeAction(exportVault),
-    importBackup: (file: File, password: string) => safeAction(() => importBackup(file, password)),
+    importBackup: (file: File, password: string) =>
+      safeAction(() => importBackup(file, password)),
+    changePassword: (
+      currentPassword: string,
+      newPassword: string,
+      confirmation: string,
+    ) =>
+      safeAction(() =>
+        changePassword(currentPassword, newPassword, confirmation),
+      ),
+    createNote,
+    updateNote,
+    deleteNote,
     lockVault: (reason?: string) => lockVault(reason),
     clearBrokenVault: removeBrokenVault,
     dismissToast: () => setToast(null),
