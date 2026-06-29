@@ -25,7 +25,7 @@ import {
   createAllowlistedPayload,
 } from './share-payload-security'
 
-export const AUTO_DESTRUCT_APP_URL = 'https://www.xn--criptovu-h1a.com'
+export const AUTO_DESTRUCT_APP_URL = 'https://www.criptoveu.com'
 const AUTO_DESTRUCT_APP_PATH = '/link-secreto'
 const AUTO_DESTRUCT_HASH_PREFIX = '#msg='
 const AUTO_DESTRUCT_STORAGE_PREFIX = 'criptify:auto-destruct:'

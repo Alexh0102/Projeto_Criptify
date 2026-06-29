@@ -9,7 +9,7 @@
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://www.xn--criptovu-h1a.com"
+          "value": "https://www.criptoveu.com"
         },
         {
           "key": "Content-Security-Policy",
