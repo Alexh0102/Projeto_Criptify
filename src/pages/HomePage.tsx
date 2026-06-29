@@ -12,6 +12,7 @@ import {
   LockKeyhole,
   NotebookPen,
   QrCode,
+  ScanSearch,
   ShieldCheck,
   Users,
 } from 'lucide-react'
@@ -29,6 +30,7 @@ const iconByPath = {
   '/link-secreto': Link2,
   '/esteganografia': ImageUp,
   '/veu-notes': NotebookPen,
+  '/diagnostico-navegador': ScanSearch,
 } as const
 
 const trustItemKeys = ['local', 'focusedFlow', 'ready'] as const
@@ -217,7 +219,9 @@ export default function HomePage() {
               const Icon = iconByPath[tool.path]
               const isSteganographyCard = tool.id === 'steganography'
               const technicalLabel =
-                tool.id === 'steganography' || tool.id === 'notes'
+                tool.id === 'steganography' ||
+                tool.id === 'notes' ||
+                tool.id === 'diagnostics'
                   ? t(`tools.${tool.id}.technicalLabel`)
                   : null
 

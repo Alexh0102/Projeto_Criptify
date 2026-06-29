@@ -16,6 +16,11 @@ export default function TechnicalDetailsPage() {
                 'Cada ferramenta abre em uma tela própria para evitar mistura de fluxo e reduzir distrações desnecessárias.',
             },
             {
+              title: 'Diagnóstico em rota isolada',
+              description:
+                'A rota /diagnostico-navegador é carregada sob demanda e avalia recursos do navegador sem inicializar processamento de arquivo.',
+            },
+            {
               title: 'Home como ponto de entrada',
               description:
                 'A home funciona como hub de navegação, com contexto, casos de uso e acesso rápido às ferramentas.',
@@ -129,6 +134,11 @@ export default function TechnicalDetailsPage() {
               title: 'Arquivo-chave sem fingerprint público',
               description:
                 'O pacote registra apenas a exigência do segundo fator. Nenhum hash do arquivo-chave é serializado, pois isso permitiria usá-lo no lugar do próprio arquivo.',
+            },
+            {
+              title: 'Diagnóstico sem dependência externa',
+              description:
+                'A avaliação usa apenas Web APIs do navegador e heurísticas conservadoras para HTTPS, Web Crypto, WASM, Workers, File API, downloads locais e perfis Argon2id.',
             },
           ],
         },

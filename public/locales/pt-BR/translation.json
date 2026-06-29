@@ -274,6 +274,50 @@
       "eyebrow": "Cofre local",
       "cardTitle": "Cofre de notas",
       "technicalLabel": "AES-GCM"
+    },
+    "diagnostics": {
+      "title": "Diagnóstico do navegador",
+      "description": "Verifique se este navegador suporta HTTPS, Web Crypto, WebAssembly, Workers e perfis Argon2id.",
+      "helper": "Veja compatibilidade, limitações e recomendação de RAM antes de processar arquivos sensíveis.",
+      "eyebrow": "Compatibilidade",
+      "cardTitle": "Diagnóstico",
+      "technicalLabel": "Sem upload"
+    }
+  },
+  "diagnostics": {
+    "page": {
+      "eyebrow": "Diagnóstico do navegador",
+      "title": "Confira se este dispositivo está pronto para o CriptoVéu.",
+      "description": "O teste roda localmente e verifica recursos essenciais para criptografia, Argon2id, leitura de arquivos e downloads no navegador.",
+      "badge": "Sem upload",
+      "refresh": "Atualizar diagnóstico",
+      "loading": "Preparando diagnóstico local..."
+    },
+    "report": {
+      "eyebrow": "Resultado local",
+      "helper": "Nenhum arquivo, senha, nota ou chave é lido por este diagnóstico. O relatório descreve apenas recursos do navegador."
+    },
+    "environment": {
+      "browser": "Navegador",
+      "memory": "Memória declarada",
+      "cores": "Núcleos lógicos",
+      "context": "Contexto",
+      "secure": "Seguro",
+      "insecure": "Inseguro",
+      "unknown": "Não informado"
+    },
+    "capabilities": {
+      "eyebrow": "Compatibilidade",
+      "title": "Recursos essenciais"
+    },
+    "argon2": {
+      "eyebrow": "Argon2id",
+      "title": "Perfis de memória recomendados"
+    },
+    "notes": {
+      "eyebrow": "Transparência",
+      "title": "O que este diagnóstico significa",
+      "copy": "Copiar relatório JSON"
     }
   },
   "files": {
