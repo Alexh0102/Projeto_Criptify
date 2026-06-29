@@ -14,6 +14,7 @@ import TechnicalDetailsPage from './pages/TechnicalDetailsPage'
 import TermsPage from './pages/TermsPage'
 
 const FilesPage = lazy(() => import('./pages/FilesPage'))
+const BrowserDiagnosticsPage = lazy(() => import('./pages/BrowserDiagnosticsPage'))
 const LinkSecretPage = lazy(() => import('./pages/LinkSecretPage'))
 const QrSecretPage = lazy(() => import('./pages/QrSecretPage'))
 const SteganographyPage = lazy(() => import('./pages/SteganographyPage'))
@@ -50,6 +51,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/arquivos" element={<FilesPage />} />
+            <Route path="/diagnostico-navegador" element={<BrowserDiagnosticsPage />} />
             <Route path="/qr-secreto" element={<QrSecretPage />} />
             <Route path="/link-secreto" element={<LinkSecretPage />} />
             <Route path="/esteganografia" element={<SteganographyPage />} />

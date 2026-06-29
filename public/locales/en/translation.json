@@ -241,6 +241,50 @@
       "eyebrow": "Local vault",
       "cardTitle": "Note vault",
       "technicalLabel": "AES-GCM"
+    },
+    "diagnostics": {
+      "title": "Browser diagnostics",
+      "description": "Check whether this browser supports HTTPS, Web Crypto, WebAssembly, Workers, and Argon2id profiles.",
+      "helper": "Review compatibility, limitations, and RAM recommendations before processing sensitive files.",
+      "eyebrow": "Compatibility",
+      "cardTitle": "Diagnostics",
+      "technicalLabel": "No upload"
+    }
+  },
+  "diagnostics": {
+    "page": {
+      "eyebrow": "Browser diagnostics",
+      "title": "Check whether this device is ready for CriptoVéu.",
+      "description": "This test runs locally and checks essential browser features for encryption, Argon2id, file reading, and local downloads.",
+      "badge": "No upload",
+      "refresh": "Refresh diagnostics",
+      "loading": "Preparing local diagnostics..."
+    },
+    "report": {
+      "eyebrow": "Local result",
+      "helper": "No file, password, note, or key is read by this diagnostic. The report only describes browser capabilities."
+    },
+    "environment": {
+      "browser": "Browser",
+      "memory": "Reported memory",
+      "cores": "Logical cores",
+      "context": "Context",
+      "secure": "Secure",
+      "insecure": "Insecure",
+      "unknown": "Not reported"
+    },
+    "capabilities": {
+      "eyebrow": "Compatibility",
+      "title": "Essential capabilities"
+    },
+    "argon2": {
+      "eyebrow": "Argon2id",
+      "title": "Recommended memory profiles"
+    },
+    "notes": {
+      "eyebrow": "Transparency",
+      "title": "What this diagnostic means",
+      "copy": "Copy JSON report"
     }
   },
   "files": {

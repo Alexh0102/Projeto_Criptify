@@ -40,6 +40,11 @@ export default function SecurityPage() {
               description:
                 'Dê preferência a navegadores atualizados e a dispositivos sob seu controle direto.',
             },
+            {
+              title: 'Use o diagnóstico do navegador',
+              description:
+                'A ferramenta de diagnóstico verifica localmente HTTPS, Web Crypto, WebAssembly, Workers e perfis Argon2id antes de tarefas sensíveis.',
+            },
           ],
         },
         {
@@ -104,6 +109,11 @@ export default function SecurityPage() {
               title: 'Diagnóstico sem senha tem alcance limitado',
               description:
                 'O inspetor pode reconhecer cabeçalho, registros e manifesto, mas informa apenas estrutura plausível. A autenticidade só é confirmada com a senha e o AES-GCM.',
+            },
+            {
+              title: 'Diagnóstico do navegador não lê segredos',
+              description:
+                'A rota /diagnostico-navegador descreve recursos do ambiente e recomenda perfis de RAM. Ela não abre arquivos, senhas, notas ou chaves.',
             },
             {
               title: 'Compatibilidade sem enfraquecer novas criações',

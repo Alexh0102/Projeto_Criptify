@@ -26,6 +26,7 @@ Principais recursos:
 - Link protegido com expiração embutida no payload e limite de visualizações controlado localmente no navegador.
 - Esteganografia para esconder mensagens protegidas dentro de imagens.
 - VéuNotes, um cofre portátil de várias notas criptografadas.
+- Diagnóstico local do navegador para avaliar HTTPS, Web Crypto, WebAssembly, Workers e perfis Argon2id.
 - PWA com service worker para cache controlado do shell da aplicação.
 
 ---
@@ -39,6 +40,7 @@ Principais recursos:
 | `/link-secreto` | Link protegido | Gera links com mensagem criptografada no hash da URL. |
 | `/esteganografia` | Mensagem oculta | Esconde ou revela mensagens protegidas em imagens. |
 | `/veu-notes` | VéuNotes | Organiza várias notas em um cofre local exportável como `.criptoveu-note`. |
+| `/diagnostico-navegador` | Diagnóstico do navegador | Verifica compatibilidade local e recomenda perfis de RAM para Argon2id. |
 | `/seguranca` | Segurança | Explica o modelo de segurança adotado pelo projeto. |
 | `/detalhes-tecnicos` | Detalhes técnicos | Apresenta informações técnicas da implementação. |
 
@@ -435,6 +437,7 @@ Ideias e melhorias futuras planejadas ou em estudo:
 - [x] Gerador local de frase, senha e chave de 256 bits, com medidor heurístico e avisos de padrões fracos.
 - [x] Proteção dupla de arquivos com senha + arquivo-chave no formato `CRIPTOVEU5`.
 - [x] Cofre portátil VéuNotes com várias notas, etiquetas, busca local, troca de senha e arquivo `.criptoveu-note`.
+- [x] Diagnóstico do navegador com verificação local de APIs críticas e recomendação conservadora de perfis Argon2id.
 
 > Observação sobre o futuro chat: mesmo sem armazenar mensagens, um servidor de sinalização ou relay poderá observar metadados como IP, horário, duração da sessão e tamanho aproximado dos pacotes. Isso deve ser documentado claramente quando o recurso for implementado.
 
@@ -511,6 +514,7 @@ Após o deploy, valide:
 - Link protegido.
 - Esteganografia.
 - VéuNotes.
+- Diagnóstico do navegador.
 - Funcionamento do PWA.
 
 ---

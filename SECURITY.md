@@ -38,6 +38,7 @@ CriptoVéu é um app 100% client-side. Isso significa que:
 - Titulos, etiquetas, textos e identificadores do cofre ficam cifrados; a busca ocorre somente apos o desbloqueio
 - A importacao valida o envelope e o documento antes de substituir o cofre local
 - A troca de senha exige a senha atual, cria novo salt e nao altera backups exportados anteriormente
+- O diagnostico do navegador verifica localmente HTTPS, Web Crypto, WebAssembly, Workers, File API e perfis Argon2id sem ler arquivos, senhas ou chaves
 
 ## Limites
 
@@ -50,6 +51,7 @@ CriptoVéu é um app 100% client-side. Isso significa que:
 - Um arquivo-chave conhecido pelo atacante oferece pouco ganho; perder ou alterar qualquer byte impede a recuperacao
 - Perder a senha do cofre portatil impede a recuperacao; localStorage e arquivos de backup podem ser apagados ou corrompidos
 - O bloqueio automatico reduz exposicao acidental, mas nao protege contra malware ou dispositivo comprometido durante a sessao aberta
+- O diagnostico do navegador e uma estimativa de compatibilidade, nao uma auditoria do dispositivo nem garantia de desempenho sob carga real
 
 ## Recomendacoes de deploy
 
