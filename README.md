@@ -4,7 +4,7 @@ CriptoVéu é uma aplicação web pública e open source para proteger arquivos,
 
 O projeto foi construído com foco em privacidade: arquivos, senhas, mensagens e notas são processados no dispositivo do usuário, sem upload de dados sensíveis para servidores da aplicação.
 
-**Site em produção:** https://www.xn--criptovu-h1a.com/
+**Site em produção:** https://www.criptoveu.com/
 
 > Aviso importante: o CriptoVéu não deve ser interpretado como uma solução “100% segura” ou como substituto para auditoria criptográfica formal. A segurança final depende da senha escolhida, do dispositivo, do navegador, da integridade do código JavaScript entregue ao usuário e do ambiente de execução.
 
