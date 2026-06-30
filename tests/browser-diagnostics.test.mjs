@@ -114,3 +114,46 @@ test('preferencias locais indisponiveis geram alerta nao critico', () => {
   )
 })
 
+test('relatorio respeita idioma selecionado', () => {
+  const english = diagnostics.createBrowserDiagnosticsReport(
+    baseInput(),
+    '2026-06-29T00:00:00.000Z',
+    'en',
+  )
+  const spanish = diagnostics.createBrowserDiagnosticsReport(
+    baseInput(),
+    '2026-06-29T00:00:00.000Z',
+    'es',
+  )
+
+  assert.equal(english.summary, 'Environment compatible with CriptoVéu modern features.')
+  assert.equal(english.environment.browserLabel, 'Google Chrome or Chromium')
+  assert.equal(
+    english.capabilities.find((item) => item.id === 'secureContext').title,
+    'Secure context',
+  )
+  assert.equal(
+    english.argon2Profiles.find((item) => item.id === 'basic').title,
+    '64 MB - Basic',
+  )
+  assert.match(english.notes.join('\n'), /no data sent to the server/)
+
+  assert.equal(spanish.summary, 'Entorno compatible con los recursos modernos de CriptoVéu.')
+  assert.equal(spanish.environment.browserLabel, 'Google Chrome o Chromium')
+  assert.equal(
+    spanish.capabilities.find((item) => item.id === 'secureContext').title,
+    'Contexto seguro',
+  )
+  assert.equal(
+    spanish.argon2Profiles.find((item) => item.id === 'basic').title,
+    '64 MB - Básico',
+  )
+  assert.match(spanish.notes.join('\n'), /sin envío de datos al servidor/)
+})
+
+test('idioma do navegador resolve para locale suportado', () => {
+  assert.equal(diagnostics.resolveBrowserDiagnosticsLocale('en-US'), 'en')
+  assert.equal(diagnostics.resolveBrowserDiagnosticsLocale('es-MX'), 'es')
+  assert.equal(diagnostics.resolveBrowserDiagnosticsLocale('pt-BR'), 'pt-BR')
+  assert.equal(diagnostics.resolveBrowserDiagnosticsLocale('fr-FR'), 'pt-BR')
+})

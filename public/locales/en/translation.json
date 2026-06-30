@@ -276,6 +276,11 @@
       "eyebrow": "Local result",
       "helper": "No file, password, note, or key is read by this diagnostic. The report only describes browser capabilities."
     },
+    "status": {
+      "ok": "Ready",
+      "warning": "Attention",
+      "fail": "Critical"
+    },
     "environment": {
       "browser": "Browser",
       "memory": "Reported memory",
@@ -296,7 +301,9 @@
     "notes": {
       "eyebrow": "Transparency",
       "title": "What this diagnostic means",
-      "copy": "Copy JSON report"
+      "copy": "Copy JSON report",
+      "copied": "Report copied.",
+      "copyFailed": "Could not copy automatically."
     }
   },
   "files": {

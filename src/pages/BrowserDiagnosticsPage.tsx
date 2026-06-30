@@ -16,25 +16,17 @@ import ToolHeroCompact from '../components/ui/ToolHeroCompact'
 import {
   collectBrowserDiagnosticsInput,
   createBrowserDiagnosticsReport,
+  resolveBrowserDiagnosticsLocale,
 } from '../lib/browser-diagnostics'
 import type {
   BrowserDiagnosticsReport,
   DiagnosticStatus,
 } from '../lib/browser-diagnostics'
 
-const statusCopy: Record<DiagnosticStatus, { label: string; className: string }> = {
-  ok: {
-    label: 'Pronto',
-    className: 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100',
-  },
-  warning: {
-    label: 'Atenção',
-    className: 'border-amber-300/25 bg-amber-400/10 text-amber-100',
-  },
-  fail: {
-    label: 'Crítico',
-    className: 'border-rose-400/30 bg-rose-500/10 text-rose-100',
-  },
+const statusClassName: Record<DiagnosticStatus, string> = {
+  ok: 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100',
+  warning: 'border-amber-300/25 bg-amber-400/10 text-amber-100',
+  fail: 'border-rose-400/30 bg-rose-500/10 text-rose-100',
 }
 
 const statusIcon = {
@@ -44,32 +36,37 @@ const statusIcon = {
 } satisfies Record<DiagnosticStatus, typeof CheckCircle2>
 
 function StatusBadge({ status }: { status: DiagnosticStatus }) {
+  const { t } = useTranslation()
   const Icon = statusIcon[status]
-  const copy = statusCopy[status]
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.22em] ${copy.className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.22em] ${statusClassName[status]}`}
     >
       <Icon className="h-3.5 w-3.5" />
-      {copy.label}
+      {t(`diagnostics.status.${status}`)}
     </span>
   )
 }
 
-function createReport() {
-  return createBrowserDiagnosticsReport(collectBrowserDiagnosticsInput())
+function createReport(language: string | undefined, generatedAt: string) {
+  return createBrowserDiagnosticsReport(
+    collectBrowserDiagnosticsInput(),
+    generatedAt,
+    resolveBrowserDiagnosticsLocale(language),
+  )
 }
 
 export default function BrowserDiagnosticsPage() {
-  const { t } = useTranslation()
-  const [report, setReport] = useState<BrowserDiagnosticsReport | null>(() =>
-    typeof window === 'undefined' ? null : createReport(),
-  )
+  const { t, i18n } = useTranslation()
+  const activeLanguage = i18n.resolvedLanguage ?? i18n.language
+  const [generatedAt, setGeneratedAt] = useState(() => new Date().toISOString())
+  const report: BrowserDiagnosticsReport | null =
+    typeof window === 'undefined' ? null : createReport(activeLanguage, generatedAt)
   const [copyStatus, setCopyStatus] = useState('')
 
   function refreshReport() {
-    setReport(createReport())
+    setGeneratedAt(new Date().toISOString())
     setCopyStatus('')
   }
 
@@ -80,9 +77,9 @@ export default function BrowserDiagnosticsPage() {
 
     try {
       await navigator.clipboard.writeText(JSON.stringify(report, null, 2))
-      setCopyStatus('Relatório copiado.')
+      setCopyStatus(t('diagnostics.notes.copied'))
     } catch {
-      setCopyStatus('Não foi possível copiar automaticamente.')
+      setCopyStatus(t('diagnostics.notes.copyFailed'))
     }
   }
 
