@@ -276,6 +276,11 @@
       "eyebrow": "Resultado local",
       "helper": "Este diagnóstico no lee archivos, contraseñas, notas ni claves. El informe solo describe capacidades del navegador."
     },
+    "status": {
+      "ok": "Listo",
+      "warning": "Atención",
+      "fail": "Crítico"
+    },
     "environment": {
       "browser": "Navegador",
       "memory": "Memoria declarada",
@@ -296,7 +301,9 @@
     "notes": {
       "eyebrow": "Transparencia",
       "title": "Qué significa este diagnóstico",
-      "copy": "Copiar informe JSON"
+      "copy": "Copiar informe JSON",
+      "copied": "Informe copiado.",
+      "copyFailed": "No fue posible copiar automáticamente."
     }
   },
   "files": {
