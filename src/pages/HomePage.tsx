@@ -22,7 +22,7 @@ import { Link } from 'react-router-dom'
 import ToolPageLayout from '../components/layout/ToolPageLayout'
 import BrandLogo from '../components/ui/BrandLogo'
 import HelpAccordion from '../components/ui/HelpAccordion'
-import { toolDefinitions } from '../config/tools'
+import { betaResourceDefinitions, toolDefinitions } from '../config/tools'
 
 const iconByPath = {
   '/arquivos': FileArchive,
@@ -149,9 +149,9 @@ export default function HomePage() {
             <a href="#ferramentas" className="btn-secondary">
               {t('home.hero.toolsCta')}
             </a>
-            <Link to="/apoiar" className="btn-secondary">
-              {t('home.hero.supportCta')}
-            </Link>
+            <a href="#recursos-beta" className="btn-secondary">
+              {t('home.hero.betaCta')}
+            </a>
           </div>
 
           <p className="mt-3.5 text-sm text-zinc-400">{t('home.hero.note')}</p>
@@ -219,9 +219,7 @@ export default function HomePage() {
               const Icon = iconByPath[tool.path]
               const isSteganographyCard = tool.id === 'steganography'
               const technicalLabel =
-                tool.id === 'steganography' ||
-                tool.id === 'notes' ||
-                tool.id === 'diagnostics'
+                tool.id === 'steganography' || tool.id === 'notes'
                   ? t(`tools.${tool.id}.technicalLabel`)
                   : null
 
@@ -261,8 +259,59 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section id="recursos-beta" className="scroll-mt-36 space-y-3.5 sm:scroll-mt-32">
+          <div>
+            <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/70">
+              {t('home.beta.eyebrow')}
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-white sm:text-[2rem]">
+              {t('home.beta.title')}
+            </h2>
+            <p className="mt-2.5 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">
+              {t('home.beta.description')}
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {betaResourceDefinitions.map((resource) => {
+              const Icon = iconByPath[resource.path]
+
+              return (
+                <Link
+                  key={resource.path}
+                  to={resource.path}
+                  className="surface-primary group rounded-[30px] border-cyan-500/25 p-4 transition duration-200 hover:-translate-y-1 sm:p-5"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="icon-chip transition group-hover:scale-105">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.24em] text-cyan-100">
+                      {t('home.beta.badge')}
+                    </span>
+                  </div>
+
+                  <h3 className="mt-4 text-[1.28rem] font-semibold leading-tight text-white">
+                    {t(`tools.${resource.id}.cardTitle`)}
+                  </h3>
+                  <p className="mt-2.5 text-sm leading-6 text-zinc-400">
+                    {t(`tools.${resource.id}.description`)}
+                  </p>
+                  <p className="mt-2.5 text-[10px] uppercase tracking-[0.32em] text-zinc-500/80">
+                    {t(`tools.${resource.id}.technicalLabel`)}
+                  </p>
+                  <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-cyan-100">
+                    {t('home.tools.open')}
+                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+
         <section className="surface-secondary rounded-[32px] p-4 sm:p-5">
-          <div className="flex flex-col gap-4 rounded-[26px] border border-emerald-400/25 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(34,211,238,0.08))] p-5 shadow-[0_18px_48px_rgba(16,185,129,0.08)] md:flex-row md:items-center md:justify-between">
+          <div className="rounded-[26px] border border-emerald-400/25 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(34,211,238,0.08))] p-5 shadow-[0_18px_48px_rgba(16,185,129,0.08)]">
             <div>
               <p className="text-xs uppercase tracking-[0.32em] text-emerald-50">
                 {t('home.support.eyebrow')}
@@ -274,10 +323,6 @@ export default function HomePage() {
                 {t('home.support.description')}
               </p>
             </div>
-            <Link to="/apoiar" className="btn-primary shrink-0">
-              {t('home.hero.supportCta')}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
           </div>
         </section>
 
