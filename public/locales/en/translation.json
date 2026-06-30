@@ -86,6 +86,9 @@
       "tools": "Tools",
       "supportAria": "Support the CriptoVéu project",
       "support": "Support",
+      "openBetaAria": "Open beta resources",
+      "beta": "Beta Resources",
+      "betaShort": "Beta",
       "theme": "Theme",
       "enableLightTheme": "Enable light theme",
       "enableDarkTheme": "Enable dark theme"
@@ -97,6 +100,8 @@
     "drawer": {
       "title": "Tools",
       "description": "Choose the right tool for your task.",
+      "betaTitle": "Beta Resources",
+      "betaDescription": "Try new features before they join the main list.",
       "home": "Home",
       "homeHelper": "Go back to the CriptoVéu overview.",
       "closeToolsAria": "Close tools menu",
@@ -115,6 +120,7 @@
       "description": "Use local tools to encrypt, share, and hide sensitive content with more control and less exposure.",
       "filesCta": "Start with files",
       "toolsCta": "View tools",
+      "betaCta": "Beta Resources",
       "supportCta": "Support the project",
       "note": "Everything is processed locally on your device."
     },
@@ -143,6 +149,12 @@
       "eyebrow": "Tools",
       "title": "Choose the task and go straight to the right tool.",
       "open": "Open tool"
+    },
+    "beta": {
+      "eyebrow": "Beta Resources",
+      "title": "Useful new features without crowding the main list.",
+      "description": "Recent or practically validated features live here. They remain local and transparent while they earn their place in the product.",
+      "badge": "Beta"
     },
     "support": {
       "eyebrow": "Donation prompt",

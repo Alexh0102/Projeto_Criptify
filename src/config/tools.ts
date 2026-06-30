@@ -1,12 +1,16 @@
 export type ToolDefinition = {
-  id: 'files' | 'qr' | 'link' | 'steganography' | 'notes' | 'diagnostics'
+  id: 'files' | 'qr' | 'link' | 'steganography' | 'notes'
   path:
     | '/arquivos'
     | '/qr-secreto'
     | '/link-secreto'
     | '/esteganografia'
     | '/veu-notes'
-    | '/diagnostico-navegador'
+}
+
+export type BetaResourceDefinition = {
+  id: 'diagnostics'
+  path: '/diagnostico-navegador'
 }
 
 export const toolDefinitions: ToolDefinition[] = [
@@ -30,6 +34,9 @@ export const toolDefinitions: ToolDefinition[] = [
     id: 'notes',
     path: '/veu-notes',
   },
+]
+
+export const betaResourceDefinitions: BetaResourceDefinition[] = [
   {
     id: 'diagnostics',
     path: '/diagnostico-navegador',

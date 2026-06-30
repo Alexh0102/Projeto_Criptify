@@ -86,6 +86,9 @@
       "tools": "Ferramentas",
       "supportAria": "Apoiar o projeto CriptoVéu",
       "support": "Apoiar",
+      "openBetaAria": "Abrir recursos em beta",
+      "beta": "Recursos em Beta",
+      "betaShort": "Beta",
       "theme": "Tema",
       "enableLightTheme": "Ativar tema claro",
       "enableDarkTheme": "Ativar tema escuro"
@@ -97,6 +100,8 @@
     "drawer": {
       "title": "Ferramentas",
       "description": "Escolha a ferramenta certa para a sua tarefa.",
+      "betaTitle": "Recursos em Beta",
+      "betaDescription": "Experimente recursos novos antes de entrarem na lista principal.",
       "home": "Home",
       "homeHelper": "Voltar para a visão geral do CriptoVéu.",
       "closeToolsAria": "Fechar menu de ferramentas",
@@ -115,6 +120,7 @@
       "description": "Use ferramentas locais para criptografar, compartilhar e ocultar conteúdo sensível com mais controle e menos exposição.",
       "filesCta": "Começar por arquivos",
       "toolsCta": "Ver ferramentas",
+      "betaCta": "Recursos em Beta",
       "supportCta": "Apoiar o Projeto",
       "note": "Tudo processado localmente no seu dispositivo."
     },
@@ -152,6 +158,12 @@
       "eyebrow": "Ferramentas",
       "title": "Escolha a tarefa e entre direto na ferramenta certa.",
       "open": "Abrir ferramenta"
+    },
+    "beta": {
+      "eyebrow": "Recursos em Beta",
+      "title": "Novidades úteis sem ocupar a lista principal.",
+      "description": "Aqui ficam recursos recentes ou em validação prática. Eles continuam locais e transparentes, mas ainda estão ganhando espaço no produto.",
+      "badge": "Beta"
     },
     "support": {
       "eyebrow": "Doação incentivada",

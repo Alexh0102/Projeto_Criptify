@@ -1,10 +1,10 @@
-﻿import { Crown, Grid2x2, MoonStar, SunMedium, X } from 'lucide-react'
+﻿import { FlaskConical, Grid2x2, MoonStar, SunMedium, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink } from 'react-router-dom'
 
-import { toolDefinitions } from '../../config/tools'
+import { betaResourceDefinitions, toolDefinitions } from '../../config/tools'
 import { useTheme } from '../../context/theme'
 import BrandLogo from '../ui/BrandLogo'
 import InstallAppButton from '../ui/InstallAppButton'
@@ -18,7 +18,9 @@ type Props = {
 export default function ToolPageLayout({ children, showToolsDock = false }: Props) {
   const { t } = useTranslation()
   const { theme, toggleTheme, shellStyle } = useTheme()
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [activeDrawer, setActiveDrawer] = useState<'tools' | 'beta' | null>(null)
+  const isDrawerOpen = activeDrawer !== null
+  const drawerItems = activeDrawer === 'beta' ? betaResourceDefinitions : toolDefinitions
 
   useEffect(() => {
     if (!isDrawerOpen) {
@@ -30,7 +32,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsDrawerOpen(false)
+        setActiveDrawer(null)
       }
     }
 
@@ -63,7 +65,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
             <div className="cv-shell-header-actions flex shrink-0 items-center gap-2 sm:gap-3">
               <button
                 type="button"
-                onClick={() => setIsDrawerOpen(true)}
+                onClick={() => setActiveDrawer('tools')}
                 className="cv-tools-trigger hidden md:flex btn-secondary justify-center px-3 sm:w-auto"
                 aria-label={t('layout.header.openToolsAria')}
               >
@@ -71,14 +73,15 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                 {t('layout.header.tools')}
               </button>
 
-              <Link
-                to="/apoiar"
+              <button
+                type="button"
+                onClick={() => setActiveDrawer('beta')}
                 className="hidden btn-secondary justify-center px-3 sm:inline-flex"
-                aria-label={t('layout.header.supportAria')}
+                aria-label={t('layout.header.openBetaAria')}
               >
-                <Crown className="h-4 w-4" />
-                {t('layout.header.support')}
-              </Link>
+                <FlaskConical className="h-4 w-4" />
+                {t('layout.header.beta')}
+              </button>
 
               <LanguageSwitcher />
 
@@ -124,15 +127,26 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
 
       {showToolsDock && !isDrawerOpen ? (
         <div className="cv-tools-dock fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 md:hidden">
+          <div className="grid w-full max-w-[420px] grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => setIsDrawerOpen(true)}
-            className="cv-tools-dock-button btn-primary w-full max-w-[360px] justify-center"
+            onClick={() => setActiveDrawer('tools')}
+            className="cv-tools-dock-button btn-primary w-full justify-center px-3"
             aria-label={t('layout.header.openToolsAria')}
           >
             <Grid2x2 className="h-4 w-4" />
             {t('layout.header.tools')}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveDrawer('beta')}
+            className="cv-tools-dock-button btn-secondary w-full justify-center px-3"
+            aria-label={t('layout.header.openBetaAria')}
+          >
+            <FlaskConical className="h-4 w-4" />
+            {t('layout.header.betaShort')}
+          </button>
+          </div>
         </div>
       ) : null}
 
@@ -142,23 +156,25 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
             type="button"
             className="absolute inset-0 bg-black/60"
             aria-label={t('layout.drawer.closeToolsAria')}
-            onClick={() => setIsDrawerOpen(false)}
+            onClick={() => setActiveDrawer(null)}
           />
 
           <div className="absolute inset-x-0 bottom-0 rounded-t-[32px] border border-white/10 bg-zinc-950/95 p-4 backdrop-blur-xl sm:inset-y-4 sm:right-4 sm:left-auto sm:w-[420px] sm:rounded-[32px] sm:p-5">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">
-                  {t('layout.drawer.title')}
+                  {t(`layout.drawer.${activeDrawer === 'beta' ? 'betaTitle' : 'title'}`)}
                 </p>
                 <p className="mt-1 text-xs sm:text-sm text-zinc-400">
-                  {t('layout.drawer.description')}
+                  {t(
+                    `layout.drawer.${activeDrawer === 'beta' ? 'betaDescription' : 'description'}`,
+                  )}
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => setIsDrawerOpen(false)}
+                onClick={() => setActiveDrawer(null)}
                 className="btn-secondary h-10 w-10 shrink-0 rounded-full px-0 py-0 sm:h-11 sm:w-11"
                 aria-label={t('layout.drawer.closeDrawerAria')}
               >
@@ -169,7 +185,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
             <div className="mt-4 grid gap-2 sm:mt-5 sm:gap-3">
               <NavLink
                 to="/"
-                onClick={() => setIsDrawerOpen(false)}
+                onClick={() => setActiveDrawer(null)}
                 className={({ isActive }) =>
                   `${isActive ? 'surface-primary' : 'surface-secondary'} rounded-[24px] px-3 py-3 sm:px-4 sm:py-4 text-left transition`
                 }
@@ -180,11 +196,11 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                 </p>
               </NavLink>
 
-              {toolDefinitions.map((tool) => (
+              {drawerItems.map((tool) => (
                 <NavLink
                   key={tool.path}
                   to={tool.path}
-                  onClick={() => setIsDrawerOpen(false)}
+                  onClick={() => setActiveDrawer(null)}
                   className={({ isActive }) =>
                     `${isActive ? 'surface-primary' : 'surface-secondary'} rounded-[24px] px-3 py-3 sm:px-4 sm:py-4 text-left transition`
                   }
