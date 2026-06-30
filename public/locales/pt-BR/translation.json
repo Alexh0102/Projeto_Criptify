@@ -309,6 +309,11 @@
       "eyebrow": "Resultado local",
       "helper": "Nenhum arquivo, senha, nota ou chave é lido por este diagnóstico. O relatório descreve apenas recursos do navegador."
     },
+    "status": {
+      "ok": "Pronto",
+      "warning": "Atenção",
+      "fail": "Crítico"
+    },
     "environment": {
       "browser": "Navegador",
       "memory": "Memória declarada",
@@ -329,7 +334,9 @@
     "notes": {
       "eyebrow": "Transparência",
       "title": "O que este diagnóstico significa",
-      "copy": "Copiar relatório JSON"
+      "copy": "Copiar relatório JSON",
+      "copied": "Relatório copiado.",
+      "copyFailed": "Não foi possível copiar automaticamente."
     }
   },
   "files": {

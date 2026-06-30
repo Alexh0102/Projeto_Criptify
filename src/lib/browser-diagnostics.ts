@@ -1,4 +1,5 @@
 export type DiagnosticStatus = 'ok' | 'warning' | 'fail'
+export type BrowserDiagnosticsLocale = 'pt-BR' | 'en' | 'es'
 
 export type CapabilityId =
   | 'secureContext'
@@ -72,6 +73,295 @@ type NavigatorWithDeviceMemory = Navigator & {
   deviceMemory?: number
 }
 
+type DiagnosticMessages = {
+  unknownBrowser: string
+  chromiumBrowser: string
+  compatibleBrowser: string
+  notReported: string
+  summaries: Record<DiagnosticStatus, string>
+  notes: [string, string, string]
+  capabilities: Record<
+    CapabilityId,
+    {
+      title: string
+      ok: string
+      fail: string
+    }
+  >
+  profiles: {
+    unavailable: string
+    basicTitle: string
+    basicOk: string
+    basicWarning: string
+    mediumTitle: string
+    mediumOk: string
+    mediumWarning: string
+    highTitle: string
+    highOk: string
+    highWarning: string
+    highFail: string
+  }
+}
+
+const DIAGNOSTIC_MESSAGES: Record<BrowserDiagnosticsLocale, DiagnosticMessages> = {
+  'pt-BR': {
+    unknownBrowser: 'Navegador não identificado',
+    chromiumBrowser: 'Google Chrome ou Chromium',
+    compatibleBrowser: 'Navegador compatível',
+    notReported: 'Não informado',
+    summaries: {
+      ok: 'Ambiente compatível com os recursos modernos do CriptoVéu.',
+      warning:
+        'Ambiente utilizável, com limitações ou perfis de memória que exigem cuidado.',
+      fail: 'Ambiente incompatível para processamento seguro neste navegador.',
+    },
+    notes: [
+      `${DIAGNOSTIC_VERSION}: diagnóstico local, sem envio de dados ao servidor.`,
+      'A estimativa de memória é conservadora e depende do que o navegador declara.',
+      'O teste não prova segurança absoluta; ele apenas verifica compatibilidade e riscos práticos do ambiente.',
+    ],
+    capabilities: {
+      secureContext: {
+        title: 'Contexto seguro',
+        ok: 'HTTPS ou localhost ativo. As APIs criptográficas podem operar.',
+        fail: 'Abra o site por HTTPS ou localhost para liberar as APIs críticas.',
+      },
+      webCrypto: {
+        title: 'Web Crypto API',
+        ok: 'crypto.subtle está disponível para AES-GCM e SHA-256.',
+        fail: 'Este navegador não expõe crypto.subtle de forma compatível.',
+      },
+      aesGcm: {
+        title: 'AES-256-GCM',
+        ok: 'O navegador oferece a base necessária para chaves AES-GCM não extraíveis.',
+        fail: 'Sem Web Crypto, o CriptoVéu não deve processar conteúdo sensível.',
+      },
+      webAssembly: {
+        title: 'WebAssembly',
+        ok: 'WebAssembly está disponível para executar Argon2id no navegador.',
+        fail: 'Sem WebAssembly, a derivação Argon2id pode não funcionar.',
+      },
+      webWorker: {
+        title: 'Web Worker',
+        ok: 'Workers estão disponíveis para evitar congelamento da interface.',
+        fail: 'Sem Worker, tarefas pesadas podem travar a tela.',
+      },
+      fileApi: {
+        title: 'File API',
+        ok: 'Leitura local de arquivos está disponível sem upload.',
+        fail: 'Sem File API, as ferramentas de arquivo ficam indisponíveis.',
+      },
+      blobDownload: {
+        title: 'Download local',
+        ok: 'Blob e URL.createObjectURL permitem gerar downloads no dispositivo.',
+        fail: 'Sem Blob URL, o navegador pode não conseguir salvar resultados locais.',
+      },
+      localStorage: {
+        title: 'Preferências locais',
+        ok: 'localStorage está acessível apenas para preferências e limites locais.',
+        fail: 'Preferências e contadores locais podem ser perdidos neste navegador.',
+      },
+      serviceWorker: {
+        title: 'Instalação/PWA',
+        ok: 'Service Worker está disponível para recursos de app instalável.',
+        fail: 'O site ainda pode funcionar, mas a instalação como app pode ser limitada.',
+      },
+    },
+    profiles: {
+      unavailable:
+        'Indisponível neste ambiente porque faltam HTTPS, Web Crypto, WebAssembly ou Web Worker.',
+      basicTitle: '64 MB - Básico',
+      basicOk: 'Perfil adequado para celulares modestos e tarefas rápidas.',
+      basicWarning:
+        'Pode funcionar, mas este navegador declara pouca memória disponível.',
+      mediumTitle: '256 MB - Recomendado',
+      mediumOk: 'Bom equilíbrio para smartphones modernos e computadores.',
+      mediumWarning:
+        'Tente primeiro com arquivos pequenos; se houver lentidão, use o perfil básico.',
+      highTitle: '512 MB - Alto',
+      highOk: 'Perfil viável para computadores com boa memória.',
+      highWarning: 'Use apenas em computadores e espere maior consumo de memória.',
+      highFail:
+        'Não recomendado para este ambiente; pode travar ou ser encerrado pelo navegador.',
+    },
+  },
+  en: {
+    unknownBrowser: 'Unidentified browser',
+    chromiumBrowser: 'Google Chrome or Chromium',
+    compatibleBrowser: 'Compatible browser',
+    notReported: 'Not reported',
+    summaries: {
+      ok: 'Environment compatible with CriptoVéu modern features.',
+      warning:
+        'Usable environment, with limitations or memory profiles that require care.',
+      fail: 'Incompatible environment for secure processing in this browser.',
+    },
+    notes: [
+      `${DIAGNOSTIC_VERSION}: local diagnostic, with no data sent to the server.`,
+      'The memory estimate is conservative and depends on what the browser reports.',
+      'This test does not prove absolute security; it only checks compatibility and practical environment risks.',
+    ],
+    capabilities: {
+      secureContext: {
+        title: 'Secure context',
+        ok: 'HTTPS or localhost is active. Cryptographic APIs can operate.',
+        fail: 'Open the site over HTTPS or localhost to unlock critical APIs.',
+      },
+      webCrypto: {
+        title: 'Web Crypto API',
+        ok: 'crypto.subtle is available for AES-GCM and SHA-256.',
+        fail: 'This browser does not expose crypto.subtle compatibly.',
+      },
+      aesGcm: {
+        title: 'AES-256-GCM',
+        ok: 'The browser provides the base needed for non-extractable AES-GCM keys.',
+        fail: 'Without Web Crypto, CriptoVéu should not process sensitive content.',
+      },
+      webAssembly: {
+        title: 'WebAssembly',
+        ok: 'WebAssembly is available to run Argon2id in the browser.',
+        fail: 'Without WebAssembly, Argon2id derivation may not work.',
+      },
+      webWorker: {
+        title: 'Web Worker',
+        ok: 'Workers are available to avoid freezing the interface.',
+        fail: 'Without Workers, heavy tasks may freeze the screen.',
+      },
+      fileApi: {
+        title: 'File API',
+        ok: 'Local file reading is available without upload.',
+        fail: 'Without the File API, file tools are unavailable.',
+      },
+      blobDownload: {
+        title: 'Local download',
+        ok: 'Blob and URL.createObjectURL can generate downloads on the device.',
+        fail: 'Without Blob URLs, the browser may not save local results.',
+      },
+      localStorage: {
+        title: 'Local preferences',
+        ok: 'localStorage is available only for preferences and local limits.',
+        fail: 'Local preferences and counters may be lost in this browser.',
+      },
+      serviceWorker: {
+        title: 'Install/PWA',
+        ok: 'Service Worker is available for installable app features.',
+        fail: 'The site may still work, but installation as an app can be limited.',
+      },
+    },
+    profiles: {
+      unavailable:
+        'Unavailable in this environment because HTTPS, Web Crypto, WebAssembly, or Web Worker is missing.',
+      basicTitle: '64 MB - Basic',
+      basicOk: 'Suitable profile for modest phones and quick tasks.',
+      basicWarning: 'It may work, but this browser reports little available memory.',
+      mediumTitle: '256 MB - Recommended',
+      mediumOk: 'Good balance for modern smartphones and computers.',
+      mediumWarning:
+        'Try small files first; if there is slowness, use the basic profile.',
+      highTitle: '512 MB - High',
+      highOk: 'Viable profile for computers with good memory.',
+      highWarning: 'Use only on computers and expect higher memory usage.',
+      highFail:
+        'Not recommended for this environment; it may freeze or be terminated by the browser.',
+    },
+  },
+  es: {
+    unknownBrowser: 'Navegador no identificado',
+    chromiumBrowser: 'Google Chrome o Chromium',
+    compatibleBrowser: 'Navegador compatible',
+    notReported: 'No informado',
+    summaries: {
+      ok: 'Entorno compatible con los recursos modernos de CriptoVéu.',
+      warning:
+        'Entorno utilizable, con limitaciones o perfiles de memoria que requieren cuidado.',
+      fail: 'Entorno incompatible para procesamiento seguro en este navegador.',
+    },
+    notes: [
+      `${DIAGNOSTIC_VERSION}: diagnóstico local, sin envío de datos al servidor.`,
+      'La estimación de memoria es conservadora y depende de lo que declara el navegador.',
+      'La prueba no demuestra seguridad absoluta; solo verifica compatibilidad y riesgos prácticos del entorno.',
+    ],
+    capabilities: {
+      secureContext: {
+        title: 'Contexto seguro',
+        ok: 'HTTPS o localhost está activo. Las APIs criptográficas pueden funcionar.',
+        fail: 'Abre el sitio por HTTPS o localhost para habilitar las APIs críticas.',
+      },
+      webCrypto: {
+        title: 'Web Crypto API',
+        ok: 'crypto.subtle está disponible para AES-GCM y SHA-256.',
+        fail: 'Este navegador no expone crypto.subtle de forma compatible.',
+      },
+      aesGcm: {
+        title: 'AES-256-GCM',
+        ok: 'El navegador ofrece la base necesaria para claves AES-GCM no extraíbles.',
+        fail: 'Sin Web Crypto, CriptoVéu no debe procesar contenido sensible.',
+      },
+      webAssembly: {
+        title: 'WebAssembly',
+        ok: 'WebAssembly está disponible para ejecutar Argon2id en el navegador.',
+        fail: 'Sin WebAssembly, la derivación Argon2id puede no funcionar.',
+      },
+      webWorker: {
+        title: 'Web Worker',
+        ok: 'Los Workers están disponibles para evitar que la interfaz se congele.',
+        fail: 'Sin Worker, las tareas pesadas pueden congelar la pantalla.',
+      },
+      fileApi: {
+        title: 'File API',
+        ok: 'La lectura local de archivos está disponible sin carga.',
+        fail: 'Sin File API, las herramientas de archivo quedan indisponibles.',
+      },
+      blobDownload: {
+        title: 'Descarga local',
+        ok: 'Blob y URL.createObjectURL permiten generar descargas en el dispositivo.',
+        fail: 'Sin Blob URL, el navegador puede no guardar resultados locales.',
+      },
+      localStorage: {
+        title: 'Preferencias locales',
+        ok: 'localStorage está accesible solo para preferencias y límites locales.',
+        fail: 'Las preferencias y contadores locales pueden perderse en este navegador.',
+      },
+      serviceWorker: {
+        title: 'Instalación/PWA',
+        ok: 'Service Worker está disponible para recursos de app instalable.',
+        fail: 'El sitio aún puede funcionar, pero la instalación como app puede ser limitada.',
+      },
+    },
+    profiles: {
+      unavailable:
+        'Indisponible en este entorno porque faltan HTTPS, Web Crypto, WebAssembly o Web Worker.',
+      basicTitle: '64 MB - Básico',
+      basicOk: 'Perfil adecuado para celulares modestos y tareas rápidas.',
+      basicWarning:
+        'Puede funcionar, pero este navegador declara poca memoria disponible.',
+      mediumTitle: '256 MB - Recomendado',
+      mediumOk: 'Buen equilibrio para smartphones modernos y computadoras.',
+      mediumWarning:
+        'Prueba primero con archivos pequeños; si hay lentitud, usa el perfil básico.',
+      highTitle: '512 MB - Alto',
+      highOk: 'Perfil viable para computadoras con buena memoria.',
+      highWarning: 'Úsalo solo en computadoras y espera mayor consumo de memoria.',
+      highFail:
+        'No recomendado para este entorno; puede congelarse o ser finalizado por el navegador.',
+    },
+  },
+}
+
+export function resolveBrowserDiagnosticsLocale(
+  language: string | undefined,
+): BrowserDiagnosticsLocale {
+  if (language?.toLowerCase().startsWith('es')) {
+    return 'es'
+  }
+
+  if (language?.toLowerCase().startsWith('en')) {
+    return 'en'
+  }
+
+  return 'pt-BR'
+}
+
 function isLikelyMobile(input: BrowserDiagnosticsInput) {
   const userAgent = input.userAgent?.toLowerCase() ?? ''
 
@@ -110,6 +400,7 @@ function assessArgon2Profile(
   id: Argon2ProfileId,
   memoryMb: 64 | 256 | 512,
   input: BrowserDiagnosticsInput,
+  messages: DiagnosticMessages,
 ): Argon2ProfileAssessment {
   const memoryGb = normalizeDeviceMemory(input.deviceMemoryGb)
   const cores = input.hardwareConcurrency ?? 0
@@ -123,8 +414,7 @@ function assessArgon2Profile(
       memoryMb,
       status: 'fail',
       title: `${memoryMb} MB`,
-      recommendation:
-        'Indisponível neste ambiente porque faltam HTTPS, Web Crypto, WebAssembly ou Web Worker.',
+      recommendation: messages.profiles.unavailable,
     }
   }
 
@@ -135,11 +425,11 @@ function assessArgon2Profile(
       id,
       memoryMb,
       status,
-      title: '64 MB - Básico',
+      title: messages.profiles.basicTitle,
       recommendation:
         status === 'ok'
-          ? 'Perfil adequado para celulares modestos e tarefas rápidas.'
-          : 'Pode funcionar, mas este navegador declara pouca memória disponível.',
+          ? messages.profiles.basicOk
+          : messages.profiles.basicWarning,
     }
   }
 
@@ -151,11 +441,11 @@ function assessArgon2Profile(
       id,
       memoryMb,
       status,
-      title: '256 MB - Recomendado',
+      title: messages.profiles.mediumTitle,
       recommendation:
         status === 'ok'
-          ? 'Bom equilíbrio para smartphones modernos e computadores.'
-          : 'Tente primeiro com arquivos pequenos; se houver lentidão, use o perfil básico.',
+          ? messages.profiles.mediumOk
+          : messages.profiles.mediumWarning,
     }
   }
 
@@ -170,19 +460,22 @@ function assessArgon2Profile(
     id,
     memoryMb,
     status,
-    title: '512 MB - Alto',
+    title: messages.profiles.highTitle,
     recommendation:
       status === 'ok'
-        ? 'Perfil viável para computadores com boa memória.'
+        ? messages.profiles.highOk
         : status === 'warning'
-          ? 'Use apenas em computadores e espere maior consumo de memória.'
-          : 'Não recomendado para este ambiente; pode travar ou ser encerrado pelo navegador.',
+          ? messages.profiles.highWarning
+          : messages.profiles.highFail,
   }
 }
 
-function detectBrowserLabel(userAgent: string | undefined) {
+function detectBrowserLabel(
+  userAgent: string | undefined,
+  messages: DiagnosticMessages,
+) {
   if (!userAgent) {
-    return 'Navegador não identificado'
+    return messages.unknownBrowser
   }
 
   if (/Edg\//.test(userAgent)) {
@@ -194,7 +487,7 @@ function detectBrowserLabel(userAgent: string | undefined) {
   }
 
   if (/Chrome\//.test(userAgent) && !/Chromium\//.test(userAgent)) {
-    return 'Google Chrome ou Chromium'
+    return messages.chromiumBrowser
   }
 
   if (/Firefox\//.test(userAgent)) {
@@ -205,85 +498,87 @@ function detectBrowserLabel(userAgent: string | undefined) {
     return 'Safari'
   }
 
-  return 'Navegador compatível'
+  return messages.compatibleBrowser
 }
 
 export function createBrowserDiagnosticsReport(
   input: BrowserDiagnosticsInput,
   generatedAt = new Date().toISOString(),
+  locale: BrowserDiagnosticsLocale = 'pt-BR',
 ): BrowserDiagnosticsReport {
+  const messages = DIAGNOSTIC_MESSAGES[locale]
   const capabilities: BrowserCapability[] = [
     createCapability(
       'secureContext',
       input.isSecureContext,
-      'Contexto seguro',
-      'HTTPS ou localhost ativo. As APIs criptográficas podem operar.',
-      'Abra o site por HTTPS ou localhost para liberar as APIs críticas.',
+      messages.capabilities.secureContext.title,
+      messages.capabilities.secureContext.ok,
+      messages.capabilities.secureContext.fail,
     ),
     createCapability(
       'webCrypto',
       input.hasCrypto && input.hasSubtleCrypto,
-      'Web Crypto API',
-      'crypto.subtle está disponível para AES-GCM e SHA-256.',
-      'Este navegador não expõe crypto.subtle de forma compatível.',
+      messages.capabilities.webCrypto.title,
+      messages.capabilities.webCrypto.ok,
+      messages.capabilities.webCrypto.fail,
     ),
     createCapability(
       'aesGcm',
       input.hasCrypto && input.hasSubtleCrypto,
-      'AES-256-GCM',
-      'O navegador oferece a base necessária para chaves AES-GCM não extraíveis.',
-      'Sem Web Crypto, o CriptoVéu não deve processar conteúdo sensível.',
+      messages.capabilities.aesGcm.title,
+      messages.capabilities.aesGcm.ok,
+      messages.capabilities.aesGcm.fail,
     ),
     createCapability(
       'webAssembly',
       input.hasWebAssembly,
-      'WebAssembly',
-      'WebAssembly está disponível para executar Argon2id no navegador.',
-      'Sem WebAssembly, a derivação Argon2id pode não funcionar.',
+      messages.capabilities.webAssembly.title,
+      messages.capabilities.webAssembly.ok,
+      messages.capabilities.webAssembly.fail,
     ),
     createCapability(
       'webWorker',
       input.hasWorker,
-      'Web Worker',
-      'Workers estão disponíveis para evitar congelamento da interface.',
-      'Sem Worker, tarefas pesadas podem travar a tela.',
+      messages.capabilities.webWorker.title,
+      messages.capabilities.webWorker.ok,
+      messages.capabilities.webWorker.fail,
     ),
     createCapability(
       'fileApi',
       input.hasFileApi,
-      'File API',
-      'Leitura local de arquivos está disponível sem upload.',
-      'Sem File API, as ferramentas de arquivo ficam indisponíveis.',
+      messages.capabilities.fileApi.title,
+      messages.capabilities.fileApi.ok,
+      messages.capabilities.fileApi.fail,
     ),
     createCapability(
       'blobDownload',
       input.hasBlob && input.hasObjectUrl,
-      'Download local',
-      'Blob e URL.createObjectURL permitem gerar downloads no dispositivo.',
-      'Sem Blob URL, o navegador pode não conseguir salvar resultados locais.',
+      messages.capabilities.blobDownload.title,
+      messages.capabilities.blobDownload.ok,
+      messages.capabilities.blobDownload.fail,
     ),
     createCapability(
       'localStorage',
       input.localStorageAvailable,
-      'Preferências locais',
-      'localStorage está acessível apenas para preferências e limites locais.',
-      'Preferências e contadores locais podem ser perdidos neste navegador.',
+      messages.capabilities.localStorage.title,
+      messages.capabilities.localStorage.ok,
+      messages.capabilities.localStorage.fail,
       false,
     ),
     createCapability(
       'serviceWorker',
       input.hasServiceWorker,
-      'Instalação/PWA',
-      'Service Worker está disponível para recursos de app instalável.',
-      'O site ainda pode funcionar, mas a instalação como app pode ser limitada.',
+      messages.capabilities.serviceWorker.title,
+      messages.capabilities.serviceWorker.ok,
+      messages.capabilities.serviceWorker.fail,
       false,
     ),
   ]
 
   const argon2Profiles: Argon2ProfileAssessment[] = [
-    assessArgon2Profile('basic', 64, input),
-    assessArgon2Profile('medium', 256, input),
-    assessArgon2Profile('high', 512, input),
+    assessArgon2Profile('basic', 64, input, messages),
+    assessArgon2Profile('medium', 256, input, messages),
+    assessArgon2Profile('high', 512, input, messages),
   ]
 
   const criticalFailure = capabilities.some((item) => item.critical && item.status === 'fail')
@@ -293,19 +588,12 @@ export function createBrowserDiagnosticsReport(
   const highProfileFails = argon2Profiles.some((item) => item.id === 'high' && item.status === 'fail')
   const overallStatus: DiagnosticStatus = criticalFailure ? 'fail' : anyWarning || highProfileFails ? 'warning' : 'ok'
 
-  const summary =
-    overallStatus === 'ok'
-      ? 'Ambiente compatível com os recursos modernos do CriptoVéu.'
-      : overallStatus === 'warning'
-        ? 'Ambiente utilizável, com limitações ou perfis de memória que exigem cuidado.'
-        : 'Ambiente incompatível para processamento seguro neste navegador.'
-
   const memoryGb = normalizeDeviceMemory(input.deviceMemoryGb)
 
   return {
     generatedAt,
     overallStatus,
-    summary,
+    summary: messages.summaries[overallStatus],
     capabilities,
     argon2Profiles,
     environment: {
@@ -313,15 +601,11 @@ export function createBrowserDiagnosticsReport(
       deviceMemoryGb: memoryGb ?? null,
       hardwareConcurrency: input.hardwareConcurrency ?? null,
       maxTouchPoints: input.maxTouchPoints ?? null,
-      browserLabel: detectBrowserLabel(input.userAgent),
-      platform: input.platform ?? 'Não informado',
-      language: input.language ?? 'Não informado',
+      browserLabel: detectBrowserLabel(input.userAgent, messages),
+      platform: input.platform ?? messages.notReported,
+      language: input.language ?? messages.notReported,
     },
-    notes: [
-      `${DIAGNOSTIC_VERSION}: diagnóstico local, sem envio de dados ao servidor.`,
-      'A estimativa de memória é conservadora e depende do que o navegador declara.',
-      'O teste não prova segurança absoluta; ele apenas verifica compatibilidade e riscos práticos do ambiente.',
-    ],
+    notes: messages.notes,
   }
 }
 
