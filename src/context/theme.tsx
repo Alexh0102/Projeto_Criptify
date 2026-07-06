@@ -26,7 +26,16 @@ function resolveInitialTheme(): Theme {
     return savedTheme
   }
 
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark'
+  }
+
+  if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    return 'light'
+  }
+
+  // Sem preferência salva ou detectável no sistema: o padrão da aplicação é o tema escuro.
+  return 'dark'
 }
 
 const LIGHT_BACKGROUND =

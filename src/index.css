@@ -275,6 +275,14 @@ select {
     filter: none;
   }
 
+  html[data-theme='light'] .btn-primary:disabled {
+    opacity: 1;
+    background: rgba(18, 49, 77, 0.14);
+    color: #1f3a52;
+    border: 1px solid rgba(31, 53, 73, 0.28);
+    box-shadow: none;
+  }
+
   .btn-secondary {
     background: var(--btn-secondary-bg);
     border: 1px solid var(--btn-secondary-border);
@@ -290,6 +298,14 @@ select {
   .btn-accent:disabled {
     @apply cursor-not-allowed opacity-60;
     transform: none;
+  }
+
+  html[data-theme='light'] .btn-secondary:disabled,
+  html[data-theme='light'] .btn-accent:disabled {
+    opacity: 1;
+    background: rgba(31, 53, 73, 0.08);
+    color: #33526b;
+    border-color: rgba(31, 53, 73, 0.26);
   }
 
   .btn-accent {
@@ -359,11 +375,11 @@ html[data-theme='light'] .app-shell .text-zinc-300 {
 }
 
 html[data-theme='light'] .app-shell .text-zinc-400 {
-  color: #48637e !important;
+  color: #405a73 !important;
 }
 
 html[data-theme='light'] .app-shell .text-zinc-500 {
-  color: #687f93 !important;
+  color: #475569 !important;
 }
 
 html[data-theme='light'] .app-shell .text-cyan-100,
