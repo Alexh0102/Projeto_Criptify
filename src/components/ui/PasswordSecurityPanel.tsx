@@ -115,14 +115,12 @@ export default function PasswordSecurityPanel({
           </span>
         </div>
 
-        <div
-          className="mt-3 grid grid-cols-5 gap-2"
-          role="meter"
-          aria-valuemin={0}
-          aria-valuemax={5}
-          aria-valuenow={analysis.score}
-          aria-label={t('passwordSecurity.strength.title')}
-        >
+        <p className="sr-only">
+          {t('passwordSecurity.strength.title')}
+          {`: ${analysis.score}/5`}
+        </p>
+
+        <div className="mt-3 grid grid-cols-5 gap-2" aria-hidden="true">
           {STRENGTH_SLOTS.map((slot) => (
             <span
               key={slot}

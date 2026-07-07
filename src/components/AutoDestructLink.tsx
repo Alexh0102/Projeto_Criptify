@@ -8,7 +8,7 @@
   Sparkles,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import {
   AutoDestructLinkError,
@@ -33,6 +33,7 @@ import {
 import AdvancedOptions from './ui/AdvancedOptions'
 import FreeUsageCounter from './ui/FreeUsageCounter'
 import MobileStickyCTA from './ui/MobileStickyCTA'
+import PasswordInput from './ui/PasswordInput'
 import PasswordSecurityPanel from './ui/PasswordSecurityPanel'
 import ResultPanel from './ui/ResultPanel'
 import SegmentedMode from './ui/SegmentedMode'
@@ -110,24 +111,36 @@ const VIEW_LIMIT_OPTIONS: Array<{
 function OptionCard({
   label,
   helper,
+  name,
+  value,
   selected,
   onClick,
 }: {
   label: string
   helper: string
+  name: string
+  value: string
   selected: boolean
   onClick: () => void
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={(selected ? 'surface-primary' : 'surface-secondary') + ' rounded-[24px] px-4 py-4 text-left transition'}
+    <label
+      className={
+        (selected ? 'surface-primary' : 'surface-secondary') +
+        ' block cursor-pointer rounded-[24px] px-4 py-4 text-left transition focus-within:ring-2 focus-within:ring-cyan-200/60'
+      }
     >
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={selected}
+        onChange={onClick}
+        className="sr-only"
+      />
       <p className="text-sm font-semibold text-white">{label}</p>
       <p className="mt-2 text-sm leading-6 text-zinc-400">{helper}</p>
-    </button>
+    </label>
   )
 }
 
@@ -164,6 +177,8 @@ export default function AutoDestructLink({
   incomingHashError,
   onClearIncomingHash,
 }: Props) {
+  const expirationGroupName = useId()
+  const viewLimitGroupName = useId()
   const [tab, setTab] = useState<Tab>('generate')
   const [plainText, setPlainText] = useState('')
   const [generatePassword, setGeneratePassword] = useState('')
@@ -480,8 +495,7 @@ export default function AutoDestructLink({
                   className="tool-textarea mt-4 min-h-[140px] sm:min-h-[180px]"
                 />
 
-                <input
-                  type="password"
+                <PasswordInput
                   value={generatePassword}
                   onChange={(event) => setGeneratePassword(event.target.value)}
                   placeholder="Digite a senha da mensagem"
@@ -537,6 +551,8 @@ export default function AutoDestructLink({
                             key={option.value}
                             label={option.label}
                             helper={option.helper}
+                            name={expirationGroupName}
+                            value={option.value}
                             selected={expiresIn === option.value}
                             onClick={() => setExpiresIn(option.value)}
                           />
@@ -552,6 +568,8 @@ export default function AutoDestructLink({
                             key={option.value}
                             label={option.label}
                             helper={option.helper}
+                            name={viewLimitGroupName}
+                            value={option.value}
                             selected={maxViewsValue === option.value}
                             onClick={() => setMaxViewsValue(option.value)}
                           />
@@ -664,8 +682,7 @@ export default function AutoDestructLink({
                 </button>
               </div>
 
-              <input
-                type="password"
+              <PasswordInput
                 value={readPassword}
                 onChange={(event) => setReadPassword(event.target.value)}
                 placeholder="Digite a senha da mensagem"

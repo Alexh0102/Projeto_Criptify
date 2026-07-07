@@ -15,7 +15,7 @@ import {
   Unlock,
   X,
 } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 
 import useVeuNotes from '../hooks/useVeuNotes'
@@ -26,6 +26,7 @@ import {
 import { VEU_NOTES_MIN_PASSWORD_LENGTH } from '../lib/veunotes-crypto'
 import FieldBlock from './ui/FieldBlock'
 import MobileStickyCTA from './ui/MobileStickyCTA'
+import PasswordInput from './ui/PasswordInput'
 import PasswordSecurityPanel from './ui/PasswordSecurityPanel'
 
 type ToastTone = 'success' | 'error' | 'info'
@@ -53,19 +54,18 @@ function getNotePreview(content: string) {
 }
 
 type NoteTagsInputProps = {
-  id: string
   tags: string[]
   onChange: (tags: string[]) => void
 }
 
-function NoteTagsInput({ id, tags, onChange }: NoteTagsInputProps) {
+function NoteTagsInput({ tags, onChange }: NoteTagsInputProps) {
   const [draft, setDraft] = useState(() => tags.join(', '))
 
   return (
     <div className="relative">
       <Tags className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
       <input
-        id={id}
+        id="veunotes-note-tags"
         type="text"
         value={draft}
         onChange={(event) => {
@@ -87,17 +87,6 @@ function NoteTagsInput({ id, tags, onChange }: NoteTagsInputProps) {
 }
 
 export default function VeuNotesVault() {
-  const fileInputId = useId()
-  const createPasswordId = useId()
-  const createConfirmId = useId()
-  const unlockPasswordId = useId()
-  const importPasswordId = useId()
-  const currentPasswordId = useId()
-  const newPasswordId = useId()
-  const newPasswordConfirmId = useId()
-  const noteTitleId = useId()
-  const noteTagsId = useId()
-  const noteContentId = useId()
   const importInputRef = useRef<HTMLInputElement | null>(null)
 
   const {
@@ -229,11 +218,13 @@ export default function VeuNotesVault() {
       ) : null}
 
       <input
-        id={fileInputId}
+        id="veunotes-backup-file"
         ref={importInputRef}
         type="file"
         accept=".criptoveu-note,.json,application/json,application/vnd.criptoveu.note+json"
         className="hidden"
+        aria-label="Selecionar arquivo de backup do cofre"
+        tabIndex={-1}
         onChange={handleImportFileChange}
       />
 
@@ -308,12 +299,11 @@ export default function VeuNotesVault() {
               <div className="mt-4">
                 <FieldBlock
                   label="Senha mestre do arquivo"
-                  htmlFor={importPasswordId}
+                  htmlFor="veunotes-import-password"
                   helper="O arquivo só será salvo localmente após a autenticação AES-GCM."
                 >
-                  <input
-                    id={importPasswordId}
-                    type="password"
+                  <PasswordInput
+                    id="veunotes-import-password"
                     value={importPassword}
                     onChange={(event) => setImportPassword(event.target.value)}
                     placeholder="Digite a senha do cofre"
@@ -371,12 +361,11 @@ export default function VeuNotesVault() {
                 <div className="mt-5 space-y-5">
                   <FieldBlock
                     label="Senha mestre"
-                    htmlFor={createPasswordId}
+                    htmlFor="veunotes-create-password"
                     helper={`Use pelo menos ${VEU_NOTES_MIN_PASSWORD_LENGTH} caracteres.`}
                   >
-                    <input
-                      id={createPasswordId}
-                      type="password"
+                    <PasswordInput
+                      id="veunotes-create-password"
                       value={createPassword}
                       onChange={(event) => setCreatePassword(event.target.value)}
                       placeholder="Crie uma senha forte para o cofre"
@@ -394,12 +383,11 @@ export default function VeuNotesVault() {
 
                   <FieldBlock
                     label="Confirmar senha"
-                    htmlFor={createConfirmId}
+                    htmlFor="veunotes-create-confirm-password"
                     helper="Confirme a mesma senha antes de criar o cofre."
                   >
-                    <input
-                      id={createConfirmId}
-                      type="password"
+                    <PasswordInput
+                      id="veunotes-create-confirm-password"
                       value={createConfirmPassword}
                       onChange={(event) =>
                         setCreateConfirmPassword(event.target.value)
@@ -490,12 +478,11 @@ export default function VeuNotesVault() {
                 <div className="mt-5 space-y-5">
                   <FieldBlock
                     label="Senha mestre"
-                    htmlFor={unlockPasswordId}
+                    htmlFor="veunotes-unlock-password"
                     helper="Digite a senha para autenticar e descriptografar o cofre."
                   >
-                    <input
-                      id={unlockPasswordId}
-                      type="password"
+                    <PasswordInput
+                      id="veunotes-unlock-password"
                       value={unlockPassword}
                       onChange={(event) => setUnlockPassword(event.target.value)}
                       placeholder="Digite sua senha mestre"
@@ -660,12 +647,11 @@ export default function VeuNotesVault() {
                   <div className="mt-5 grid gap-5 lg:grid-cols-3">
                     <FieldBlock
                       label="Senha atual"
-                      htmlFor={currentPasswordId}
+                      htmlFor="veunotes-current-password"
                       helper="Confirma que você pode abrir o cofre atual."
                     >
-                      <input
-                        id={currentPasswordId}
-                        type="password"
+                      <PasswordInput
+                        id="veunotes-current-password"
                         value={currentPassword}
                         onChange={(event) => setCurrentPassword(event.target.value)}
                         className="tool-input"
@@ -674,12 +660,11 @@ export default function VeuNotesVault() {
                     </FieldBlock>
                     <FieldBlock
                       label="Nova senha"
-                      htmlFor={newPasswordId}
+                      htmlFor="veunotes-new-password"
                       helper={`Mínimo de ${VEU_NOTES_MIN_PASSWORD_LENGTH} caracteres.`}
                     >
-                      <input
-                        id={newPasswordId}
-                        type="password"
+                      <PasswordInput
+                        id="veunotes-new-password"
                         value={newPassword}
                         onChange={(event) => setNewPassword(event.target.value)}
                         className="tool-input"
@@ -688,12 +673,11 @@ export default function VeuNotesVault() {
                     </FieldBlock>
                     <FieldBlock
                       label="Confirmar nova senha"
-                      htmlFor={newPasswordConfirmId}
+                      htmlFor="veunotes-new-password-confirm"
                       helper="Repita exatamente a nova senha."
                     >
-                      <input
-                        id={newPasswordConfirmId}
-                        type="password"
+                      <PasswordInput
+                        id="veunotes-new-password-confirm"
                         value={newPasswordConfirmation}
                         onChange={(event) =>
                           setNewPasswordConfirmation(event.target.value)
@@ -854,11 +838,11 @@ export default function VeuNotesVault() {
                       <div className="mt-5 space-y-5">
                         <FieldBlock
                           label="Título"
-                          htmlFor={noteTitleId}
+                          htmlFor="veunotes-note-title"
                           helper={`${selectedNote.title.length}/${PORTABLE_VAULT_MAX_TITLE_LENGTH} caracteres`}
                         >
                           <input
-                            id={noteTitleId}
+                            id="veunotes-note-title"
                             type="text"
                             value={selectedNote.title}
                             maxLength={PORTABLE_VAULT_MAX_TITLE_LENGTH}
@@ -874,12 +858,11 @@ export default function VeuNotesVault() {
 
                         <FieldBlock
                           label="Etiquetas"
-                          htmlFor={noteTagsId}
+                          htmlFor="veunotes-note-tags"
                           helper="Separe por vírgulas. Elas ficam dentro do conteúdo criptografado."
                         >
                           <NoteTagsInput
                             key={selectedNote.id}
-                            id={noteTagsId}
                             tags={selectedNote.tags}
                             onChange={(tags) =>
                               updateNote(selectedNote.id, { tags })
@@ -889,11 +872,11 @@ export default function VeuNotesVault() {
 
                         <FieldBlock
                           label="Conteúdo"
-                          htmlFor={noteContentId}
+                          htmlFor="veunotes-note-content"
                           helper={`${selectedNote.content.length.toLocaleString('pt-BR')}/${PORTABLE_VAULT_MAX_CONTENT_LENGTH.toLocaleString('pt-BR')} caracteres`}
                         >
                           <textarea
-                            id={noteContentId}
+                            id="veunotes-note-content"
                             value={selectedNote.content}
                             maxLength={PORTABLE_VAULT_MAX_CONTENT_LENGTH}
                             onChange={(event) =>
