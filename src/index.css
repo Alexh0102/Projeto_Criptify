@@ -149,6 +149,7 @@ select {
 }
 
 .cv-shell-header {
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
 
@@ -156,6 +157,10 @@ select {
   background-color: rgba(251, 191, 36, 0.12);
   border-color: rgba(251, 191, 36, 0.24);
   color: #fef3c7;
+}
+
+.cv-privacy-blur {
+  filter: blur(15px);
 }
 
 .brand-logo-frame {
@@ -337,6 +342,16 @@ select {
     border-color: rgba(34, 211, 238, 0.34);
     box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.08);
   }
+
+  .password-toggle-btn {
+    color: var(--btn-secondary-text);
+    opacity: 0.62;
+  }
+
+  .password-toggle-btn:hover,
+  .password-toggle-btn:focus-visible {
+    opacity: 1;
+  }
 }
 
 .criptoveu-progress {
@@ -388,7 +403,8 @@ html[data-theme='light'] .app-shell .text-cyan-50 {
   color: #17456b !important;
 }
 
-html[data-theme='light'] .app-shell .text-emerald-50 {
+html[data-theme='light'] .app-shell .text-emerald-50,
+html[data-theme='light'] .app-shell .text-emerald-100 {
   color: #166534 !important;
 }
 
@@ -590,6 +606,7 @@ html[data-theme='light'] .cv-note-warning {
 
   .cv-tools-dock {
     background: linear-gradient(180deg, transparent 0%, rgba(5, 7, 11, 0.72) 34%, rgba(5, 7, 11, 0.9) 100%);
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
   }
 

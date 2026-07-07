@@ -17,7 +17,7 @@ type Props = {
 
 export default function ToolPageLayout({ children, showToolsDock = false }: Props) {
   const { t } = useTranslation()
-  const { theme, toggleTheme, shellStyle } = useTheme()
+  const { theme, toggleTheme } = useTheme()
   const [activeDrawer, setActiveDrawer] = useState<'tools' | 'beta' | null>(null)
   const isDrawerOpen = activeDrawer !== null
   const drawerItems = activeDrawer === 'beta' ? betaResourceDefinitions : toolDefinitions
@@ -45,7 +45,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
   }, [isDrawerOpen])
 
   return (
-    <div className="app-shell relative min-h-screen overflow-hidden" style={shellStyle}>
+    <div className="app-shell relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-grid-fade bg-[size:34px_34px] opacity-15 [mask-image:linear-gradient(to_bottom,rgba(0,0,0,0.9),transparent)]" />
       <div className="cv-shell-orb cv-shell-orb-left pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-cyan-400/18 blur-3xl" />
       <div className="cv-shell-orb cv-shell-orb-right pointer-events-none absolute right-0 top-8 h-80 w-80 rounded-full bg-amber-300/12 blur-3xl" />

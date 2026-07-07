@@ -37,6 +37,7 @@ import {
 } from '../lib/steganography'
 import FreeUsageCounter from './ui/FreeUsageCounter'
 import MobileStickyCTA from './ui/MobileStickyCTA'
+import PasswordInput from './ui/PasswordInput'
 import ResultPanel from './ui/ResultPanel'
 import SegmentedMode from './ui/SegmentedMode'
 
@@ -361,8 +362,7 @@ export default function SteganographyPanel({ compact = false }: Props) {
                   className="tool-textarea mt-4 min-h-[140px] sm:min-h-[180px]"
                 />
 
-                <input
-                  type="password"
+                <PasswordInput
                   value={hidePassword}
                   onChange={(event) => setHidePassword(event.target.value)}
                   placeholder="Digite a senha da mensagem protegida"
@@ -528,8 +528,7 @@ export default function SteganographyPanel({ compact = false }: Props) {
                   )}
                 </label>
 
-                <input
-                  type="password"
+                <PasswordInput
                   value={revealPassword}
                   onChange={(event) => setRevealPassword(event.target.value)}
                   placeholder="Digite a senha da mensagem escondida"

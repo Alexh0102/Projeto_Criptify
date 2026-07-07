@@ -7,10 +7,6 @@ type Theme = 'dark' | 'light'
 type ThemeContextValue = {
   theme: Theme
   toggleTheme: () => void
-  shellStyle: {
-    background: string
-    color: string
-  }
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
@@ -62,16 +58,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     () => ({
       theme,
       toggleTheme: () => setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark')),
-      shellStyle:
-        theme === 'light'
-          ? {
-              background: LIGHT_BACKGROUND,
-              color: '#0f2236',
-            }
-          : {
-              background: DARK_BACKGROUND,
-              color: '#f5f7fb',
-            },
     }),
     [theme],
   )

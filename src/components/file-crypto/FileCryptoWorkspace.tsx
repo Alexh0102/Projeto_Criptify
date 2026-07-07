@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next'
 import FieldBlock from '../ui/FieldBlock'
 import AdvancedOptions from '../ui/AdvancedOptions'
 import MobileStickyCTA from '../ui/MobileStickyCTA'
+import PasswordInput from '../ui/PasswordInput'
 import ResultPanel from '../ui/ResultPanel'
 import SegmentedMode from '../ui/SegmentedMode'
 import PasswordSecurityPanel from '../ui/PasswordSecurityPanel'
@@ -978,9 +979,8 @@ export default function FileCryptoWorkspace() {
                 helper={t('files.workspace.password.helper')}
               >
                 <div className="space-y-3">
-                  <input
+                  <PasswordInput
                     id={passwordInputId}
-                    type="password"
                     value={password}
                     autoComplete="new-password"
                     spellCheck={false}
@@ -1212,8 +1212,9 @@ export default function FileCryptoWorkspace() {
 
             {results.length > 0 ? (
               <div
-                className="min-w-0 space-y-4 overflow-hidden transition duration-300"
-                style={{ filter: isInactive ? 'blur(15px)' : 'none' }}
+                className={`min-w-0 space-y-4 overflow-hidden transition duration-300 ${
+                  isInactive ? 'cv-privacy-blur' : ''
+                }`}
               >
                 {results.map((result) => (
                   <article
