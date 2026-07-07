@@ -32,6 +32,7 @@ import {
 } from '../lib/premium'
 import FreeUsageCounter from './ui/FreeUsageCounter'
 import MobileStickyCTA from './ui/MobileStickyCTA'
+import PasswordInput from './ui/PasswordInput'
 import PasswordSecurityPanel from './ui/PasswordSecurityPanel'
 import ResultPanel from './ui/ResultPanel'
 import SegmentedMode from './ui/SegmentedMode'
@@ -364,8 +365,7 @@ export default function QRCodeGenerator({
                   className="tool-textarea mt-4 min-h-[140px] sm:min-h-[180px]"
                 />
 
-                <input
-                  type="password"
+                <PasswordInput
                   value={generatePassword}
                   onChange={(event) => setGeneratePassword(event.target.value)}
                   placeholder="Digite a senha da mensagem"
@@ -500,8 +500,7 @@ export default function QRCodeGenerator({
                 Cole aqui uma captura do QR Code com Ctrl+V. O navegador processa a imagem localmente.
               </div>
 
-              <input
-                type="password"
+              <PasswordInput
                 value={readPassword}
                 onChange={(event) => setReadPassword(event.target.value)}
                 placeholder="Digite a senha da mensagem"

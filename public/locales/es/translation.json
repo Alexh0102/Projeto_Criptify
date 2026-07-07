@@ -14,7 +14,9 @@
     "close": "Cerrar",
     "file": "Archivo",
     "copied": "Copiado",
-    "localBadge": "100% local"
+    "localBadge": "100% local",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña"
   },
   "passwordSecurity": {
     "strength": {
