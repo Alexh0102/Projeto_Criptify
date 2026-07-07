@@ -157,6 +157,9 @@ export default function UniversalPreview({
         : metadata.kind === 'text' || metadata.kind === 'pdf'
           ? FileText
           : ShieldOff
+  const previewContainerClassName = `surface-technical min-w-0 overflow-hidden rounded-[24px] p-3 transition duration-300 sm:p-4 ${
+    isInactive ? 'cv-privacy-blur' : ''
+  }`
 
   return (
     <div ref={containerRef} className="min-w-0 space-y-4 overflow-hidden">
@@ -206,13 +209,13 @@ export default function UniversalPreview({
 
       <p className="text-xs leading-6 text-zinc-500">{t('files.preview.localPreviewNote')}</p>
 
-      <div
-        className="surface-technical min-w-0 overflow-hidden rounded-[24px] p-3 transition duration-300 sm:p-4"
-        style={{ filter: isInactive ? 'blur(15px)' : 'none' }}
-        aria-hidden={isInactive}
-      >
-        {renderPreview()}
-      </div>
+      {isInactive ? (
+        <div className={previewContainerClassName} aria-hidden="true">
+          {renderPreview()}
+        </div>
+      ) : (
+        <div className={previewContainerClassName}>{renderPreview()}</div>
+      )}
     </div>
   )
 }

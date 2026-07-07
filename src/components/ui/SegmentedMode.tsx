@@ -1,5 +1,7 @@
 ﻿import type { ReactNode } from 'react'
 
+import { useId } from 'react'
+
 type Option = {
   value: string
   label: string
@@ -23,6 +25,8 @@ export default function SegmentedMode({
   sticky = false,
   className = '',
 }: Props) {
+  const groupName = useId()
+
   return (
     <div
       className={`${
@@ -36,22 +40,31 @@ export default function SegmentedMode({
       ) : null}
 
       <div className="surface-technical grid gap-2 rounded-3xl p-1.5 sm:auto-cols-fr sm:grid-flow-col">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={value === option.value}
-            onClick={() => onChange(option.value)}
-            className={`flex items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm font-medium transition ${
-              value === option.value
-                ? 'bg-white text-zinc-950 shadow-[0_12px_30px_rgba(34,211,238,0.12)]'
-                : 'text-zinc-300 hover:bg-white/5'
-            }`}
-          >
-            {option.icon}
-            {option.label}
-          </button>
-        ))}
+        {options.map((option) => {
+          const selected = value === option.value
+
+          return (
+            <label
+              key={option.value}
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm font-medium transition focus-within:ring-2 focus-within:ring-cyan-200/60 ${
+                selected
+                  ? 'bg-white text-zinc-950 shadow-[0_12px_30px_rgba(34,211,238,0.12)]'
+                  : 'text-zinc-300 hover:bg-white/5'
+              }`}
+            >
+              <input
+                type="radio"
+                name={groupName}
+                value={option.value}
+                checked={selected}
+                onChange={() => onChange(option.value)}
+                className="sr-only"
+              />
+              {option.icon}
+              {option.label}
+            </label>
+          )
+        })}
       </div>
     </div>
   )
