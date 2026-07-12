@@ -29,7 +29,7 @@ const KEY_FILE_PROTECTION_FIELDS = [
   'embedded',
 ] as const
 
-export type FileIntegrityFormat = 'CRIPTOVEU4' | 'CRIPTOVEU5'
+export type FileIntegrityFormat = 'CRIPTOVEU4' | 'CRIPTOVEU5' | 'CRIPTOVEU6'
 
 export type FileIntegrityHashes = {
   fileHashSha256: string
@@ -258,7 +258,7 @@ export function assertFileIntegrityManifest(
   const argon2 = manifest.argon2
   const keyFileProtection = manifest.keyFileProtection
   const hasValidKeyFileProtection =
-    manifest.format === 'CRIPTOVEU4'
+    (manifest.format === 'CRIPTOVEU4' || manifest.format === 'CRIPTOVEU6')
       ? keyFileProtection === undefined
       : manifest.format === 'CRIPTOVEU5' &&
         keyFileProtection !== undefined &&
@@ -275,7 +275,8 @@ export function assertFileIntegrityManifest(
   if (
     manifest.version !== FILE_INTEGRITY_MANIFEST_VERSION ||
     (manifest.format !== 'CRIPTOVEU4' &&
-      manifest.format !== 'CRIPTOVEU5') ||
+      manifest.format !== 'CRIPTOVEU5' &&
+      manifest.format !== 'CRIPTOVEU6') ||
     !hasValidKeyFileProtection ||
     typeof manifest.manifestId !== 'string' ||
     !/^[a-f0-9]{32}$/.test(manifest.manifestId) ||

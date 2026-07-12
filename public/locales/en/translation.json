@@ -468,6 +468,11 @@
         "notEmbedded": "The file, its name, and its SHA-256 fingerprint are not stored in the package.",
         "exactBytes": "Keep a copy with the exact same bytes and share it separately from the password and package."
       },
+      "recoverableParity": {
+        "title": "Recoverable parity mode",
+        "description": "Adds XOR parity to every group of {{count}} encrypted blocks. It can recover one block with damaged contents, but increases package size.",
+        "keyFileUnavailable": "Unavailable with a key file: choose one protection for this package."
+      },
       "advanced": {
         "title": "Advanced settings",
         "helper": "Argon2id: {{memory}} MB RAM, {{iterations}} passes",

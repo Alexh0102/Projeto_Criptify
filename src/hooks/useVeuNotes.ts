@@ -7,6 +7,7 @@ import {
   encryptNoteWithSession,
   unlockVeuNotesBlob,
   type VeuNotesBlobJson,
+  type VeuNotesRecoveryMode,
   type VeuNotesSession,
 } from '../lib/veunotes-crypto'
 import {
@@ -127,6 +128,7 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
       ? 'O cofre está crescendo. Exporte um backup e mantenha uma cópia segura.'
       : null
   const usageLabel = formatStorageUsage(storageBytes)
+  const recoveryMode = sessionRef.current?.recoveryMode ?? 'standard'
   const selectedNote =
     vault?.notes.find((note) => note.id === selectedNoteId) ?? null
   const visibleNotes = useMemo(
@@ -341,7 +343,11 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
   )
 
   const createVault = useCallback(
-    async (password: string, confirmation: string) => {
+    async (
+      password: string,
+      confirmation: string,
+      recoveryMode: VeuNotesRecoveryMode = 'standard',
+    ) => {
       const normalizedPassword = password.trim()
 
       if (normalizedPassword.length < VEU_NOTES_MIN_PASSWORD_LENGTH) {
@@ -362,6 +368,7 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
         const { blob, session } = await createVeuNotesVault(
           plaintext,
           normalizedPassword,
+          recoveryMode,
         )
 
         persistBlob(blob)
@@ -504,6 +511,7 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
         const { blob, session } = await createVeuNotesVault(
           plaintext,
           normalizedPassword,
+          sessionRef.current?.recoveryMode ?? 'standard',
         )
 
         persistBlob(blob)
@@ -512,6 +520,42 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
         showToast(
           'success',
           'Senha alterada. Exporte um novo backup; arquivos antigos continuam usando a senha anterior.',
+        )
+      } finally {
+        setIsBusy(false)
+      }
+    },
+    [persistBlob, showToast, vault],
+  )
+
+  const setRecoveryMode = useCallback(
+    async (nextMode: VeuNotesRecoveryMode) => {
+      if (
+        !vault ||
+        !sessionRef.current ||
+        sessionRef.current.recoveryMode === nextMode
+      ) {
+        return
+      }
+
+      setIsBusy(true)
+
+      try {
+        const plaintext = serializePortableVault(vault)
+        const nextSession: VeuNotesSession = {
+          ...sessionRef.current,
+          recoveryMode: nextMode,
+        }
+        const blob = await encryptNoteWithSession(plaintext, nextSession)
+
+        persistBlob(blob)
+        sessionRef.current = nextSession
+        lastSavedVaultRef.current = plaintext
+        showToast(
+          'success',
+          nextMode === 'recoverable'
+            ? 'Modo recuperável com paridade ativado. Exporte um novo backup.'
+            : 'Modo recuperável desativado. O cofre foi salvo no formato padrão.',
         )
       } finally {
         setIsBusy(false)
@@ -612,10 +656,14 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
     storageWarning,
     lastSavedAt,
     storageError,
+    recoveryMode,
     idleMinutes,
     toast,
-    createVault: (password: string, confirmation: string) =>
-      safeAction(() => createVault(password, confirmation)),
+    createVault: (
+      password: string,
+      confirmation: string,
+      recoveryMode: VeuNotesRecoveryMode = 'standard',
+    ) => safeAction(() => createVault(password, confirmation, recoveryMode)),
     unlockVault: (password: string) => safeAction(() => unlockVault(password)),
     saveVault: (options?: { silent?: boolean }) =>
       safeAction(() => saveVault(options)),
@@ -630,6 +678,8 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
       safeAction(() =>
         changePassword(currentPassword, newPassword, confirmation),
       ),
+    setRecoveryMode: (nextMode: VeuNotesRecoveryMode) =>
+      safeAction(() => setRecoveryMode(nextMode)),
     createNote,
     updateNote,
     deleteNote,

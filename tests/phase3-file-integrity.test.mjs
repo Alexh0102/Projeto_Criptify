@@ -198,6 +198,39 @@ test('CRIPTOVEU4 recupera múltiplos blocos e verifica o manifesto', async () =>
   assert.match(recovered.securityReport.fileHashSha256, /^[a-f0-9]{64}$/)
 })
 
+test('CRIPTOVEU6 recupera um bloco cifrado danificado com paridade', async () => {
+  const recoverable = await criptoveu.encryptFile(
+    sourceFixture,
+    'senha-fase-3-de-teste',
+    undefined,
+    {
+      argon2MemoryMb: 8,
+      argon2Iterations: 1,
+      recoverable: true,
+    },
+  )
+  const bytes = new Uint8Array(await recoverable.blob.arrayBuffer())
+  const ranges = getRecordRanges(bytes)
+
+  assert.equal(await recoverable.blob.slice(0, 10).text(), 'CRIPTOVEU6')
+  assert.equal(ranges.length, 4)
+  assert.equal(ranges[2].type, 3)
+
+  bytes[ranges[1].start + RECORD_HEADER_LENGTH + 8] ^= 0x01
+  const recovered = await criptoveu.decryptFile(
+    fileFromBytes(bytes, 'integridade-recuperavel.bin.criptoveu'),
+    'senha-fase-3-de-teste',
+  )
+
+  assert.deepEqual(
+    new Uint8Array(await recovered.blob.arrayBuffer()),
+    new Uint8Array(await sourceFixture.arrayBuffer()),
+  )
+  assert.equal(recovered.securityReport.format, 'CRIPTOVEU6')
+  assert.equal(recovered.securityReport.recoverableParity.enabled, true)
+  assert.equal(recovered.securityReport.recoverableParity.recoveredBlocks, 1)
+})
+
 test('inspetor rejeita truncamento e tamanho de registro adulterado', async () => {
   const original = new Uint8Array(await encryptedFixture.blob.arrayBuffer())
   const truncated = original.slice(0, -1)

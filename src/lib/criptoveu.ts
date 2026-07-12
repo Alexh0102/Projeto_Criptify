@@ -22,6 +22,7 @@ const PBKDF2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU2'
 const ARGON2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU3'
 const INTEGRITY_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU4'
 const KEY_FILE_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU5'
+const RECOVERABLE_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU6'
 const LEGACY_FILE_HEADER_BYTES = new TextEncoder().encode(LEGACY_FILE_HEADER_TEXT)
 const LEGACY_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
   LEGACY_CHUNKED_FILE_HEADER_TEXT,
@@ -38,6 +39,9 @@ const INTEGRITY_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
 const KEY_FILE_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
   KEY_FILE_CHUNKED_FILE_HEADER_TEXT,
 )
+const RECOVERABLE_CHUNKED_FILE_HEADER_BYTES = new TextEncoder().encode(
+  RECOVERABLE_CHUNKED_FILE_HEADER_TEXT,
+)
 const SALT_LENGTH_BYTES = 16
 const IV_LENGTH_BYTES = 12
 const PBKDF2_ITERATIONS = 600_000
@@ -48,6 +52,8 @@ const INTEGRITY_RECORD_HEADER_BYTES =
   INTEGRITY_RECORD_TYPE_BYTES + CHUNK_RECORD_LENGTH_BYTES
 const INTEGRITY_DATA_RECORD_TYPE = 1
 const INTEGRITY_MANIFEST_RECORD_TYPE = 2
+const RECOVERABLE_PARITY_RECORD_TYPE = 3
+export const RECOVERABLE_PARITY_GROUP_SIZE = 4
 const ARGON2_PARAMETER_LENGTH_BYTES = 4
 const ARGON2_MIN_MEMORY_MB = 8
 const ARGON2_MAX_MEMORY_MB = 512
@@ -109,6 +115,7 @@ export type FileEncryptionOptions = FileSizeGuardOptions & {
   argon2MemoryMb?: number
   argon2Iterations?: number
   keyFile?: File | null
+  recoverable?: boolean
 }
 
 export type Argon2Parameters = {
@@ -133,6 +140,7 @@ export type ProcessResult = {
 }
 
 export type FilePackageFormat =
+  | 'CRIPTOVEU6'
   | 'CRIPTOVEU5'
   | 'CRIPTOVEU4'
   | 'CRIPTOVEU3'
@@ -180,6 +188,11 @@ export type FileSecurityReport = {
     required: boolean
     digest: 'SHA-256' | null
     embedded: false
+  }
+  recoverableParity: {
+    enabled: boolean
+    groupSize: number | null
+    recoveredBlocks: number
   }
   uploadToServer: false
   note: string
@@ -234,6 +247,35 @@ function cloneBytes(source: Uint8Array): Uint8Array<ArrayBuffer> {
   const cloned = new Uint8Array(new ArrayBuffer(source.length))
   cloned.set(source)
   return cloned
+}
+
+function createXorParity(chunks: readonly Uint8Array[]) {
+  const length = Math.max(...chunks.map((chunk) => chunk.byteLength))
+  const parity = new Uint8Array(length)
+
+  for (const chunk of chunks) {
+    for (let index = 0; index < chunk.byteLength; index += 1) {
+      parity[index] ^= chunk[index]
+    }
+  }
+
+  return parity
+}
+
+function recoverXorParityChunk(
+  parity: Uint8Array,
+  chunks: readonly Uint8Array[],
+  recoveredLength: number,
+) {
+  const recovered = parity.slice(0, recoveredLength)
+
+  for (const chunk of chunks) {
+    for (let index = 0; index < chunk.byteLength; index += 1) {
+      recovered[index] ^= chunk[index]
+    }
+  }
+
+  return recovered
 }
 
 function randomBytes(length: number): Uint8Array<ArrayBuffer> {
@@ -611,6 +653,11 @@ function createAeadOnlySecurityReport(options: {
       digest: null,
       embedded: false,
     },
+    recoverableParity: {
+      enabled: false,
+      groupSize: null,
+      recoveredBlocks: 0,
+    },
     uploadToServer: false,
     note:
       'Formato legado autenticado por AES-GCM, sem manifesto SHA-256 do Escudo de Integridade.',
@@ -706,9 +753,19 @@ export async function encryptFile(
 ): Promise<ProcessResult> {
   assertSupportedFileSize(file, options)
   const keyFile = options?.keyFile ?? null
-  const packageFormat: FileIntegrityFormat = keyFile
-    ? 'CRIPTOVEU5'
-    : 'CRIPTOVEU4'
+  const useRecoverableParity = options?.recoverable === true
+  const packageFormat: FileIntegrityFormat = useRecoverableParity
+    ? 'CRIPTOVEU6'
+    : keyFile
+      ? 'CRIPTOVEU5'
+      : 'CRIPTOVEU4'
+
+  if (useRecoverableParity && keyFile) {
+    throw new CriptoveuError(
+      'INVALID_FILE',
+      'O modo recuperável com paridade ainda não pode ser combinado com arquivo-chave.',
+    )
+  }
 
   if (keyFile && isSameFileSelection(file, keyFile)) {
     throw new CriptoveuError(
@@ -793,6 +850,7 @@ export async function encryptFile(
     'encrypt',
   )
   const encryptedParts: BlobPart[] = [fixedHeader]
+  const parityGroup: Uint8Array[] = []
   let processedBytes = 0
   let chunkIndex = 0
 
@@ -824,6 +882,24 @@ export async function encryptFile(
       ),
       ciphertext,
     )
+    if (useRecoverableParity) {
+      parityGroup.push(ciphertext)
+
+      if (
+        parityGroup.length === RECOVERABLE_PARITY_GROUP_SIZE ||
+        chunkIndex + 1 === manifest.chunkCount
+      ) {
+        const parity = createXorParity(parityGroup)
+        encryptedParts.push(
+          createIntegrityRecordHeader(
+            RECOVERABLE_PARITY_RECORD_TYPE,
+            parity.byteLength,
+          ),
+          parity,
+        )
+        parityGroup.length = 0
+      }
+    }
     processedBytes += plainChunk.byteLength
     chunkIndex += 1
 
@@ -931,9 +1007,16 @@ export async function encryptFile(
         digest: keyFile ? 'SHA-256' : null,
         embedded: false,
       },
+      recoverableParity: {
+        enabled: useRecoverableParity,
+        groupSize: useRecoverableParity ? RECOVERABLE_PARITY_GROUP_SIZE : null,
+        recoveredBlocks: 0,
+      },
       uploadToServer: false,
       note:
-        keyFile
+        useRecoverableParity
+          ? `Pacote recuperável com paridade local gerado. Cada grupo de ${RECOVERABLE_PARITY_GROUP_SIZE} blocos pode recuperar um bloco com conteúdo danificado.`
+          : keyFile
           ? 'Pacote com proteção dupla gerado localmente. O arquivo-chave não foi incorporado ao pacote.'
           : 'Pacote gerado localmente e verificado estruturalmente. Reabra o arquivo baixado para confirmar novamente o manifesto.',
     },
@@ -1049,7 +1132,9 @@ async function inspectIntegrityPackage(
   const expectedHeaderBytes =
     format === 'CRIPTOVEU5'
       ? KEY_FILE_CHUNKED_FILE_HEADER_BYTES
-      : INTEGRITY_CHUNKED_FILE_HEADER_BYTES
+      : format === 'CRIPTOVEU6'
+        ? RECOVERABLE_CHUNKED_FILE_HEADER_BYTES
+        : INTEGRITY_CHUNKED_FILE_HEADER_BYTES
   const fixedHeader = new Uint8Array(
     await blob.slice(0, INTEGRITY_HEADER_LENGTH_BYTES).arrayBuffer(),
   )
@@ -1069,6 +1154,7 @@ async function inspectIntegrityPackage(
   let offset = INTEGRITY_HEADER_LENGTH_BYTES
   let observedChunkCount = 0
   let manifestPresent = false
+  let parityRecords = 0
 
   while (offset < blob.size) {
     if (blob.size - offset < INTEGRITY_RECORD_HEADER_BYTES) {
@@ -1086,6 +1172,13 @@ async function inspectIntegrityPackage(
           .arrayBuffer(),
       ),
     )
+    const expectingData = observedChunkCount < parsedHeader.chunkCount
+    const expectingParity =
+      format === 'CRIPTOVEU6' &&
+      observedChunkCount > 0 &&
+      (observedChunkCount % RECOVERABLE_PARITY_GROUP_SIZE === 0 ||
+        observedChunkCount === parsedHeader.chunkCount) &&
+      parityRecords < Math.ceil(observedChunkCount / RECOVERABLE_PARITY_GROUP_SIZE)
     const maximumLength =
       recordHeader.recordType === INTEGRITY_MANIFEST_RECORD_TYPE
         ? MAX_FILE_INTEGRITY_MANIFEST_BYTES + AES_GCM_TAG_LENGTH_BYTES
@@ -1109,7 +1202,17 @@ async function inspectIntegrityPackage(
       )
     }
 
-    if (observedChunkCount < parsedHeader.chunkCount) {
+    if (expectingParity) {
+      if (recordHeader.recordType !== RECOVERABLE_PARITY_RECORD_TYPE) {
+        return createInvalidInspection(
+          blob.size,
+          'O registro de paridade recuperável está ausente ou fora de posição.',
+          format,
+        )
+      }
+
+      parityRecords += 1
+    } else if (expectingData) {
       if (recordHeader.recordType !== INTEGRITY_DATA_RECORD_TYPE) {
         return createInvalidInspection(
           blob.size,
@@ -1141,6 +1244,9 @@ async function inspectIntegrityPackage(
   if (
     observedChunkCount !== parsedHeader.chunkCount ||
     !manifestPresent ||
+    (format === 'CRIPTOVEU6' &&
+      parityRecords !==
+        Math.ceil(parsedHeader.chunkCount / RECOVERABLE_PARITY_GROUP_SIZE)) ||
     offset !== blob.size
   ) {
     return createInvalidInspection(
@@ -1157,6 +1263,8 @@ async function inspectIntegrityPackage(
     message:
       format === 'CRIPTOVEU5'
         ? 'Estrutura plausível. A autenticação exige a senha e o arquivo-chave corretos.'
+        : format === 'CRIPTOVEU6'
+          ? `Estrutura recuperável plausível. Cada grupo de ${RECOVERABLE_PARITY_GROUP_SIZE} blocos possui uma paridade local.`
         : 'Estrutura plausível. A autenticidade e o manifesto exigem a senha correta.',
     memoryMb: parsedHeader.parameters.memoryMb,
     iterations: parsedHeader.parameters.iterations,
@@ -1266,6 +1374,20 @@ export async function inspectCriptoveuPackage(
       }
 
       return await inspectIntegrityPackage(blob, 'CRIPTOVEU5')
+    }
+
+    if (header === RECOVERABLE_CHUNKED_FILE_HEADER_TEXT) {
+      detectedFormat = 'CRIPTOVEU6'
+
+      if (blob.size < INTEGRITY_HEADER_LENGTH_BYTES) {
+        return createInvalidInspection(
+          blob.size,
+          'O cabeçalho CRIPTOVEU6 está truncado.',
+          'CRIPTOVEU6',
+        )
+      }
+
+      return await inspectIntegrityPackage(blob, 'CRIPTOVEU6')
     }
 
     if (header === INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {
@@ -1400,7 +1522,9 @@ function buildIntegrityHeader(
   const formatBytes =
     format === 'CRIPTOVEU5'
       ? KEY_FILE_CHUNKED_FILE_HEADER_BYTES
-      : INTEGRITY_CHUNKED_FILE_HEADER_BYTES
+      : format === 'CRIPTOVEU6'
+        ? RECOVERABLE_CHUNKED_FILE_HEADER_BYTES
+        : INTEGRITY_CHUNKED_FILE_HEADER_BYTES
   let offset = 0
 
   header.set(formatBytes, offset)
@@ -2010,7 +2134,9 @@ async function decryptIntegrityChunkedFile(
   const expectedHeaderBytes =
     format === 'CRIPTOVEU5'
       ? KEY_FILE_CHUNKED_FILE_HEADER_BYTES
-      : INTEGRITY_CHUNKED_FILE_HEADER_BYTES
+      : format === 'CRIPTOVEU6'
+        ? RECOVERABLE_CHUNKED_FILE_HEADER_BYTES
+        : INTEGRITY_CHUNKED_FILE_HEADER_BYTES
   await reportProgress(onProgress, 6, `Lendo cabeçalho ${format}`)
   const reader = file.stream().getReader()
   let pendingBytes = new Uint8Array(0)
@@ -2021,6 +2147,12 @@ async function decryptIntegrityChunkedFile(
   let consumedBytes = 0
   let decryptedSize = 0
   let manifest: FileIntegrityManifest | null = null
+  let recoveredBlocks = 0
+  const recoverableGroup: Array<{
+    ciphertext: Uint8Array<ArrayBuffer>
+    ciphertextLength: number
+    recordIndex: number
+  }> = []
   const decryptedParts: BlobPart[] = []
 
   async function decryptRecord(
@@ -2059,12 +2191,61 @@ async function decryptIntegrityChunkedFile(
           'INVALID_PASSWORD_OR_FILE',
           format === 'CRIPTOVEU5'
             ? 'Senha ou arquivo-chave incorreto, ou pacote adulterado.'
+            : format === 'CRIPTOVEU6'
+              ? 'Senha incorreta ou pacote recuperável adulterado além da capacidade de paridade.'
             : 'Senha incorreta ou pacote CRIPTOVEU4 adulterado.',
         )
       }
 
       throw error
     }
+  }
+
+  async function decryptRecoverableGroup(parity: Uint8Array<ArrayBuffer>) {
+    const decryptedGroup: Uint8Array[] = []
+    let failedIndex = -1
+
+    for (const [index, record] of recoverableGroup.entries()) {
+      try {
+        decryptedGroup[index] = await decryptRecord(
+          INTEGRITY_DATA_RECORD_TYPE,
+          record.ciphertext,
+          record.ciphertextLength,
+          record.recordIndex,
+        )
+      } catch (error) {
+        if (failedIndex !== -1) {
+          throw error
+        }
+
+        failedIndex = index
+      }
+    }
+
+    if (failedIndex !== -1) {
+      const failedRecord = recoverableGroup[failedIndex]
+      const recoveredCiphertext = recoverXorParityChunk(
+        parity,
+        recoverableGroup
+          .filter((_, index) => index !== failedIndex)
+          .map((record) => record.ciphertext),
+        failedRecord.ciphertextLength,
+      )
+      decryptedGroup[failedIndex] = await decryptRecord(
+        INTEGRITY_DATA_RECORD_TYPE,
+        recoveredCiphertext,
+        failedRecord.ciphertextLength,
+        failedRecord.recordIndex,
+      )
+      recoveredBlocks += 1
+    }
+
+    for (const decrypted of decryptedGroup) {
+      decryptedParts.push(cloneBytes(decrypted))
+      decryptedSize += decrypted.byteLength
+    }
+
+    recoverableGroup.length = 0
   }
 
   try {
@@ -2147,12 +2328,19 @@ async function decryptIntegrityChunkedFile(
           pendingBytes.slice(0, INTEGRITY_RECORD_HEADER_BYTES),
         )
         const expectingData = dataChunkIndex < parsedHeader.chunkCount
-        const expectedType = expectingData
-          ? INTEGRITY_DATA_RECORD_TYPE
-          : INTEGRITY_MANIFEST_RECORD_TYPE
-        const maximumLength = expectingData
-          ? parsedHeader.chunkSize + AES_GCM_TAG_LENGTH_BYTES
-          : MAX_FILE_INTEGRITY_MANIFEST_BYTES + AES_GCM_TAG_LENGTH_BYTES
+        const groupNeedsParity =
+          format === 'CRIPTOVEU6' &&
+          recoverableGroup.length > 0 &&
+          (recoverableGroup.length === RECOVERABLE_PARITY_GROUP_SIZE ||
+            dataChunkIndex === parsedHeader.chunkCount)
+        const expectedType = groupNeedsParity
+          ? RECOVERABLE_PARITY_RECORD_TYPE
+          : expectingData
+            ? INTEGRITY_DATA_RECORD_TYPE
+            : INTEGRITY_MANIFEST_RECORD_TYPE
+        const maximumLength = expectedType === INTEGRITY_MANIFEST_RECORD_TYPE
+          ? MAX_FILE_INTEGRITY_MANIFEST_BYTES + AES_GCM_TAG_LENGTH_BYTES
+          : parsedHeader.chunkSize + AES_GCM_TAG_LENGTH_BYTES
 
         if (recordHeader.recordType !== expectedType || manifest) {
           throw new CriptoveuError(
@@ -2175,33 +2363,38 @@ async function decryptIntegrityChunkedFile(
         const ciphertext = cloneBytes(
           pendingBytes.slice(INTEGRITY_RECORD_HEADER_BYTES, recordLength),
         )
-        const recordIndex = expectingData
-          ? dataChunkIndex
-          : parsedHeader.chunkCount
-        const decrypted = await decryptRecord(
-          recordHeader.recordType,
-          ciphertext,
-          recordHeader.ciphertextLength,
-          recordIndex,
-        )
-
-        if (expectingData) {
-          decryptedParts.push(decrypted)
-          decryptedSize += decrypted.byteLength
-          dataChunkIndex += 1
+        if (groupNeedsParity) {
+          await decryptRecoverableGroup(ciphertext)
           await reportProgress(
             onProgress,
-            Math.min(
-              88,
-              (format === 'CRIPTOVEU5' ? 22 : 16) +
-                Math.round(
-                  (consumedBytes / file.size) *
-                    (format === 'CRIPTOVEU5' ? 66 : 72),
-                ),
-            ),
-            `Abrindo bloco ${dataChunkIndex} de ${parsedHeader.chunkCount}`,
+            Math.min(88, 16 + Math.round((consumedBytes / file.size) * 72)),
+            `Recuperando grupo de paridade até o bloco ${dataChunkIndex}`,
           )
+        } else if (expectingData) {
+          if (format === 'CRIPTOVEU6') {
+            recoverableGroup.push({
+              ciphertext,
+              ciphertextLength: recordHeader.ciphertextLength,
+              recordIndex: dataChunkIndex,
+            })
+          } else {
+            const decrypted = await decryptRecord(
+              recordHeader.recordType,
+              ciphertext,
+              recordHeader.ciphertextLength,
+              dataChunkIndex,
+            )
+            decryptedParts.push(decrypted)
+            decryptedSize += decrypted.byteLength
+          }
+          dataChunkIndex += 1
         } else {
+          const decrypted = await decryptRecord(
+            recordHeader.recordType,
+            ciphertext,
+            recordHeader.ciphertextLength,
+            parsedHeader.chunkCount,
+          )
           try {
             manifest = parseFileIntegrityManifest(decrypted)
           } catch (error) {
@@ -2226,6 +2419,7 @@ async function decryptIntegrityChunkedFile(
     !parsedHeader ||
     pendingBytes.length > 0 ||
     dataChunkIndex !== parsedHeader.chunkCount ||
+    recoverableGroup.length > 0 ||
     !manifest
   ) {
     throw new CriptoveuError(
@@ -2302,9 +2496,19 @@ async function decryptIntegrityChunkedFile(
         digest: format === 'CRIPTOVEU5' ? 'SHA-256' : null,
         embedded: false,
       },
+      recoverableParity: {
+        enabled: format === 'CRIPTOVEU6',
+        groupSize:
+          format === 'CRIPTOVEU6' ? RECOVERABLE_PARITY_GROUP_SIZE : null,
+        recoveredBlocks,
+      },
       uploadToServer: false,
       note:
-        format === 'CRIPTOVEU5'
+        format === 'CRIPTOVEU6'
+          ? recoveredBlocks > 0
+            ? `Paridade recuperou ${recoveredBlocks} bloco(s) e o manifesto SHA-256 foi confirmado localmente.`
+            : 'Paridade recuperável, AES-GCM, manifesto e SHA-256 verificados localmente.'
+          : format === 'CRIPTOVEU5'
           ? 'Proteção dupla, manifesto e SHA-256 verificados localmente. O arquivo-chave não estava incorporado ao pacote.'
           : 'Escudo de Integridade verificado após a recuperação local do conteúdo.',
     },
@@ -2329,6 +2533,14 @@ export async function decryptFile(
       password,
       'CRIPTOVEU5',
       options?.keyFile ?? null,
+      onProgress,
+    )
+  } else if (modernHeader === RECOVERABLE_CHUNKED_FILE_HEADER_TEXT) {
+    result = await decryptIntegrityChunkedFile(
+      file,
+      password,
+      'CRIPTOVEU6',
+      null,
       onProgress,
     )
   } else if (modernHeader === INTEGRITY_CHUNKED_FILE_HEADER_TEXT) {

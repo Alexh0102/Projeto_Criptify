@@ -468,6 +468,11 @@
         "notEmbedded": "El archivo, su nombre y su huella SHA-256 no se guardan en el paquete.",
         "exactBytes": "Guarda una copia con los mismos bytes y compártela por separado de la contraseña y del paquete."
       },
+      "recoverableParity": {
+        "title": "Modo recuperable con paridad",
+        "description": "Añade paridad XOR a cada grupo de {{count}} bloques cifrados. Puede recuperar un bloque con contenido dañado, pero aumenta el tamaño del paquete.",
+        "keyFileUnavailable": "No disponible con archivo-clave: elige una protección para este paquete."
+      },
       "advanced": {
         "title": "Configuración avanzada",
         "helper": "Argon2id: {{memory}} MB de RAM, {{iterations}} pasadas",
