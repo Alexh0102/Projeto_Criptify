@@ -50,6 +50,7 @@ const VEU_NOTES_V3_FIELDS = [
   'iv',
   'ciphertext',
   'recoveryIv',
+  'recoveryCiphertext',
   'parity',
 ] as const
 
@@ -89,6 +90,7 @@ export type VeuNotesBlobV3 = {
   iv: string
   ciphertext: string
   recoveryIv: string
+  recoveryCiphertext: string
   parity: string
 }
 
@@ -303,9 +305,12 @@ export function assertVeuNotesBlobJson(value: unknown): VeuNotesBlobJson {
         typeof value.iv !== 'string' ||
         typeof value.ciphertext !== 'string' ||
         typeof value.recoveryIv !== 'string' ||
+        typeof value.recoveryCiphertext !== 'string' ||
         typeof value.parity !== 'string' ||
         !validateBinaryFields(value.salt, value.iv, value.ciphertext) ||
         decodeBase64ToBytes(value.recoveryIv).byteLength !== IV_LENGTH_BYTES ||
+        decodeBase64ToBytes(value.recoveryCiphertext).byteLength !==
+          decodeBase64ToBytes(value.ciphertext).byteLength ||
         decodeBase64ToBytes(value.parity).byteLength !==
           decodeBase64ToBytes(value.ciphertext).byteLength
       ) {
@@ -479,6 +484,7 @@ export async function encryptNoteWithSession(
     iv: encodeBytesToBase64(iv),
     ciphertext: encodeBytesToBase64(primaryCiphertext),
     recoveryIv: encodeBytesToBase64(recoveryIv),
+    recoveryCiphertext: encodeBytesToBase64(recoveryCiphertext),
     parity: encodeBytesToBase64(xorBytes(primaryCiphertext, recoveryCiphertext)),
   }
 }
@@ -532,11 +538,11 @@ async function decryptNoteV3WithSession(
   } catch {
     try {
       const recoveredCiphertext = xorBytes(
-        decodeBase64ToBytes(blob.ciphertext),
+        decodeBase64ToBytes(blob.recoveryCiphertext),
         decodeBase64ToBytes(blob.parity),
       )
       return await decryptCiphertext(
-        decodeBase64ToBytes(blob.recoveryIv),
+        decodeBase64ToBytes(blob.iv),
         recoveredCiphertext,
       )
     } catch {

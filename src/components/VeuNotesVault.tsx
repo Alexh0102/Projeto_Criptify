@@ -425,7 +425,7 @@ export default function VeuNotesVault() {
                       <span className="mt-1 block text-cyan-100/80">
                         Mantém paridade entre duas cópias cifradas para recuperar
                         um backup se um dos ciphertexts sofrer dano. O arquivo fica
-                        aproximadamente duas vezes maior.
+                        aproximadamente três vezes maior.
                       </span>
                     </span>
                   </label>
