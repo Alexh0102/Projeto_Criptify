@@ -188,3 +188,28 @@ test('arquivo NOTE2 não expõe senha, títulos, etiquetas ou conteúdo do cofre
     veuNotesCrypto.unlockVeuNotesBlob(blob, 'senha-incorreta-para-o-cofre'),
   )
 })
+
+test('NOTE3 recupera um ciphertext danificado com paridade', async () => {
+  const plaintext = 'backup recuperável com paridade'
+  const { blob } = await veuNotesCrypto.createVeuNotesVault(
+    plaintext,
+    'senha-portatil-paridade-2026',
+    'recoverable',
+  )
+  const ciphertext = Buffer.from(blob.ciphertext, 'base64')
+  ciphertext[12] ^= 0x01
+  const damaged = {
+    ...blob,
+    ciphertext: ciphertext.toString('base64'),
+  }
+
+  assert.equal(blob.version, 3)
+  assert.equal(blob.type, 'NOTE3')
+  assert.equal(
+    (await veuNotesCrypto.unlockVeuNotesBlob(
+      damaged,
+      'senha-portatil-paridade-2026',
+    )).plaintext,
+    plaintext,
+  )
+})

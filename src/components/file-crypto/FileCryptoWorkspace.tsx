@@ -130,6 +130,7 @@ export default function FileCryptoWorkspace() {
   const [files, setFiles] = useState<File[]>([])
   const [password, setPassword] = useState('')
   const [useKeyFile, setUseKeyFile] = useState(false)
+  const [useRecoverableParity, setUseRecoverableParity] = useState(false)
   const [keyFile, setKeyFile] = useState<File | null>(null)
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState(() => t('files.workspace.status.ready'))
@@ -331,6 +332,7 @@ export default function FileCryptoWorkspace() {
 
     setMode(resolvedMode)
     setUseKeyFile(false)
+    setUseRecoverableParity(false)
     setKeyFile(null)
     setProgress(0)
     setProgressLabel(t('files.workspace.status.ready'))
@@ -618,6 +620,8 @@ export default function FileCryptoWorkspace() {
                       ? keyFile
                       : null
                     : keyFile,
+                recoverable:
+                  mode === 'encrypt' ? useRecoverableParity : undefined,
               },
             )
 
@@ -1019,6 +1023,10 @@ export default function FileCryptoWorkspace() {
               onEnabledChange={(enabled) => {
                 setUseKeyFile(enabled)
 
+                if (enabled) {
+                  setUseRecoverableParity(false)
+                }
+
                 if (!enabled) {
                   setKeyFile(null)
                 }
@@ -1026,6 +1034,39 @@ export default function FileCryptoWorkspace() {
               onFileChange={handleKeyFileInputChange}
               onClear={() => setKeyFile(null)}
             />
+
+            {mode === 'encrypt' ? (
+              <label
+                className={`flex gap-3 rounded-[24px] border p-4 text-sm leading-6 transition ${
+                  useKeyFile
+                    ? 'cursor-not-allowed border-white/10 bg-white/[0.025] text-zinc-500'
+                    : 'cursor-pointer border-cyan-400/20 bg-cyan-400/10 text-cyan-50'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={useRecoverableParity}
+                  disabled={isProcessing || useKeyFile}
+                  onChange={(event) => setUseRecoverableParity(event.target.checked)}
+                  className="mt-1 accent-cyan-400"
+                />
+                <span>
+                  <span className="block font-semibold text-white">
+                    {t('files.workspace.recoverableParity.title')}
+                  </span>
+                  <span className="mt-1 block text-cyan-100/80">
+                    {t('files.workspace.recoverableParity.description', {
+                      count: 4,
+                    })}
+                  </span>
+                  {useKeyFile ? (
+                    <span className="mt-1 block text-xs text-zinc-500">
+                      {t('files.workspace.recoverableParity.keyFileUnavailable')}
+                    </span>
+                  ) : null}
+                </span>
+              </label>
+            ) : null}
 
             {mode === 'encrypt' ? (
               <AdvancedOptions

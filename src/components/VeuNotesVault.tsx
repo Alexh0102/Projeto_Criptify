@@ -102,6 +102,7 @@ export default function VeuNotesVault() {
     isDirty,
     isUnlocked,
     storageWarning,
+    recoveryMode,
     lastSavedAt,
     storageError,
     idleMinutes,
@@ -112,6 +113,7 @@ export default function VeuNotesVault() {
     exportVault,
     importBackup,
     changePassword,
+    setRecoveryMode,
     createNote,
     updateNote,
     deleteNote,
@@ -130,6 +132,7 @@ export default function VeuNotesVault() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newPasswordConfirmation, setNewPasswordConfirmation] = useState('')
+  const [createRecoveryMode, setCreateRecoveryMode] = useState(false)
 
   function triggerImportPicker() {
     importInputRef.current?.click()
@@ -143,7 +146,11 @@ export default function VeuNotesVault() {
   }
 
   async function handleCreateVault() {
-    const result = await createVault(createPassword, createConfirmPassword)
+    const result = await createVault(
+      createPassword,
+      createConfirmPassword,
+      createRecoveryMode ? 'recoverable' : 'standard',
+    )
 
     if (result !== null) {
       setCreatePassword('')
@@ -403,6 +410,26 @@ export default function VeuNotesVault() {
                     exporte um backup e guarde-o separadamente da senha.
                   </div>
 
+                  <label className="flex cursor-pointer gap-3 rounded-[24px] border border-cyan-400/20 bg-cyan-400/10 p-4 text-sm leading-6 text-cyan-50">
+                    <input
+                      type="checkbox"
+                      checked={createRecoveryMode}
+                      disabled={isBusy}
+                      onChange={(event) => setCreateRecoveryMode(event.target.checked)}
+                      className="mt-1 accent-cyan-400"
+                    />
+                    <span>
+                      <span className="block font-semibold text-white">
+                        Modo recuperável com paridade
+                      </span>
+                      <span className="mt-1 block text-cyan-100/80">
+                        Mantém paridade entre duas cópias cifradas para recuperar
+                        um backup se um dos ciphertexts sofrer dano. O arquivo fica
+                        aproximadamente três vezes maior.
+                      </span>
+                    </span>
+                  </label>
+
                   <div className="grid gap-3 sm:grid-cols-2">
                     <button
                       type="button"
@@ -620,6 +647,33 @@ export default function VeuNotesVault() {
                     {storageWarning}
                   </div>
                 ) : null}
+
+                <div className="mt-4 rounded-[24px] border border-cyan-400/20 bg-cyan-400/10 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        Modo recuperável com paridade
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-cyan-100/80">
+                        {recoveryMode === 'recoverable'
+                          ? 'Ativo: o backup usa duas cópias cifradas ligadas por paridade XOR.'
+                          : 'Inativo: ative para criar um novo backup tolerante a dano em um ciphertext.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void setRecoveryMode(
+                          recoveryMode === 'recoverable' ? 'standard' : 'recoverable',
+                        )
+                      }
+                      disabled={isBusy}
+                      className="btn-secondary shrink-0"
+                    >
+                      {recoveryMode === 'recoverable' ? 'Desativar' : 'Ativar'}
+                    </button>
+                  </div>
+                </div>
               </section>
 
               {showPasswordChange ? (
