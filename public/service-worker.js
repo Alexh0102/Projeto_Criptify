@@ -1,5 +1,6 @@
-const APP_SHELL_CACHE = 'criptoveu-app-shell-v1'
-const STATIC_CACHE = 'criptoveu-static-v1'
+const CACHE_VERSION = 'v2'
+const APP_SHELL_CACHE = `criptoveu-app-shell-${CACHE_VERSION}`
+const STATIC_CACHE = `criptoveu-static-${CACHE_VERSION}`
 const APP_SHELL_URLS = [
   '/',
   '/index.html',

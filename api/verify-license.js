@@ -1,5 +1,11 @@
 ﻿import crypto from 'node:crypto'
 
+import {
+  enforceRateLimit,
+  readJsonBody,
+  RequestSecurityError,
+} from './_request-security.js'
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const LICENSE_SCOPE = 'criptoveu:lifetime:v1'
 
@@ -52,43 +58,23 @@ function timingSafeEqualText(firstValue, secondValue) {
   return crypto.timingSafeEqual(firstBuffer, secondBuffer)
 }
 
-function readJsonBody(req) {
-  if (req.body && typeof req.body === 'object') {
-    return Promise.resolve(req.body)
-  }
-
-  if (typeof req.body === 'string') {
-    try {
-      return Promise.resolve(JSON.parse(req.body))
-    } catch {
-      return Promise.resolve({})
-    }
-  }
-
-  return new Promise((resolve, reject) => {
-    const chunks = []
-
-    req.on('data', (chunk) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
-    })
-
-    req.on('end', () => {
-      try {
-        const rawBody = Buffer.concat(chunks).toString('utf8')
-        resolve(rawBody ? JSON.parse(rawBody) : {})
-      } catch (error) {
-        reject(error)
-      }
-    })
-
-    req.on('error', (error) => reject(error))
-  })
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  try {
+    enforceRateLimit(req, {
+      key: 'verify-license',
+      maxRequests: 10,
+    })
+  } catch (error) {
+    if (error instanceof RequestSecurityError && error.code === 'RATE_LIMITED') {
+      return res.status(429).json({ valid: false, error: error.message })
+    }
+
+    throw error
   }
 
   let internalLicenseSecret
@@ -104,7 +90,11 @@ export default async function handler(req, res) {
 
   try {
     body = await readJsonBody(req)
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestSecurityError && error.code === 'PAYLOAD_TOO_LARGE') {
+      return res.status(413).json({ valid: false, error: error.message })
+    }
+
     return res.status(400).json({ valid: false, error: 'JSON inválido.' })
   }
 
@@ -116,7 +106,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ valid: false, error: 'Informe a chave de licença.' })
   }
 
-  if (adminMasterKey && rawLicenseKey === adminMasterKey) {
+  if (adminMasterKey && timingSafeEqualText(rawLicenseKey, adminMasterKey)) {
     return res.status(200).json({ valid: true, tier: 'admin' })
   }
 

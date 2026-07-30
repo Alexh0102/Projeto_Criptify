@@ -2,6 +2,13 @@
 
 import Stripe from 'stripe'
 
+import {
+  enforceRateLimit,
+  readJsonBody,
+  RequestSecurityError,
+  getConfiguredSiteOrigin,
+} from './_request-security.js'
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const CHECKOUT_PRICE_CENTS = 1000
 
@@ -10,16 +17,6 @@ function getRequiredEnv(name) {
 
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`)
-  }
-
-  return value
-}
-
-function getHeader(req, headerName) {
-  const value = req.headers[headerName.toLowerCase()]
-
-  if (Array.isArray(value)) {
-    return value[0]
   }
 
   return value
@@ -54,59 +51,6 @@ function validateEmail(email) {
   return { valid: true, normalizedEmail }
 }
 
-function readJsonBody(req) {
-  if (req.body && typeof req.body === 'object') {
-    return Promise.resolve(req.body)
-  }
-
-  if (typeof req.body === 'string') {
-    try {
-      return Promise.resolve(JSON.parse(req.body))
-    } catch {
-      return Promise.resolve({})
-    }
-  }
-
-  return new Promise((resolve, reject) => {
-    const chunks = []
-
-    req.on('data', (chunk) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
-    })
-
-    req.on('end', () => {
-      try {
-        const rawBody = Buffer.concat(chunks).toString('utf8')
-        resolve(rawBody ? JSON.parse(rawBody) : {})
-      } catch (error) {
-        reject(error)
-      }
-    })
-
-    req.on('error', (error) => reject(error))
-  })
-}
-
-function getRequestOrigin(req) {
-  const configuredSiteUrl =
-    process.env.CHECKOUT_SITE_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.PUBLIC_SITE_URL
-
-  if (configuredSiteUrl) {
-    return configuredSiteUrl.replace(/\/$/, '')
-  }
-
-  const host = getHeader(req, 'x-forwarded-host') || getHeader(req, 'host')
-  const protocol = getHeader(req, 'x-forwarded-proto') || 'https'
-
-  if (!host) {
-    throw new Error('Unable to resolve checkout origin')
-  }
-
-  return `${protocol}://${host}`.replace(/\/$/, '')
-}
-
 function buildClientReferenceId(email) {
   return crypto.createHash('sha256').update(email).digest('hex').slice(0, 32)
 }
@@ -115,6 +59,19 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  try {
+    enforceRateLimit(req, {
+      key: 'create-checkout-session',
+      maxRequests: 5,
+    })
+  } catch (error) {
+    if (error instanceof RequestSecurityError && error.code === 'RATE_LIMITED') {
+      return res.status(429).json({ error: error.message })
+    }
+
+    throw error
   }
 
   let stripeSecretKey
@@ -130,7 +87,11 @@ export default async function handler(req, res) {
 
   try {
     body = await readJsonBody(req)
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestSecurityError && error.code === 'PAYLOAD_TOO_LARGE') {
+      return res.status(413).json({ error: error.message })
+    }
+
     return res.status(400).json({ error: 'JSON inválido.' })
   }
 
@@ -143,7 +104,7 @@ export default async function handler(req, res) {
   const stripe = new Stripe(stripeSecretKey)
 
   try {
-    const origin = getRequestOrigin(req)
+    const origin = getConfiguredSiteOrigin()
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       customer_email: emailValidation.normalizedEmail,

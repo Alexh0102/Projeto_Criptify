@@ -319,11 +319,16 @@ export default function useVeuNotes(options: UseVeuNotesOptions = {}) {
     }
 
     const autosaveTimer = window.setTimeout(() => {
-      void saveVault({ silent: true })
+      void saveVault({ silent: true }).catch((error) => {
+        showToast(
+          'error',
+          `O salvamento automático falhou: ${getFriendlyErrorMessage(error)}`,
+        )
+      })
     }, autosaveDelayMs)
 
     return () => window.clearTimeout(autosaveTimer)
-  }, [autosaveDelayMs, isBusy, isDirty, isUnlocked, saveVault])
+  }, [autosaveDelayMs, isBusy, isDirty, isUnlocked, saveVault, showToast])
 
   const activateVault = useCallback(
     (
