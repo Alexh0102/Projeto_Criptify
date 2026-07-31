@@ -1,491 +1,471 @@
+> 🌐 **Versão em Português:** [Leia o README em Português](README_PT.md)
+
+---
+
 # CriptoVéu
 
-CriptoVéu é uma aplicação web pública e open source para proteger arquivos, mensagens, QR Codes, links, imagens com esteganografia e notas diretamente no navegador.
+Public and open-source 100% client-side web application to protect files, messages, QR codes, links, images with steganography, and notes directly in the browser.
 
-O projeto foi construído com foco em privacidade: arquivos, senhas, mensagens e notas são processados no dispositivo do usuário, sem upload de dados sensíveis para servidores da aplicação.
+CriptoVéu was built with privacy in mind: files, passwords, messages, and notes are processed on the user's device, without uploading sensitive data to the application's servers.
 
-**Site em produção:** https://www.criptoveu.com/
+**Production site:** https://www.criptoveu.com/
 
-> Aviso importante: o CriptoVéu não deve ser interpretado como uma solução “100% segura” ou como substituto para auditoria criptográfica formal. A segurança final depende da senha escolhida, do dispositivo, do navegador, da integridade do código JavaScript entregue ao usuário e do ambiente de execução.
+**Repository:** https://github.com/Alexh0102/Projeto_Criptoveu
 
----
-
-## Resumo
-
-O objetivo do CriptoVéu é oferecer ferramentas simples para criptografia, descriptografia e compartilhamento protegido de conteúdo em um ambiente **100% client-side**.
-
-A aplicação usa a **Web Crypto API** nativa do navegador para realizar criptografia autenticada com **AES-GCM**. Novos arquivos, mensagens, QR Codes, links protegidos e cofres VéuNotes usam **Argon2id em WebAssembly**, executado dentro de um **Web Worker**. Formatos V1 anteriores com PBKDF2/SHA-256 continuam aceitos para leitura.
-
-Principais recursos:
-
-- Criptografia e descriptografia de arquivos locais.
-- Processamento por blocos para arquivos grandes.
-- Pré-visualização local de arquivos descriptografados, quando o navegador oferece suporte.
-- Geração de chave longa no estilo usado por formatos como `.crypt15`.
-- QR Code protegido por senha.
-- Link protegido com expiração embutida no payload e limite de visualizações controlado localmente no navegador.
-- Esteganografia para esconder mensagens protegidas dentro de imagens.
-- VéuNotes, um cofre portátil de várias notas criptografadas.
-- Diagnóstico local do navegador para avaliar HTTPS, Web Crypto, WebAssembly, Workers e perfis Argon2id.
-- PWA com service worker para cache controlado do shell da aplicação.
+> Important notice: CriptoVéu must not be considered a “100% secure” solution or a substitute for a formal cryptographic audit. Final security depends on the selected password, device, browser, integrity of the JavaScript delivered to the user, and execution environment.
 
 ---
 
-## Ferramentas disponíveis
+## Summary
 
-| Rota | Ferramenta | Descrição |
+CriptoVéu provides simple tools for encrypting, decrypting, and sharing protected content in a **100% client-side** environment.
+
+The application uses the browser's native **Web Crypto API** for authenticated **AES-GCM** encryption. New files, messages, QR codes, protected links, and VéuNotes vaults use **Argon2id in WebAssembly**, running inside a **Web Worker**. Earlier V1 formats using PBKDF2/SHA-256 remain supported for reading.
+
+Main features:
+
+- Local file encryption and decryption.
+- Chunked processing for large files.
+- Local preview of decrypted files when supported by the browser.
+- Long-key generation in the style used by formats such as `.crypt15`.
+- Password-protected QR codes.
+- Protected links with expiration embedded in the payload and a view limit controlled locally by the browser.
+- Steganography for hiding protected messages inside images.
+- VéuNotes, a portable vault for multiple encrypted notes.
+- Local browser diagnostics for HTTPS, Web Crypto, WebAssembly, Workers, and Argon2id memory profiles.
+- PWA support with a service worker for controlled application-shell caching.
+
+---
+
+## Available tools
+
+| Route | Tool | Description |
 |---|---|---|
-| `/arquivos` | Criptografia de arquivos | Protege ou descriptografa arquivos locais usando senha. |
-| `/qr-secreto` | QR protegido | Cria e lê QR Codes com mensagens criptografadas. |
-| `/link-secreto` | Link protegido | Gera links com mensagem criptografada no hash da URL. |
-| `/esteganografia` | Mensagem oculta | Esconde ou revela mensagens protegidas em imagens. |
-| `/veu-notes` | VéuNotes | Organiza várias notas em um cofre local exportável como `.criptoveu-note`. |
-| `/diagnostico-navegador` | Diagnóstico do navegador | Verifica compatibilidade local e recomenda perfis de RAM para Argon2id. |
-| `/seguranca` | Segurança | Explica o modelo de segurança adotado pelo projeto. |
-| `/detalhes-tecnicos` | Detalhes técnicos | Apresenta informações técnicas da implementação. |
+| `/arquivos` | File encryption | Protects or decrypts local files with a password. |
+| `/qr-secreto` | Protected QR | Creates and reads QR codes containing encrypted messages. |
+| `/link-secreto` | Protected link | Generates links with an encrypted message in the URL hash. |
+| `/esteganografia` | Hidden message | Hides or reveals protected messages in images. |
+| `/veu-notes` | VéuNotes | Organizes multiple notes in a local vault exportable as `.criptoveu-note`. |
+| `/diagnostico-navegador` | Browser diagnostics | Checks local compatibility and recommends Argon2id memory profiles. |
+| `/seguranca` | Security | Explains the project's security model. |
+| `/detalhes-tecnicos` | Technical details | Presents implementation details. |
 
 ---
 
-## Tecnologias
+## Technology highlights
 
-- React 18 com TypeScript.
-- Vite 7 para desenvolvimento, build e preview.
-- React Router DOM para navegação client-side.
-- Tailwind CSS e PostCSS para estilização.
-- lucide-react para ícones.
-- Web Crypto API nativa do navegador.
-- hash-wasm para Argon2id em WebAssembly, executado em Web Worker.
-- qrcode para geração de QR Code.
-- jsqr para leitura de QR Code em imagens.
-- Service Worker e Web App Manifest para experiência PWA.
-- ESLint com regras para React Hooks, React Refresh e TypeScript.
+- AES-256-GCM via the Web Crypto API.
+- Argon2id v1.3 via WebAssembly in Web Workers (`hash-wasm`).
+- 2 MB chunked file processing with an encrypted integrity manifest (V4/V5).
+- Dual protection with password + key file (V5).
+- Portable encrypted note vault (VéuNotes / `PORTABLE_VAULT1`).
+- URL hash payload serialization for links and QR codes; payloads are never sent in HTTP requests.
+- LSB steganography for PNG images.
+- Strict security headers, including CSP with Trusted Types, COOP, and COEP.
+
+Additional technologies:
+
+- React 18 with TypeScript.
+- Vite 7 for development, builds, and previews.
+- React Router DOM for client-side navigation.
+- Tailwind CSS and PostCSS for styling.
+- `lucide-react` for icons.
+- `qrcode` for QR code generation.
+- `jsqr` for reading QR codes from images.
+- Service Worker and Web App Manifest for the PWA experience.
+- ESLint with React Hooks, React Refresh, and TypeScript rules.
 
 ---
 
-## Criptografia por ferramenta
+## Cryptography by tool
 
-| Ferramenta | Criptografia | Derivação de chave | Armazenamento / saída |
+| Tool | Cryptography | Key derivation | Storage / output |
 |---|---|---|---|
-| Arquivos V5 com proteção dupla | AES-256-GCM + manifesto SHA-256 cifrado | SHA-256 de senha + arquivo-chave, seguido de Argon2id | Arquivo `.criptoveu` |
-| Arquivos V4 | AES-256-GCM + manifesto SHA-256 cifrado | Argon2id v1.3 via WASM em Web Worker | Arquivo `.criptoveu` |
-| Arquivos legados | AES-GCM | Argon2id no `CRIPTOVEU3`; PBKDF2/SHA-256 nos anteriores | Pacotes `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1` |
-| Mensagens `MSG2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVM2` |
-| QR protegido `QR2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVQ2` no hash da URL |
-| Link protegido `LINK2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVL2` no hash da URL |
-| Esteganografia | Mensagem `MSG2` protegida antes da ocultação | Argon2id, 64 MB, `t=2`, `p=1` | Imagem PNG com dados ocultos |
-| VéuNotes `NOTE2` + `PORTABLE_VAULT1` | AES-256-GCM | Argon2id, 128 MB, `t=2`, `p=1` | `localStorage` e arquivo `.criptoveu-note` |
-| Formatos V1 legados | AES-GCM | PBKDF2/SHA-256 | Leitura compatível; novas criações usam V2 |
+| V5 files with dual protection | AES-256-GCM + encrypted SHA-256 manifest | SHA-256 of password + key file, followed by Argon2id | `.criptoveu` file |
+| V4 files | AES-256-GCM + encrypted SHA-256 manifest | Argon2id v1.3 via WASM in a Web Worker | `.criptoveu` file |
+| Legacy files | AES-GCM | Argon2id in `CRIPTOVEU3`; PBKDF2/SHA-256 in earlier formats | `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2`, and `CRIPTIFY1` packages |
+| `MSG2` messages | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | `CVM2` payload |
+| Protected `QR2` QR codes | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | `CVQ2` payload in the URL hash |
+| Protected `LINK2` links | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | `CVL2` payload in the URL hash |
+| Steganography | `MSG2` message protected before hiding | Argon2id, 64 MB, `t=2`, `p=1` | PNG image with hidden data |
+| VéuNotes `NOTE2` + `PORTABLE_VAULT1` | AES-256-GCM | Argon2id, 128 MB, `t=2`, `p=1` | `localStorage` and `.criptoveu-note` file |
+| Legacy V1 formats | AES-GCM | PBKDF2/SHA-256 | Read-compatible; new creations use V2 |
 
 ---
 
-## Como funciona
+## How it works
 
-### Arquivos
+### Files
 
-A ferramenta de arquivos aceita múltiplos arquivos no modo de proteção e gera pacotes com extensão `.criptoveu`.
+The file tool accepts multiple files in protection mode and creates `.criptoveu` packages.
 
-A criptografia acontece em blocos de até **2 MB**, reduzindo o consumo de memória e permitindo processar arquivos maiores com mais estabilidade.
+Encryption takes place in chunks of up to **2 MB**, reducing memory consumption and allowing larger files to be processed more reliably.
 
-Formato atual do pacote V4:
+Current V4 package format:
 
 ```text
-CRIPTOVEU4 + ram_mb_ascii + passes_ascii + salt + iv_inicial
-  + tamanho_bloco + quantidade_blocos
-  + [tipo_dados + tamanho_ciphertext + ciphertext]...
-  + [tipo_manifesto + tamanho_ciphertext + manifesto_cifrado]
+CRIPTOVEU4 + ram_mb_ascii + passes_ascii + salt + initial_iv
+  + chunk_size + block_count
+  + [data_type + ciphertext_size + ciphertext]...
+  + [manifest_type + ciphertext_size + encrypted_manifest]
 ```
 
-Estrutura do cabeçalho V4:
+V4 header structure:
 
 ```text
-offset  tamanho   campo
-0       10        assinatura: "CRIPTOVEU4"
-10      4         RAM Argon2id em MB, ASCII decimal
-14      4         passes Argon2id, ASCII decimal
-18      16        salt
-34      12        IV inicial
-46      4         tamanho dos blocos em bytes
-50      4         quantidade de blocos
-54      ...       registros de dados e manifesto
+offset  size   field
+0       10     signature: "CRIPTOVEU4"
+10      4      Argon2id RAM in MB, decimal ASCII
+14      4      Argon2id passes, decimal ASCII
+18      16     salt
+34      12     initial IV
+46      4      chunk size in bytes
+50      4      block count
+54      ...    data and manifest records
 ```
 
-Detalhes técnicos:
+Technical details:
 
-- Algoritmo: **AES-256-GCM**.
-- Derivação de chave para novos arquivos: **Argon2id v1.3 via WASM em Web Worker**.
-- Parâmetros Argon2id: `t=2`, `p=1`.
-- Perfis de memória Argon2id: **64 MB**, **256 MB** por padrão ou **512 MB**.
-- A seleção de memória fica em cache apenas para criar arquivos novos.
-- O cabeçalho V4 registra RAM, passes, salt, IV inicial, tamanho de bloco e quantidade de blocos.
-- A descriptografia lê os parâmetros diretamente do pacote; não depende de `localStorage`.
-- Cada bloco tem até 2 MB.
-- O cabeçalho fixo, tipo, índice e tamanho de cada registro entram no AAD para rejeitar alteração, reordenação e truncamento.
-- O primeiro bloco usa o IV armazenado no cabeçalho.
-- Os registros seguintes usam IVs exclusivos derivados do IV inicial e do índice; o manifesto usa o índice imediatamente posterior ao último bloco.
-- O **Escudo de Integridade** calcula SHA-256 do arquivo completo e de cada bloco em um Web Worker separado.
-- O manifesto guarda nome original, tipo MIME, tamanho, hashes, algoritmos e parâmetros Argon2id. Ele é cifrado e autenticado como o último registro do pacote.
-- Depois da recuperação, o navegador recalcula os hashes do conteúdo e só confirma a integridade quando todos coincidem.
-- O diagnóstico sem senha valida apenas a estrutura do pacote e usa a expressão **estrutura plausível**. Autenticidade exige a senha correta.
-- Cada resultado pode gerar um relatório JSON local com formato, KDF, parâmetros, contagem de blocos e estado da verificação.
-- Compatibilidade de leitura com `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1`.
-- Limite recomendado de arquivo: **2 GB**.
+- Algorithm: **AES-256-GCM**.
+- Key derivation for new files: **Argon2id v1.3 via WASM in a Web Worker**.
+- Argon2id parameters: `t=2`, `p=1`.
+- Argon2id memory profiles: **64 MB**, **256 MB** by default, or **512 MB**.
+- Memory selection is cached only for creating new files.
+- The V4 header records RAM, passes, salt, initial IV, chunk size, and block count.
+- Decryption reads parameters directly from the package and does not depend on `localStorage`.
+- Each block is up to 2 MB.
+- The fixed header, type, index, and size of each record are included in AAD to reject tampering, reordering, and truncation.
+- The first block uses the IV stored in the header.
+- Subsequent records use unique IVs derived from the initial IV and index; the manifest uses the index immediately after the last block.
+- The **Integrity Shield** calculates SHA-256 for the complete file and each block in a separate Web Worker.
+- The manifest stores the original name, MIME type, size, hashes, algorithms, and Argon2id parameters. It is encrypted and authenticated as the final package record.
+- After recovery, the browser recalculates content hashes and confirms integrity only when all hashes match.
+- Password-free inspection validates only package structure and uses the phrase **plausible structure**. Authenticity requires the correct password.
+- Each result can produce a local JSON report containing the format, KDF, Argon2id parameters, block count, and verification status.
+- Reading remains compatible with `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2`, and `CRIPTIFY1`.
+- Recommended file limit: **2 GB**.
 
-> Observação: o SHA-256 do manifesto complementa a autenticação AES-GCM e permite verificação explícita pós-recuperação. Ele não substitui AES-GCM nem torna uma estrutura sem senha “verificada”.
+> Note: the manifest SHA-256 complements AES-GCM authentication and enables explicit post-recovery verification. It does not replace AES-GCM or make a password-free structure “verified.”
 
-#### Proteção dupla com arquivo-chave
+#### Dual protection with a key file
 
-Quando a opção **Senha + arquivo-chave** é ativada, novos arquivos usam a
-assinatura `CRIPTOVEU5`. O restante da estrutura de blocos, AAD e manifesto
-segue o desenho autenticado do V4, mas a chave Argon2id depende dos dois
-fatores.
+When **Password + key file** is enabled, new files use the `CRIPTOVEU5` signature. The remaining block, AAD, and manifest structure follows the authenticated V4 design, but the Argon2id key depends on both factors.
 
-O material da KDF é construído localmente desta forma:
+The KDF material is built locally as follows:
 
 ```text
-key_file_hash = SHA-256(bytes_exatos_do_arquivo_chave)
+key_file_hash = SHA-256(exact_key_file_bytes)
 material = SHA-256(
   "CriptoVeu:password-key-file:v1"
   || 0x00
-  || tamanho_da_senha_utf8_em_uint32_be
-  || senha_utf8
+  || password_utf8_length_as_uint32_be
+  || password_utf8
   || key_file_hash
 )
-chave_aes = Argon2id(material_hex, salt_do_pacote, parâmetros_do_cabeçalho)
+aes_key = Argon2id(material_hex, package_salt, header_parameters)
 ```
 
-Regras de segurança:
+Security rules:
 
-- o arquivo-chave deve ter entre 1 byte e 32 MB;
-- o nome do arquivo não participa da derivação; somente os bytes exatos;
-- arquivo, nome, hash e material combinado **não são incorporados** ao pacote
-  nem ao relatório;
-- a assinatura V5 informa apenas que um arquivo-chave é obrigatório;
-- o mesmo arquivo-chave pode ser renomeado, mas qualquer alteração em seus
-  bytes impede a abertura;
-- senha e arquivo-chave devem ser guardados e compartilhados separadamente;
-- perder qualquer um dos dois fatores torna a recuperação impossível;
-- um arquivo público ou previsível oferece pouco ganho contra um atacante que
-  já tenha acesso a ele.
+- The key file must be between 1 byte and 32 MB.
+- The file name does not participate in derivation; only the exact bytes matter.
+- The file, name, hash, and combined material are **not embedded** in the package or report.
+- The V5 signature indicates only that a key file is required.
+- The same key file may be renamed, but changing any byte prevents opening the package.
+- The password and key file should be stored and shared separately.
+- Losing either factor makes recovery impossible.
+- A public or predictable key file provides little protection against an attacker who already has access to it.
 
-Pacotes sem proteção dupla continuam sendo criados como `CRIPTOVEU4`. A leitura
-de V4 e de todos os formatos anteriores permanece compatível.
+Files without dual protection continue to be created as `CRIPTOVEU4`. Reading V4 and all previous formats remains supported.
 
 ---
 
-### Mensagens, QR Code e links protegidos
+### Messages, QR codes, and protected links
 
-Mensagens são criptografadas localmente com AES-256-GCM e serializadas em payloads próprios do CriptoVéu. Novas criações usam Argon2id dentro de Web Worker:
+Messages are encrypted locally with AES-256-GCM and serialized into CriptoVéu payloads. New creations use Argon2id inside a Web Worker:
 
-- `CVM2.` / `MSG2` para mensagens protegidas e esteganografia;
-- `CVQ2.` / `QR2` para QR protegido;
-- `CVL2.` / `LINK2` para links protegidos;
-- memória de **64 MB**, `t=2` e `p=1`;
-- salt aleatório de 16 bytes e IV aleatório de 12 bytes;
-- Base64URL para o envelope V2.
+- `CVM2.` / `MSG2` for protected messages and steganography.
+- `CVQ2.` / `QR2` for protected QR codes.
+- `CVL2.` / `LINK2` for protected links.
+- **64 MB** of memory, `t=2`, and `p=1`.
+- Random 16-byte salt and random 12-byte IV.
+- Base64URL for the V2 envelope.
 
-O QR protegido aponta para a rota `/qr-secreto` usando o hash da URL. O link protegido usa a rota `/link-secreto`, também com dados no hash da URL.
+Protected QR codes point to `/qr-secreto` using the URL hash. Protected links use `/link-secreto`, also with data in the URL hash.
 
-Importante:
+Important:
 
-- O hash da URL não é enviado ao servidor em requisições HTTP tradicionais.
-- Quem recebe o link ou o QR Code tem acesso ao payload criptografado.
-- A senha ou chave nunca é incluída no link ou no QR Code e deve ser compartilhada separadamente.
-- A proteção real depende da senha usada para abrir a mensagem.
-- Tipo, versão, KDF, parâmetros Argon2id e, no `LINK2`, criação, expiração e limite de visualizações entram no AAD do AES-GCM.
-- Alterar ciphertext, IV, salt ou metadados autenticados faz a abertura falhar.
-- Payloads V1 anteriores com **PBKDF2/SHA-256 e 600.000 iterações** continuam legíveis, mas não são mais gerados.
+- The URL hash is not sent to the server in traditional HTTP requests.
+- Anyone who receives the link or QR code has access to the encrypted payload.
+- The password or key is never included in the link or QR code and must be shared separately.
+- Actual protection depends on the password used to open the message.
+- Type, version, KDF, Argon2id parameters, and, for `LINK2`, creation time, expiration, and view limit are included in AES-GCM AAD.
+- Changing the ciphertext, IV, salt, or authenticated metadata causes opening to fail.
+- Earlier V1 payloads using **PBKDF2/SHA-256 and 600,000 iterations** remain readable but are no longer generated.
 
-#### Gerador e medidor de credenciais
+#### Credential generator and strength meter
 
-Os fluxos de criação de arquivos, links, QR Codes e VéuNotes compartilham um
-painel local de segurança com três opções:
+File, link, QR code, and VéuNotes creation flows share a local security panel with three options:
 
-- frase-senha com oito palavras escolhidas sem repetição e sufixo numérico;
-- senha aleatória de 24 caracteres com letras, números e símbolos;
-- chave máxima com **32 bytes aleatórios**, exibida como 64 caracteres
-  hexadecimais, totalizando **256 bits**.
+- Passphrase with eight non-repeating words and a numeric suffix.
+- Random 24-character password with letters, numbers, and symbols.
+- Maximum-strength key with **32 random bytes**, displayed as 64 hexadecimal characters for a total of **256 bits**.
 
-Toda escolha aleatória usa `crypto.getRandomValues`, com rejeição de valores
-para evitar viés de módulo. Não há `Math.random`, biblioteca externa, API,
-telemetria ou persistência da credencial.
+All randomness uses `crypto.getRandomValues`, with rejection sampling to avoid modulo bias. There is no `Math.random`, external library, API, telemetry, or credential persistence.
 
-O medidor de valores digitados manualmente é deliberadamente heurístico. Ele
-considera comprimento e variedade, mas também penaliza palavras comuns,
-sequências, repetições, anos, baixa diversidade, o nome do projeto e senhas
-curtas mascaradas por símbolos. Sua classificação orienta o usuário, mas não é
-uma prova matemática de entropia.
+The meter for manually entered values is deliberately heuristic. It considers length and variety, while penalizing common words, sequences, repetitions, years, low diversity, the project name, and short passwords masked by symbols. Its rating guides the user but is not a mathematical proof of entropy.
 
-Quando o próprio CriptoVéu gera a credencial, a interface identifica a
-aleatoriedade conhecida do processo separadamente da estimativa humana. A
-credencial pode ser revelada e copiada localmente, nunca é armazenada e, em
-links ou QR Codes, nunca entra no payload compartilhado.
+When CriptoVéu generates the credential, the interface distinguishes known process randomness from the human-entered estimate. The credential can be revealed and copied locally, is never stored, and never enters a shared link or QR payload.
 
-#### Sobre expiração e limite de visualizações
+#### Expiration and view limits
 
-Como o CriptoVéu não usa banco de dados para controlar estado global, o limite de visualizações do link protegido é controlado localmente pelo navegador que abre o link.
+Because CriptoVéu does not use a database for global state, the protected-link view limit is controlled locally by the browser that opens the link.
 
-Isso significa que:
+This means:
 
-- o limite pode funcionar como proteção local contra reabertura no mesmo navegador;
-- não impede que o mesmo payload seja aberto em outro navegador, outro dispositivo ou outra cópia do link;
-- não deve ser tratado como visualização única global garantida por servidor.
+- The limit can act as local protection against reopening in the same browser.
+- It does not prevent the same payload from being opened in another browser, device, or copy of the link.
+- It must not be treated as a guaranteed server-enforced global single view.
 
 ---
 
-### Esteganografia
+### Steganography
 
-A ferramenta de esteganografia usa imagem local, canvas do navegador e técnica LSB nos canais RGB para inserir uma mensagem protegida.
+The steganography tool uses a local image, browser canvas, and LSB on RGB channels to insert a protected message.
 
-A saída é uma imagem PNG contendo os dados ocultos. A mensagem deve ser protegida por senha antes de ser escondida.
+The output is a PNG image containing hidden data. The message should be protected with a password before it is hidden.
 
-Limites aplicados:
+Applied limits:
 
-- Imagem de entrada com até **10 MB**.
-- Resolução máxima de **20 milhões de pixels**.
-- Validação de capacidade da imagem antes de gravar a mensagem.
+- Input image up to **10 MB**.
+- Maximum resolution of **20 million pixels**.
+- Image capacity is validated before writing the message.
 
 ---
 
 ### VéuNotes
 
-O VéuNotes organiza várias notas em um cofre criptografado no `localStorage` e
-permite exportar o mesmo conteúdo como um arquivo portátil
-`.criptoveu-note`. Títulos, textos, etiquetas e identificadores ficam dentro
-do ciphertext; a busca só acontece localmente depois do desbloqueio.
+VéuNotes organizes multiple notes in an encrypted `localStorage` vault and allows exporting the same content as a portable `.criptoveu-note` file. Titles, text, labels, and identifiers remain inside the ciphertext; search happens locally only after unlocking.
 
-O envelope é criptografado com AES-256-GCM e protegido por senha mestre. Novos
-cofres usam `NOTE2` por fora e o documento autenticado `PORTABLE_VAULT1` por
-dentro.
+The envelope is encrypted with AES-256-GCM and protected by a master password. New vaults use `NOTE2` externally and the authenticated `PORTABLE_VAULT1` document internally.
 
-Parâmetros principais:
+Main parameters:
 
-- Senha mínima: **12 caracteres**.
-- Argon2id em Web Worker com **128 MB**, `t=2` e `p=1`.
-- Tipo, versão e parâmetros da KDF são autenticados como AAD.
-- Até **500 notas**, com títulos, conteúdo e até 12 etiquetas por nota.
-- Busca local por título, texto ou etiqueta somente durante a sessão aberta.
-- Bloqueio automático por inatividade ou permanência da aba em segundo plano.
-- Troca de senha com confirmação da senha atual e novo salt Argon2id.
-- Exportação em `.criptoveu-note`; backups JSON antigos continuam aceitos.
-- Cofres `NOTE1` com PBKDF2 continuam legíveis.
-- Depois de uma abertura legada bem-sucedida, a nota única é convertida em uma
-  nota do cofre portátil e recriptografada como `NOTE2`; o blob antigo só é
-  substituído após a nova criptografia terminar.
-- A importação valida tamanho, campos permitidos, limites e autenticação
-  AES-GCM antes de substituir o cofre local.
+- Minimum password: **12 characters**.
+- Argon2id in a Web Worker with **128 MB**, `t=2`, and `p=1`.
+- Type, version, and KDF parameters are authenticated as AAD.
+- Up to **500 notes**, with titles, content, and up to 12 labels per note.
+- Local search by title, text, or label only during an unlocked session.
+- Automatic locking after inactivity or while the tab remains in the background.
+- Password changes require confirmation of the current password and use a new Argon2id salt.
+- Export to `.criptoveu-note`; older JSON backups remain accepted.
+- `NOTE1` vaults using PBKDF2 remain readable.
+- After successful legacy opening, the single note is converted into a portable-vault note and re-encrypted as `NOTE2`; the old blob is replaced only after re-encryption finishes.
+- Imports validate size, allowed fields, limits, and AES-GCM authentication before replacing the local vault.
 
-O arquivo portátil não contém a senha e não oferece recuperação sem ela.
-Backups exportados antes de uma troca de senha continuam protegidos pela senha
-antiga.
+The portable file does not contain the password and cannot provide recovery without it. Backups exported before a password change remain protected by the old password.
 
 ---
 
-## Testes e vetores públicos
+## Tests and public vectors
 
-Os diretórios em `test-vectors/` contêm vetores reproduzíveis para `MSG2`,
-`QR2`, `LINK2` e `NOTE2`, incluindo senha de teste, salt, IV, AAD e ciphertext
-esperado.
+Directories under `test-vectors/` contain reproducible vectors for `MSG2`, `QR2`, `LINK2`, and `NOTE2`, including the test password, salt, IV, AAD, and expected ciphertext.
 
-Salt e IV fixos existem apenas nesses vetores. A produção sempre usa
-`crypto.getRandomValues`.
+Fixed salts and IVs exist only in these vectors. Production always uses `crypto.getRandomValues`.
 
-A suíte automatizada verifica compatibilidade V1, migração de `NOTE1`, senha
-incorreta, payload truncado e adulterações de ciphertext, IV, salt, tipo,
-versão, KDF, parâmetros Argon2id, expiração e limite.
+The automated suite checks V1 compatibility, `NOTE1` migration, incorrect passwords, truncated payloads, and tampering of ciphertext, IV, salt, type, version, KDF, Argon2id parameters, expiration, and limits.
 
-Os testes do gerador verificam o tamanho real da chave de 256 bits, as classes
-da senha aleatória, a estrutura da frase-senha, unicidade amostral, uso de Web
-Crypto e detecção de padrões fracos.
+Generator tests check the actual 256-bit key size, random-password character classes, passphrase structure, sample uniqueness, Web Crypto usage, and weak-pattern detection.
 
-> Atenção: o `localStorage` pertence ao navegador atual e pode ser apagado pelo usuário, pelo sistema, por extensões, por limpeza de dados ou por políticas do navegador. Faça backup quando necessário.
+> Warning: `localStorage` belongs to the current browser and may be deleted by the user, system, extensions, data cleanup, or browser policies. Create a backup when necessary.
 
 ---
 
-## Modelo de ameaça
+## Threat model
 
-O CriptoVéu foi projetado para reduzir a exposição de dados sensíveis em ferramentas web, mantendo arquivos, mensagens, notas e senhas no dispositivo do usuário sempre que possível.
+CriptoVéu is designed to reduce sensitive-data exposure in web tools, keeping files, messages, notes, and passwords on the user's device whenever possible.
 
-### O que o projeto busca proteger
+### What the project aims to protect
 
-- Conteúdo de arquivos, mensagens e notas contra leitura sem a senha correta.
-- Dados sensíveis contra upload para servidores da aplicação.
-- Pacotes criptografados contra alterações, truncamentos e corrupção, usando autenticação do AES-GCM.
-- Ataques offline contra novos pacotes de arquivos, tornando tentativas de senha mais custosas com Argon2id e uso explícito de memória.
-- Exposição acidental de payloads em links e QR Codes, desde que a senha tenha entropia suficiente.
+- File, message, and note contents from reading without the correct password.
+- Sensitive data from being uploaded to application servers.
+- Encrypted packages from tampering, truncation, and corruption through AES-GCM authentication.
+- Offline attacks against new file packages by making password attempts more expensive with Argon2id and explicit memory use.
+- Accidental exposure of link and QR payloads, provided the password has sufficient entropy.
 
-### O que está fora do escopo
+### Out of scope
 
-- Dispositivos comprometidos por malware, keylogger, screen recorder ou extensão maliciosa.
-- Senhas fracas, reutilizadas ou compartilhadas por canais inseguros.
-- Arquivos-chave públicos, previsíveis, perdidos ou copiados junto do pacote e da senha.
-- Comprometimento do domínio, pipeline de build, provedor de hospedagem, conta de deploy ou JavaScript servido ao navegador.
-- Phishing com cópias falsas da aplicação.
-- Recuperação de conteúdo quando a senha é perdida.
-- Garantia global de expiração ou visualização única em links, já que não há banco de dados ou servidor controlando estado global.
-- Proteção contra todos os modelos futuros de computação quântica.
+- Devices compromised by malware, keyloggers, screen recorders, or malicious extensions.
+- Weak, reused, or insecurely shared passwords.
+- Public, predictable, lost, or copied key files shared together with the package and password.
+- Compromise of the domain, build pipeline, hosting provider, deployment account, or JavaScript served to the browser.
+- Phishing with fake copies of the application.
+- Content recovery when the password is lost.
+- A global expiration or single-view guarantee for links, since no database or server controls global state.
+- Protection against every future model of quantum computing.
 
-### Premissas de segurança
+### Security assumptions
 
-- O usuário acessa o domínio oficial via HTTPS.
-- O navegador implementa corretamente a Web Crypto API.
-- O código JavaScript entregue ao usuário é íntegro.
-- O usuário escolhe senhas fortes e únicas.
-- O dispositivo do usuário não está comprometido.
+- The user accesses the official domain over HTTPS.
+- The browser correctly implements the Web Crypto API.
+- JavaScript delivered to the user is intact.
+- The user chooses strong and unique passwords.
+- The user's device is not compromised.
 
 ---
 
-## Nível de segurança
+## Security level
 
-O CriptoVéu adota um modelo de segurança forte para uma aplicação client-side, mas é importante entender seus limites.
+CriptoVéu adopts a strong security model for a client-side application, but its limits are important to understand.
 
-A segurança depende principalmente de:
+Security depends mainly on:
 
-- força da senha escolhida pelo usuário;
-- integridade do código JavaScript servido pelo domínio oficial;
-- uso de HTTPS ou localhost, exigido para acesso seguro à Web Crypto API;
-- ausência de envio de dados sensíveis para servidores da aplicação;
-- segurança do dispositivo e do navegador do usuário.
+- The strength of the user's selected password.
+- The integrity of JavaScript served by the official domain.
+- HTTPS or localhost, required for secure Web Crypto API access.
+- Sensitive data not being sent to application servers.
+- The security of the user's device and browser.
 
-Medidas implementadas:
+Implemented measures:
 
-- Processamento local para arquivos, mensagens e notas.
-- Senhas não são armazenadas pela aplicação.
-- Chaves criptográficas são derivadas no navegador.
-- Novos pacotes de arquivos usam Argon2id com custo de memória explícito no próprio cabeçalho.
-- AES-GCM fornece confidencialidade e autenticação do conteúdo.
-- `salt` e `iv` são gerados com `crypto.getRandomValues`.
-- Bloqueio de processamento fora de contexto seguro, como páginas sem HTTPS.
-- Validação de tamanho para arquivos, imagens, QR Codes e backups.
-- Tratamento de erro para senha incorreta, arquivo inválido e payload corrompido.
-- Pré-visualização local usando URLs temporárias criadas no navegador.
+- Local processing for files, messages, and notes.
+- Passwords are not stored by the application.
+- Cryptographic keys are derived in the browser.
+- New file packages use Argon2id with explicit memory cost in the header.
+- AES-GCM provides confidentiality and content authentication.
+- `salt` and `iv` are generated with `crypto.getRandomValues`.
+- Processing is blocked outside secure contexts such as HTTPS pages.
+- Size validation for files, images, QR codes, and backups.
+- Error handling for incorrect passwords, invalid files, and corrupted payloads.
+- Local previews using temporary URLs created in the browser.
 
-Headers e políticas de hardening configurados em `vercel.json` e `netlify.toml`:
+Headers and hardening policies are configured in `vercel.json` and `netlify.toml`:
 
-- Content-Security-Policy restritiva.
+- Restrictive Content Security Policy.
 - Strict-Transport-Security.
 - Cross-Origin-Opener-Policy.
 - Cross-Origin-Embedder-Policy.
 - Cross-Origin-Resource-Policy.
 - Referrer-Policy: `no-referrer`.
-- Permissions-Policy com recursos sensíveis desabilitados.
+- Permissions-Policy with sensitive features disabled.
 - X-Frame-Options: `DENY`.
 - X-Content-Type-Options: `nosniff`.
 - `frame-ancestors 'none'`.
 - `object-src 'none'`.
-- Cache conservador para HTML e cache longo para assets versionados.
+- Conservative HTML caching and long caching for versioned assets.
 
-Hardening de build:
+Build hardening:
 
-- Build de produção sem sourcemaps.
-- Minificação com esbuild.
-- Remoção de `console` e `debugger` no build.
-- Target moderno `es2022`.
-
----
-
-## Limitações importantes
-
-Nenhuma aplicação web client-side consegue esconder totalmente o próprio código, porque o navegador precisa receber JavaScript executável. Por isso, o projeto evita depender de segredo embutido no frontend.
-
-O CriptoVéu não deve ser entendido como substituto para auditoria criptográfica formal. Ele usa primitivas sólidas do navegador, mas a proteção final ainda depende da senha, do dispositivo, do navegador e da integridade do deploy.
-
-Argon2id dificulta ataques de força bruta paralela ao exigir memória por tentativa. AES-256 é considerado uma escolha prudente diante de modelos quânticos conhecidos, mas o projeto não afirma resistência quântica absoluta. Senhas com pouca entropia continuam vulneráveis a adivinhação.
-
-Também é importante lembrar:
-
-- Se a senha for perdida, o conteúdo não poderá ser recuperado.
-- Links e QR Codes carregam o payload criptografado; compartilhe apenas com pessoas autorizadas.
-- O limite de visualizações do link protegido é controlado localmente pelo navegador que abre o link.
-- O `localStorage` do VéuNotes pertence ao navegador atual e pode ser apagado pelo usuário, pelo sistema ou por políticas do navegador.
-- O projeto não usa, atualmente, KEMs pós-quânticos para troca de chaves entre usuários. Ferramentas baseadas em senha dependem principalmente da entropia da senha e do custo da KDF.
+- Production builds without source maps.
+- esbuild minification.
+- Removal of `console` and `debugger` in the build.
+- Modern `es2022` target.
 
 ---
 
-## Auditoria e contribuições de segurança
+## Important limitations
 
-Este projeto é open source e revisões de segurança são bem-vindas.
+No client-side web application can completely hide its own code because the browser must receive executable JavaScript. Therefore, the project avoids depending on secrets embedded in the frontend.
 
-Áreas especialmente importantes para revisão:
+CriptoVéu should not be considered a substitute for a formal cryptographic audit. It uses solid browser primitives, but final protection still depends on the password, device, browser, and deployment integrity.
 
-- uso correto de AES-GCM e IVs únicos;
-- geração de `salt` e `iv` com `crypto.getRandomValues`;
-- derivação de chave com Argon2id e PBKDF2;
-- validação de payloads, cabeçalhos e tamanhos;
-- autenticação de dados adicionais, especialmente nos blocos de arquivos;
-- segurança do Service Worker e política de cache;
-- CSP e headers de segurança;
-- riscos de XSS e manipulação de DOM;
-- segurança do `localStorage` no VéuNotes;
-- compatibilidade e segurança dos formatos legados.
+Argon2id makes parallel brute-force attacks more difficult by requiring memory per attempt. AES-256 is considered a prudent choice against known quantum models, but the project does not claim absolute quantum resistance. Low-entropy passwords remain vulnerable to guessing.
 
-Para reportar vulnerabilidades ou discutir melhorias de segurança, consulte o arquivo `SECURITY.md` do repositório.
+Also remember:
+
+- If the password is lost, content cannot be recovered.
+- Links and QR codes carry encrypted payloads; share them only with authorized people.
+- Protected-link view limits are controlled locally by the browser that opens the link.
+- VéuNotes `localStorage` belongs to the current browser and may be deleted by the user, system, or browser policies.
+- The project does not currently use post-quantum KEMs for key exchange between users. Password-based tools depend mainly on password entropy and KDF cost.
+
+---
+
+## Security auditing and contributions
+
+This project is open source, and security reviews are welcome.
+
+Especially important review areas include:
+
+- Correct use of AES-GCM and unique IVs.
+- `salt` and `iv` generation with `crypto.getRandomValues`.
+- Key derivation with Argon2id and PBKDF2.
+- Payload, header, and size validation.
+- Authentication of additional data, especially in file blocks.
+- Service Worker and cache-policy security.
+- CSP and security headers.
+- XSS and DOM-manipulation risks.
+- `localStorage` security in VéuNotes.
+- Compatibility and security of legacy formats.
+
+To report vulnerabilities or discuss security improvements, see [`SECURITY.md`](SECURITY.md) in this repository.
 
 ---
 
 ## Roadmap
 
-Ideias e melhorias futuras planejadas ou em estudo:
+Future ideas and improvements planned or under consideration:
 
-- [ ] Chat criptografado efêmero sem banco de dados.
-- [ ] Pareamento por ID temporário de sala.
-- [ ] Transporte por WebSocket ou WebRTC DataChannel.
-- [ ] Criptografia ponta a ponta no navegador.
-- [ ] Troca de chaves híbrida clássica/pós-quântica para o chat.
-- [ ] Verificação manual de fingerprint da sessão.
-- [x] Migração de mensagens, QR Codes, links e VéuNotes para Argon2id, mantendo leitura dos payloads V1.
-- [x] Escudo de Integridade para arquivos com `CRIPTOVEU4`, manifesto cifrado, verificação pós-recuperação, inspetor estrutural e relatório local.
-- [x] Gerador local de frase, senha e chave de 256 bits, com medidor heurístico e avisos de padrões fracos.
-- [x] Proteção dupla de arquivos com senha + arquivo-chave no formato `CRIPTOVEU5`.
-- [x] Cofre portátil VéuNotes com várias notas, etiquetas, busca local, troca de senha e arquivo `.criptoveu-note`.
-- [x] Diagnóstico do navegador com verificação local de APIs críticas e recomendação conservadora de perfis Argon2id.
+- [ ] Ephemeral encrypted chat without a database.
+- [ ] Pairing through a temporary room ID.
+- [ ] WebSocket or WebRTC DataChannel transport.
+- [ ] End-to-end encryption in the browser.
+- [ ] Classical/post-quantum hybrid key exchange for chat.
+- [ ] Manual session-fingerprint verification.
+- [x] Migration of messages, QR codes, links, and VéuNotes to Argon2id while keeping V1 payloads readable.
+- [x] Integrity Shield for files with `CRIPTOVEU4`, encrypted manifest, post-recovery verification, structural inspector, and local report.
+- [x] Local passphrase, password, and 256-bit key generator with heuristic meter and weak-pattern warnings.
+- [x] Dual file protection with password + key file in `CRIPTOVEU5`.
+- [x] VéuNotes portable vault with multiple notes, labels, local search, password changes, and `.criptoveu-note` files.
+- [x] Browser diagnostics with local checks of critical APIs and conservative Argon2id profile recommendations.
 
-> Observação sobre o futuro chat: mesmo sem armazenar mensagens, um servidor de sinalização ou relay poderá observar metadados como IP, horário, duração da sessão e tamanho aproximado dos pacotes. Isso deve ser documentado claramente quando o recurso for implementado.
+> Note about future chat: even without storing messages, a signaling or relay server may observe metadata such as IP address, time, session duration, and approximate packet size. This must be documented clearly when the feature is implemented.
 
 ---
 
-## Requisitos
+## Requirements
 
-- Node.js compatível com Vite 7.
+- Node.js compatible with Vite 7.
 - npm.
-- Navegador moderno com suporte a Web Crypto API, Streams, Canvas e Service Worker.
-- HTTPS em produção.
+- Modern browser with Web Crypto API, Streams, Canvas, and Service Worker support.
+- HTTPS in production.
 
-Navegadores-alvo:
+Target browsers:
 
 - Google Chrome.
 - Microsoft Edge.
 - Mozilla Firefox.
-- Safari moderno, respeitando limites práticos de memória do navegador.
+- Modern Safari, subject to practical browser-memory limits.
 
 ---
 
-## Como rodar localmente
+## Running locally
 
-Instale as dependências:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-Inicie o servidor de desenvolvimento:
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-Gere o build de produção:
+Create a production build:
 
 ```bash
 npm run build
 ```
 
-Teste o build local:
+Test the local build:
 
 ```bash
 npm run preview
 ```
 
-Execute a análise estática:
+Run static analysis:
 
 ```bash
 npm run lint
@@ -493,52 +473,52 @@ npm run lint
 
 ---
 
-## Deploy
+## Deployment
 
-O projeto está preparado para deploy em Vercel e Netlify.
+The project is prepared for deployment on Vercel and Netlify.
 
-Configuração esperada:
+Expected configuration:
 
 - Build command: `npm run build`.
 - Install command: `npm ci`.
 - Output directory: `dist`.
-- Rewrites para rotas SPA apontando para `index.html`.
-- Headers de segurança aplicados na borda da plataforma.
+- SPA rewrites pointing routes to `index.html`.
+- Security headers applied at the platform edge.
 
-Após o deploy, valide:
+After deployment, validate:
 
-- HTTPS ativo.
-- Headers de segurança presentes.
-- Criptografia e descriptografia de arquivos.
-- Geração e leitura de QR protegido.
-- Link protegido.
-- Esteganografia.
+- HTTPS is active.
+- Security headers are present.
+- File encryption and decryption.
+- Protected QR generation and reading.
+- Protected links.
+- Steganography.
 - VéuNotes.
-- Diagnóstico do navegador.
-- Funcionamento do PWA.
+- Browser diagnostics.
+- PWA behavior.
 
 ---
 
-## Estrutura do projeto
+## Project structure
 
 ```text
 src/
-  components/          Componentes reutilizáveis da interface
+  components/          Reusable interface components
   components/file-crypto/
-                       Área de criptografia, download e pré-visualização
-  config/              Definições das ferramentas exibidas no site
-  context/             Tema e provedores globais
-  hooks/               Hooks de processamento, QR e inatividade
-  lib/                 Criptografia, payloads, esteganografia e storage
-  pages/               Páginas e rotas principais
+                       File encryption, download, and preview area
+  config/              Definitions of tools shown on the site
+  context/             Theme and global providers
+  hooks/               Processing, QR, and inactivity hooks
+  lib/                 Cryptography, payloads, steganography, and storage
+  pages/               Main pages and routes
 
 public/
-  service-worker.js    Service worker do PWA
-  site.webmanifest     Manifesto da aplicação
+  service-worker.js    PWA service worker
+  site.webmanifest     Application manifest
 ```
 
 ---
 
-## Licença
+## License
 
-Distribuído sob a licença MIT. Consulte o arquivo `LICENSE` para mais detalhes.
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
