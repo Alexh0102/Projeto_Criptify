@@ -159,7 +159,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
             onClick={() => setActiveDrawer(null)}
           />
 
-          <div className="absolute inset-x-0 bottom-0 rounded-t-[32px] border border-white/10 bg-zinc-950/95 p-4 backdrop-blur-xl sm:inset-y-4 sm:right-4 sm:left-auto sm:w-[420px] sm:rounded-[32px] sm:p-5">
+          <div className="absolute inset-x-0 bottom-0 max-h-[calc(100dvh-1rem)] overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/10 bg-zinc-950/95 p-4 backdrop-blur-xl sm:inset-y-4 sm:right-4 sm:left-auto sm:w-[min(420px,calc(100vw-2rem))] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[32px] sm:p-5">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/80">
