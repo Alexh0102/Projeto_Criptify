@@ -235,7 +235,7 @@ export default function VeuNotesVault() {
         onChange={handleImportFileChange}
       />
 
-      <section className="panel-surface rounded-[32px] p-4 pb-28 sm:p-6 lg:pb-6">
+      <section className="panel-surface min-w-0 max-w-full rounded-[32px] p-4 pb-36 sm:p-6 lg:pb-6">
         <div className="space-y-6">
           {storageError ? (
             <div className="rounded-[28px] border border-rose-500/25 bg-rose-500/10 p-5">
@@ -768,8 +768,8 @@ export default function VeuNotesVault() {
                 </section>
               ) : null}
 
-              <section className="grid gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
-                <aside className="surface-secondary rounded-[28px] p-4 sm:p-5">
+              <section className="grid min-w-0 max-w-full gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+                <aside className="surface-secondary min-w-0 max-w-full rounded-[28px] p-4 sm:p-5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-white">Notas</p>
@@ -872,7 +872,7 @@ export default function VeuNotesVault() {
                   </div>
                 </aside>
 
-                <div className="surface-primary rounded-[28px] p-5 sm:p-6">
+                <div className="surface-primary min-w-0 max-w-full rounded-[28px] p-5 sm:p-6">
                   {selectedNote ? (
                     <>
                       <div className="flex items-center justify-between gap-3">
