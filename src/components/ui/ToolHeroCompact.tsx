@@ -7,6 +7,7 @@ type Props = {
   title: string
   description: string
   badge?: string
+  notice?: ReactNode
   actions?: ReactNode
 }
 
@@ -15,6 +16,7 @@ export default function ToolHeroCompact({
   title,
   description,
   badge,
+  notice,
   actions,
 }: Props) {
   const { t } = useTranslation()
@@ -36,6 +38,7 @@ export default function ToolHeroCompact({
           <p className="max-w-3xl text-sm leading-7 text-zinc-300 sm:text-[15px]">
             {description}
           </p>
+          {notice ? <div className="cv-file-limit-notice">{notice}</div> : null}
         </div>
 
         {actions ? <div className="cv-hero-actions shrink-0">{actions}</div> : null}

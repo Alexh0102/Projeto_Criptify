@@ -313,6 +313,7 @@
       "eyebrow": "File encryption",
       "title": "Protect or recover files without leaving the browser.",
       "description": "Preview local videos, photos, PDFs, and documents before protecting or recovering files with a password, no upload required.",
+      "limitNotice": "File limit: up to 10 GB",
       "help": {
         "how": { "title": "How it works", "content": "You choose the files, set the password, and processing happens locally in the browser." },
         "privacy": { "title": "Privacy", "content": "Your files never leave the device. The result is generated locally for download." }
@@ -388,7 +389,7 @@
         "clipboardDenied": "Could not access the clipboard.",
         "keyGenerated": "Long key generated locally.",
         "missingFilesOrPassword": "Select one or more files and enter a password to continue.",
-        "fileTooLargeForCommunity": "File above {{size}} in the Community tier.",
+        "fileTooLarge": "File is above {{size}}. Choose a smaller file to continue.",
         "preparingSecureEnvironment": "Preparing secure environment",
         "processing": { "encrypt": "Protecting files locally...", "decrypt": "Recovering files locally..." },
         "fileStep": "File {{current}}/{{total}} - {{label}}",
@@ -437,6 +438,13 @@
         "noFiles": "No file loaded",
         "planLimit": "Plan limit: {{limit}}",
         "additionalFiles": "+ {{count}} additional file(s)"
+      },
+      "limitDialog": {
+        "title": "Want to encrypt files larger than 10 GB?",
+        "description": "Support the project with R$ 10 and get lifetime access to higher limits.",
+        "support": "Support the project",
+        "back": "Back to encryption",
+        "close": "Close file limit notice"
       },
       "password": {
         "label": "Protection password",

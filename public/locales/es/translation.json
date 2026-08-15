@@ -313,6 +313,7 @@
       "eyebrow": "Cifrado de archivos",
       "title": "Protege o recupera archivos sin salir del navegador.",
       "description": "Previsualiza vídeos, fotos, PDFs y documentos locales antes de proteger o recuperar archivos con contraseña, sin subir nada.",
+      "limitNotice": "Límite para archivos de hasta 10 GB",
       "help": {
         "how": { "title": "Cómo funciona", "content": "Eliges los archivos, defines la contraseña y el procesamiento ocurre localmente en el navegador." },
         "privacy": { "title": "Privacidad", "content": "Tus archivos no salen del dispositivo. El resultado se genera localmente para descargarlo." }
@@ -388,7 +389,7 @@
         "clipboardDenied": "No fue posible acceder al portapapeles.",
         "keyGenerated": "Clave larga generada localmente.",
         "missingFilesOrPassword": "Selecciona uno o más archivos e introduce una contraseña para continuar.",
-        "fileTooLargeForCommunity": "Archivo por encima de {{size}} en la capa comunitaria.",
+        "fileTooLarge": "El archivo supera {{size}}. Elige un archivo más pequeño para continuar.",
         "preparingSecureEnvironment": "Preparando entorno seguro",
         "processing": { "encrypt": "Protegiendo archivos localmente...", "decrypt": "Recuperando archivos localmente..." },
         "fileStep": "Archivo {{current}}/{{total}} - {{label}}",
@@ -437,6 +438,13 @@
         "noFiles": "Ningún archivo cargado",
         "planLimit": "Límite del plan: {{limit}}",
         "additionalFiles": "+ {{count}} archivo(s) adicional(es)"
+      },
+      "limitDialog": {
+        "title": "¿Quieres cifrar archivos mayores de 10 GB?",
+        "description": "Apoya el proyecto con R$ 10 y obtén acceso vitalicio a límites más altos.",
+        "support": "Apoyar el proyecto",
+        "back": "Volver al cifrado",
+        "close": "Cerrar aviso de límite"
       },
       "password": {
         "label": "Contraseña de protección",

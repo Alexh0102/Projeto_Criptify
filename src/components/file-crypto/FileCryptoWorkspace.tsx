@@ -1,6 +1,8 @@
 ﻿import {
   AlertCircle,
+  ArrowRight,
   CheckCircle2,
+  Crown,
   Download,
   FileArchive,
   FileSearch,
@@ -11,10 +13,12 @@
   Sparkles,
   Unlock,
   Upload,
+  X,
 } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 import FieldBlock from '../ui/FieldBlock'
 import AdvancedOptions from '../ui/AdvancedOptions'
@@ -147,6 +151,7 @@ export default function FileCryptoWorkspace() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isFileLimitDialogOpen, setIsFileLimitDialogOpen] = useState(false)
   const [securityProfileId, setSecurityProfileId] =
     useState<FileSecurityProfileId>(loadSecurityProfileId)
   const fileInputId = useId()
@@ -156,7 +161,7 @@ export default function FileCryptoWorkspace() {
   const resultPanelRef = useRef<HTMLDivElement | null>(null)
   const isInactive = useInactivity({ disabled: results.length === 0 && !isPreviewOpen })
   const streamingCrypto = useStreamingCrypto()
-  const { isPremium, tier, requestPremiumAccess } = usePremium()
+  const { isPremium, tier } = usePremium()
   const canUseSecureProcessing =
     window.isSecureContext && typeof window.crypto?.subtle !== 'undefined'
   const securityProfile =
@@ -304,6 +309,28 @@ export default function FileCryptoWorkspace() {
   }, [isPreviewOpen])
 
   useEffect(() => {
+    if (!isFileLimitDialogOpen) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsFileLimitDialogOpen(false)
+      }
+    }
+
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isFileLimitDialogOpen])
+
+  useEffect(() => {
     return () => {
       for (const url of resultUrlRef.current) {
         URL.revokeObjectURL(url)
@@ -331,6 +358,7 @@ export default function FileCryptoWorkspace() {
     }
 
     setMode(resolvedMode)
+    setIsFileLimitDialogOpen(false)
     setUseKeyFile(false)
     setUseRecoverableParity(false)
     setKeyFile(null)
@@ -355,54 +383,17 @@ export default function FileCryptoWorkspace() {
       setKeyFile(null)
     }
 
-    const validFiles =
-      activeFileLimit === null
-        ? nextFiles
-        : nextFiles.filter((selectedFile) => selectedFile.size <= activeFileLimit)
-    const rejectedFiles =
-      activeFileLimit === null
-        ? []
-        : nextFiles.filter((selectedFile) => selectedFile.size > activeFileLimit)
-
-    if (validFiles.length === 0) {
-      setFiles([])
-      clearResults()
-      setStatus({
-        tone: 'error',
-        message: t('files.workspace.status.allFilesTooLarge', {
-          size: formatFileSize(FREE_FILE_SIZE_BYTES),
-        }),
-      })
-      requestPremiumAccess({
-        title: t('premium.communityLimitTitle'),
-        description: t('premium.communityLimitDescription'),
-      })
-      return
-    }
-
-    setFiles(validFiles)
+    setFiles(nextFiles)
     setProgress(0)
     setProgressLabel(
-      validFiles.length === 1
+      nextFiles.length === 1
         ? t('files.workspace.status.filesReady_one')
         : t('files.workspace.status.filesReady_other'),
     )
     setStatus({
-      tone: rejectedFiles.length > 0 ? 'error' : 'info',
-      message:
-        rejectedFiles.length > 0
-          ? t('files.workspace.status.filesLoadedWithRejected', {
-              valid: validFiles.length,
-              rejected: rejectedFiles.length,
-            })
-          : t('files.workspace.status.filesLoaded', { count: validFiles.length }),
+      tone: 'info',
+      message: t('files.workspace.status.filesLoaded', { count: nextFiles.length }),
     })
-    if (rejectedFiles.length > 0) {
-      requestPremiumAccess({
-        title: t('premium.communityLimitTitle'),
-        description: t('premium.communityLimitDescription'),
-      })
-    }
     clearResults()
   }
 
@@ -545,26 +536,21 @@ export default function FileCryptoWorkspace() {
       return
     }
 
-    const maximumSelectedFileSize =
-      FREE_FILE_SIZE_BYTES +
-      (mode === 'decrypt' ? MAX_FILE_PACKAGE_OVERHEAD_BYTES : 0)
-    const oversizedFreeFiles = isPremium
-      ? []
-      : files.filter(
-          (selectedFile) => selectedFile.size > maximumSelectedFileSize,
-        )
+    const oversizedFreeFiles =
+      activeFileLimit === null
+        ? []
+        : files.filter((selectedFile) => selectedFile.size > activeFileLimit)
 
     if (oversizedFreeFiles.length > 0) {
       setStatus({
         tone: 'error',
-        message: t('files.workspace.status.fileTooLargeForCommunity', {
+        message: t('files.workspace.status.fileTooLarge', {
           size: formatFileSize(FREE_FILE_SIZE_BYTES),
         }),
       })
-      requestPremiumAccess({
-        title: t('premium.communityLimitTitle'),
-        description: t('premium.communityLimitDescription'),
-      })
+      if (mode === 'encrypt') {
+        setIsFileLimitDialogOpen(true)
+      }
       return
     }
 
@@ -1471,10 +1457,78 @@ export default function FileCryptoWorkspace() {
           </div>
         </div>
       ) : null}
+
+      {isFileLimitDialogOpen ? (
+        <div
+          className="fixed inset-0 z-[65] flex items-center justify-center overflow-y-auto bg-black/75 px-4 py-6 backdrop-blur-sm sm:px-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="file-limit-dialog-title"
+          aria-describedby="file-limit-dialog-description"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            aria-label={t('files.workspace.limitDialog.close')}
+            onClick={() => setIsFileLimitDialogOpen(false)}
+          />
+
+          <div className="panel-surface relative z-10 max-h-[calc(100dvh-3rem)] w-full max-w-xl overflow-y-auto rounded-[30px] p-5 shadow-2xl shadow-black/50 sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="hero-badge">
+                  <AlertCircle className="h-4 w-4" />
+                  {formatFileSize(FREE_FILE_SIZE_BYTES)}
+                </div>
+                <h2
+                  id="file-limit-dialog-title"
+                  className="mt-4 text-2xl font-semibold leading-tight text-white sm:text-3xl"
+                >
+                  {t('files.workspace.limitDialog.title')}
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsFileLimitDialogOpen(false)}
+                className="btn-secondary h-10 w-10 shrink-0 rounded-full px-0 py-0"
+                aria-label={t('files.workspace.limitDialog.close')}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p
+              id="file-limit-dialog-description"
+              className="mt-4 text-sm leading-7 text-zinc-200 sm:text-base"
+            >
+              {t('files.workspace.limitDialog.description')}
+            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <Link
+                to="/apoiar"
+                onClick={() => setIsFileLimitDialogOpen(false)}
+                className="btn-primary w-full"
+              >
+                <Crown className="h-4 w-4" />
+                {t('files.workspace.limitDialog.support')}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsFileLimitDialogOpen(false)}
+                className="btn-secondary w-full"
+              >
+                {t('files.workspace.limitDialog.back')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }
-
 
 
 

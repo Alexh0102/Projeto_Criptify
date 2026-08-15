@@ -346,6 +346,7 @@
       "eyebrow": "Criptografia de arquivos",
       "title": "Proteja ou recupere arquivos sem sair do navegador.",
       "description": "Pré-visualize vídeos, fotos, PDFs e documentos locais antes de proteger ou recuperar arquivos com senha, sem upload.",
+      "limitNotice": "Limite para arquivos até 10 GB",
       "help": {
         "how": {
           "title": "Como funciona",
@@ -437,7 +438,7 @@
         "clipboardDenied": "Não foi possível acessar a área de transferência.",
         "keyGenerated": "Chave longa gerada localmente.",
         "missingFilesOrPassword": "Selecione um ou mais arquivos e informe uma senha para continuar.",
-        "fileTooLargeForCommunity": "Arquivo acima de {{size}} na Camada Comunitária.",
+        "fileTooLarge": "Arquivo acima de {{size}}. Escolha um arquivo menor para continuar.",
         "preparingSecureEnvironment": "Preparando ambiente seguro",
         "processing": {
           "encrypt": "Protegendo arquivos localmente...",
@@ -489,6 +490,13 @@
         "noFiles": "Nenhum arquivo carregado",
         "planLimit": "Limite do plano: {{limit}}",
         "additionalFiles": "+ {{count}} arquivo(s) adicional(is)"
+      },
+      "limitDialog": {
+        "title": "Quer criptografar arquivos maiores que 10 GB?",
+        "description": "Apoie o projeto com R$ 10 e tenha acesso vitalício a limites mais altos.",
+        "support": "Apoiar o projeto",
+        "back": "Voltar para criptografia",
+        "close": "Fechar aviso de limite"
       },
       "password": {
         "label": "Senha de proteção",

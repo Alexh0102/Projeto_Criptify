@@ -15,6 +15,7 @@ export default function FilesPage() {
           eyebrow={t('files.page.eyebrow')}
           title={t('files.page.title')}
           description={t('files.page.description')}
+          notice={t('files.page.limitNotice')}
         />
 
         <FileCryptoWorkspace />
