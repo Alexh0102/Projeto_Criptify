@@ -1,5 +1,15 @@
 const DEFAULT_MAX_BODY_BYTES = 16 * 1024
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 60 * 1000
+const DEFAULT_CORS_ORIGINS = [
+  'https://criptoveu.com',
+  'https://www.criptoveu.com',
+  'https://localhost',
+  'https://127.0.0.1',
+  'http://localhost',
+  'http://127.0.0.1',
+  'capacitor://localhost',
+  'ionic://localhost',
+]
 const rateLimitBuckets = new Map()
 
 function getHeader(req, headerName) {
@@ -10,6 +20,43 @@ function getHeader(req, headerName) {
   }
 
   return value
+}
+
+function getAllowedCorsOrigins() {
+  const configuredOrigins = String(process.env.CORS_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
+  return new Set([...DEFAULT_CORS_ORIGINS, ...configuredOrigins])
+}
+
+export function handleCorsRequest(req, res) {
+  const requestOrigin = getHeader(req, 'origin')
+  const allowedOrigin = requestOrigin && getAllowedCorsOrigins().has(requestOrigin)
+    ? requestOrigin
+    : null
+
+  res.setHeader('Vary', 'Origin')
+
+  if (allowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
+  }
+
+  if (req.method !== 'OPTIONS') {
+    return false
+  }
+
+  if (!allowedOrigin) {
+    res.status(403).json({ error: 'Origin not allowed' })
+    return true
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Max-Age', '600')
+  res.status(204).end()
+  return true
 }
 
 function getClientIdentifier(req) {

@@ -1,6 +1,8 @@
 import { CheckCircle2, Download, PlusSquare, Share2, Smartphone, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
+import { isNativeApp } from '../../lib/platform'
+
 type BeforeInstallPromptChoice = {
   outcome: 'accepted' | 'dismissed'
   platform: string
@@ -16,6 +18,10 @@ type Platform = 'android' | 'ios' | 'other'
 function isStandaloneMode() {
   if (typeof window === 'undefined') {
     return false
+  }
+
+  if (isNativeApp()) {
+    return true
   }
 
   return (
@@ -59,6 +65,7 @@ function getBrowserProfile() {
 }
 
 export default function InstallAppButton() {
+  const nativeApp = isNativeApp()
   const browserProfile = getBrowserProfile()
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstallSheetOpen, setIsInstallSheetOpen] = useState(false)
@@ -67,6 +74,10 @@ export default function InstallAppButton() {
   const [isSafari] = useState(browserProfile.isSafari)
 
   useEffect(() => {
+    if (nativeApp) {
+      return
+    }
+
     function handleBeforeInstallPrompt(event: Event) {
       event.preventDefault()
       setDeferredPrompt(event as BeforeInstallPromptEvent)
@@ -85,7 +96,7 @@ export default function InstallAppButton() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       window.removeEventListener('appinstalled', handleAppInstalled)
     }
-  }, [])
+  }, [nativeApp])
 
   useEffect(() => {
     if (!isInstallSheetOpen) {
@@ -204,6 +215,10 @@ export default function InstallAppButton() {
     }
 
     setIsInstallSheetOpen(true)
+  }
+
+  if (nativeApp) {
+    return null
   }
 
   return (

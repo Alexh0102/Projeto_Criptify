@@ -74,6 +74,10 @@ export function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
 }
 
+export function normalizeLicenseKey(licenseKey: string) {
+  return licenseKey.replace(/\s+/g, '').toUpperCase()
+}
+
 export function validateLicenseEmail(email: string): EmailValidationResult {
   const normalizedEmail = normalizeEmail(email)
 

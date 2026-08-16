@@ -58,3 +58,16 @@ Depois do deploy:
 - nao commitar `.env` com credenciais
 - nao desabilitar os headers de seguranca sem revisar o impacto
 - nao publicar preview aberto se houver funcionalidade sensivel no futuro
+
+## 6. App nativo Android
+
+Para builds Capacitor, defina `VITE_API_BASE_URL` com a origem publica que hospeda
+os endpoints `/api/create-checkout-session` e `/api/verify-license`.
+
+Os endpoints aceitam as origens nativas locais do Capacitor por padrao. Se a
+origem publica ou o esquema nativo for alterado, configure `CORS_ALLOWED_ORIGINS`
+no provedor de deploy como uma lista separada por virgulas, por exemplo:
+
+```text
+CORS_ALLOWED_ORIGINS=https://criptoveu.com,https://www.criptoveu.com,https://localhost
+```
