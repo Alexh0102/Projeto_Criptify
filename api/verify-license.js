@@ -2,6 +2,7 @@
 
 import {
   enforceRateLimit,
+  handleCorsRequest,
   readJsonBody,
   RequestSecurityError,
 } from './_request-security.js'
@@ -36,7 +37,7 @@ function normalizeEmail(email) {
 }
 
 function normalizeLicenseKey(licenseKey) {
-  return String(licenseKey ?? '').trim().toUpperCase()
+  return String(licenseKey ?? '').replace(/\s+/g, '').toUpperCase()
 }
 
 function buildLifetimeLicenseKey(email, licenseSecret) {
@@ -59,6 +60,10 @@ function timingSafeEqualText(firstValue, secondValue) {
 }
 
 export default async function handler(req, res) {
+  if (handleCorsRequest(req, res)) {
+    return
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
@@ -106,7 +111,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ valid: false, error: 'Informe a chave de licença.' })
   }
 
-  if (adminMasterKey && timingSafeEqualText(rawLicenseKey, adminMasterKey)) {
+  if (adminMasterKey && timingSafeEqualText(normalizedLicenseKey, normalizeLicenseKey(adminMasterKey))) {
     return res.status(200).json({ valid: true, tier: 'admin' })
   }
 

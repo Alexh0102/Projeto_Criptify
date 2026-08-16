@@ -22,8 +22,10 @@ import type { ReactNode } from 'react'
 import {
   clearFreeUsageCounters,
   normalizeEmail,
+  normalizeLicenseKey,
   validateLicenseEmail,
 } from '../lib/premium'
+import { buildApiUrl } from '../lib/platform'
 
 type PremiumTier = 'premium' | 'admin'
 
@@ -105,7 +107,11 @@ function safeWriteStoredLicense(license: StoredPremiumLicense) {
     return
   }
 
-  window.localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(license))
+  try {
+    window.localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(license))
+  } catch {
+    return
+  }
 }
 
 function safeRemoveStoredLicense() {
@@ -113,7 +119,11 @@ function safeRemoveStoredLicense() {
     return
   }
 
-  window.localStorage.removeItem(LICENSE_STORAGE_KEY)
+  try {
+    window.localStorage.removeItem(LICENSE_STORAGE_KEY)
+  } catch {
+    return
+  }
 }
 
 async function readJsonResponse<T>(response: Response): Promise<T> {
@@ -168,7 +178,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       setIsVerifyingLicense(true)
 
       try {
-        const response = await fetch('/api/verify-license', {
+        const response = await fetch(buildApiUrl('/api/verify-license'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -261,7 +271,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     setCheckoutMessage('Preparando checkout seguro de apoio ao projeto...')
 
     try {
-      const response = await fetch('/api/create-checkout-session', {
+      const response = await fetch(buildApiUrl('/api/create-checkout-session'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -287,7 +297,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   async function handleActivateLicense() {
     const normalizedActivationEmail = normalizeEmail(activationEmail)
-    const normalizedKey = activationKey.trim()
+    const normalizedKey = normalizeLicenseKey(activationKey)
 
     if (!normalizedKey) {
       setActivationError('Cole sua Chave de Ativação Vitalícia antes de ativar.')
@@ -299,7 +309,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     setActivationMessage('Validando licença em ambiente seguro...')
 
     try {
-      const response = await fetch('/api/verify-license', {
+      const response = await fetch(buildApiUrl('/api/verify-license'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
