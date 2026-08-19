@@ -118,39 +118,39 @@ export default function HomePage() {
 
   return (
     <ToolPageLayout showToolsDock>
-      <section className="space-y-5 sm:space-y-6">
-        <section className="cv-hero surface-primary rounded-[38px] p-5 sm:p-7">
-          <div className="cv-hero-brand mb-5">
+      <section className="space-y-4 sm:space-y-6">
+        <section className="cv-hero surface-primary rounded-[28px] p-4 sm:rounded-[38px] sm:p-7">
+          <div className="cv-hero-brand mb-4 sm:mb-6">
             <BrandLogo variant="hero" showTagline />
           </div>
 
           <div className="hero-badge">
-            <ShieldCheck className="h-4 w-4" />
-            {t('home.hero.badge')}
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+            <span className="truncate">{t('home.hero.badge')}</span>
           </div>
 
-          <div className="cv-hero-copy mt-4 space-y-3.5">
-            <p className="text-xs uppercase tracking-[0.38em] text-zinc-500">
+          <div className="cv-hero-copy mt-4 space-y-3 sm:space-y-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-500 sm:text-xs sm:tracking-[0.38em]">
               {t('home.hero.eyebrow')}
             </p>
-            <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-[1.02]">
+            <h1 className="max-w-4xl text-2xl font-bold tracking-tight text-white min-[320px]:text-lg min-[380px]:text-2xl sm:text-5xl sm:leading-[1.02]">
               {t('home.hero.title')}
             </h1>
-            <p className="max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
+            <p className="max-w-3xl text-sm leading-relaxed text-zinc-300 sm:text-base sm:leading-7">
               {t('home.hero.description')}
             </p>
           </div>
 
-          <div className="cv-hero-actions mt-5 flex flex-wrap gap-3">
-            <Link to="/arquivos" className="btn-primary">
-              {t('home.hero.filesCta')}
-              <ArrowRight className="h-4 w-4" />
+          <div className="cv-hero-actions mt-5 flex flex-col gap-2.5 min-[480px]:flex-row min-[480px]:flex-wrap sm:mt-6 sm:gap-3">
+            <Link to="/arquivos" className="btn-primary w-full min-[480px]:w-auto">
+              <span className="truncate">{t('home.hero.filesCta')}</span>
+              <ArrowRight className="h-4 w-4 shrink-0" />
             </Link>
-            <a href="#ferramentas" className="btn-secondary">
-              {t('home.hero.toolsCta')}
+            <a href="#ferramentas" className="btn-secondary w-full min-[480px]:w-auto">
+              <span className="truncate">{t('home.hero.toolsCta')}</span>
             </a>
-            <a href="#recursos-beta" className="btn-secondary">
-              {t('home.hero.betaCta')}
+            <a href="#recursos-beta" className="btn-secondary w-full min-[480px]:w-auto">
+              <span className="truncate">{t('home.hero.betaCta')}</span>
             </a>
           </div>
 
@@ -204,17 +204,17 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="ferramentas" className="scroll-mt-36 space-y-3.5 sm:scroll-mt-32">
-          <div>
-            <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">
+        <section id="ferramentas" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
+          <div className="px-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-zinc-500 sm:text-xs">
               {t('home.tools.eyebrow')}
             </p>
-            <h2 className="mt-2 text-2xl font-semibold text-white sm:text-[2rem]">
+            <h2 className="mt-2 text-2xl font-bold text-white sm:text-[2rem]">
               {t('home.tools.title')}
             </h2>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {toolDefinitions.map((tool) => {
               const Icon = iconByPath[tool.path]
               const isSteganographyCard = tool.id === 'steganography'
@@ -227,29 +227,29 @@ export default function HomePage() {
                 <Link
                   key={tool.path}
                   to={tool.path}
-                  className="surface-primary group rounded-[30px] p-4 transition duration-200 hover:-translate-y-1 sm:p-5"
+                  className="surface-primary group flex flex-col rounded-[30px] p-5 transition duration-200 hover:-translate-y-1 active:scale-[0.98]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="icon-chip transition group-hover:scale-105">
                       <Icon className="h-6 w-6" />
                     </div>
-                    <span className="text-[10px] uppercase tracking-[0.3em] text-zinc-500">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
                       {t(`tools.${tool.id}.eyebrow`)}
                     </span>
                   </div>
 
-                  <h3 className={`mt-4 font-semibold leading-tight text-white ${isSteganographyCard ? 'text-[1.18rem]' : 'text-[1.28rem]'}`}>
+                  <h3 className={`mt-5 font-bold leading-tight text-white ${isSteganographyCard ? 'text-lg' : 'text-xl'}`}>
                     {t(`tools.${tool.id}.cardTitle`)}
                   </h3>
-                  <p className="mt-2.5 text-sm leading-6 text-zinc-400">
+                  <p className="mt-2.5 text-sm leading-relaxed text-zinc-400">
                     {t(`tools.${tool.id}.description`)}
                   </p>
                   {technicalLabel ? (
-                    <p className="mt-2.5 text-[10px] uppercase tracking-[0.32em] text-zinc-500/80">
+                    <p className="mt-auto pt-4 text-[10px] font-bold uppercase tracking-[0.32em] text-zinc-500/80">
                       {technicalLabel}
                     </p>
                   ) : null}
-                  <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-cyan-100">
+                  <div className={`mt-4 inline-flex items-center gap-2 text-sm font-bold text-cyan-100 ${!technicalLabel ? 'mt-auto' : ''}`}>
                     {t('home.tools.open')}
                     <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
                   </div>
@@ -259,20 +259,20 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="recursos-beta" className="scroll-mt-36 space-y-3.5 sm:scroll-mt-32">
-          <div>
-            <p className="text-xs uppercase tracking-[0.32em] text-cyan-100/70">
+        <section id="recursos-beta" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
+          <div className="px-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-cyan-100/70 sm:text-xs">
               {t('home.beta.eyebrow')}
             </p>
-            <h2 className="mt-2 text-2xl font-semibold text-white sm:text-[2rem]">
+            <h2 className="mt-2 text-2xl font-bold text-white sm:text-[2rem]">
               {t('home.beta.title')}
             </h2>
-            <p className="mt-2.5 max-w-3xl text-sm leading-6 text-zinc-400 sm:text-base">
+            <p className="mt-2.5 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
               {t('home.beta.description')}
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {betaResourceDefinitions.map((resource) => {
               const Icon = iconByPath[resource.path]
 
@@ -280,27 +280,27 @@ export default function HomePage() {
                 <Link
                   key={resource.path}
                   to={resource.path}
-                  className="surface-primary group rounded-[30px] border-cyan-500/25 p-4 transition duration-200 hover:-translate-y-1 sm:p-5"
+                  className="surface-primary group flex flex-col rounded-[30px] border-cyan-500/25 p-5 transition duration-200 hover:-translate-y-1 active:scale-[0.98]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="icon-chip transition group-hover:scale-105">
                       <Icon className="h-6 w-6" />
                     </div>
-                    <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.24em] text-cyan-100">
+                    <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-100">
                       {t('home.beta.badge')}
                     </span>
                   </div>
 
-                  <h3 className="mt-4 text-[1.28rem] font-semibold leading-tight text-white">
+                  <h3 className="mt-5 text-xl font-bold leading-tight text-white">
                     {t(`tools.${resource.id}.cardTitle`)}
                   </h3>
-                  <p className="mt-2.5 text-sm leading-6 text-zinc-400">
+                  <p className="mt-2.5 text-sm leading-relaxed text-zinc-400">
                     {t(`tools.${resource.id}.description`)}
                   </p>
-                  <p className="mt-2.5 text-[10px] uppercase tracking-[0.32em] text-zinc-500/80">
+                  <p className="mt-auto pt-4 text-[10px] font-bold uppercase tracking-[0.32em] text-zinc-500/80">
                     {t(`tools.${resource.id}.technicalLabel`)}
                   </p>
-                  <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-cyan-100">
+                  <div className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-cyan-100">
                     {t('home.tools.open')}
                     <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
                   </div>

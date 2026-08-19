@@ -91,6 +91,7 @@
       "openBetaAria": "Open beta resources",
       "beta": "Beta Resources",
       "betaShort": "Beta",
+      "back": "Back",
       "theme": "Theme",
       "enableLightTheme": "Enable light theme",
       "enableDarkTheme": "Enable dark theme"
@@ -313,7 +314,7 @@
       "eyebrow": "File encryption",
       "title": "Protect or recover files without leaving the browser.",
       "description": "Preview local videos, photos, PDFs, and documents before protecting or recovering files with a password, no upload required.",
-      "limitNotice": "File limit: up to 10 GB",
+      "limitNotice": "File limit: up to 1 GB",
       "help": {
         "how": { "title": "How it works", "content": "You choose the files, set the password, and processing happens locally in the browser." },
         "privacy": { "title": "Privacy", "content": "Your files never leave the device. The result is generated locally for download." }
@@ -390,6 +391,7 @@
         "keyGenerated": "Long key generated locally.",
         "missingFilesOrPassword": "Select one or more files and enter a password to continue.",
         "fileTooLarge": "File is above {{size}}. Choose a smaller file to continue.",
+        "fileExceedsLimit": "The selected file exceeds the 1 GB limit for 100% local and secure processing in device memory.",
         "preparingSecureEnvironment": "Preparing secure environment",
         "processing": { "encrypt": "Protecting files locally...", "decrypt": "Recovering files locally..." },
         "fileStep": "File {{current}}/{{total}} - {{label}}",
@@ -440,8 +442,8 @@
         "additionalFiles": "+ {{count}} additional file(s)"
       },
       "limitDialog": {
-        "title": "Want to encrypt files larger than 10 GB?",
-        "description": "Support the project with R$ 10 and get lifetime access to higher limits.",
+        "title": "File limit: up to 1 GB",
+        "description": "To ensure 100% local, secure processing without out-of-memory (OOM) crashes on your device, the maximum allowed size is 1 GB per file.",
         "support": "Support the project",
         "back": "Back to encryption",
         "close": "Close file limit notice"

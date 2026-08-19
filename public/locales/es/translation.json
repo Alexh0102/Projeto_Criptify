@@ -91,6 +91,7 @@
       "openBetaAria": "Abrir recursos en beta",
       "beta": "Recursos en Beta",
       "betaShort": "Beta",
+      "back": "Volver",
       "theme": "Tema",
       "enableLightTheme": "Activar tema claro",
       "enableDarkTheme": "Activar tema oscuro"
@@ -312,8 +313,8 @@
     "page": {
       "eyebrow": "Cifrado de archivos",
       "title": "Protege o recupera archivos sin salir del navegador.",
-      "description": "Previsualiza vídeos, fotos, PDFs y documentos locales antes de proteger o recuperar archivos con contraseña, sin subir nada.",
-      "limitNotice": "Límite para archivos de hasta 10 GB",
+      "description": "Previsualiza vídeos, fotos, PDFs y documentos locales antes de proteger o recuperar archivos com contraseña, sin subir nada.",
+      "limitNotice": "Límite para archivos de hasta 1 GB",
       "help": {
         "how": { "title": "Cómo funciona", "content": "Eliges los archivos, defines la contraseña y el procesamiento ocurre localmente en el navegador." },
         "privacy": { "title": "Privacidad", "content": "Tus archivos no salen del dispositivo. El resultado se genera localmente para descargarlo." }
@@ -390,6 +391,7 @@
         "keyGenerated": "Clave larga generada localmente.",
         "missingFilesOrPassword": "Selecciona uno o más archivos e introduce una contraseña para continuar.",
         "fileTooLarge": "El archivo supera {{size}}. Elige un archivo más pequeño para continuar.",
+        "fileExceedsLimit": "El archivo seleccionado supera el límite de 1 GB para procesamiento 100% local e seguro en la memoria del dispositivo.",
         "preparingSecureEnvironment": "Preparando entorno seguro",
         "processing": { "encrypt": "Protegiendo archivos localmente...", "decrypt": "Recuperando archivos localmente..." },
         "fileStep": "Archivo {{current}}/{{total}} - {{label}}",
@@ -440,8 +442,8 @@
         "additionalFiles": "+ {{count}} archivo(s) adicional(es)"
       },
       "limitDialog": {
-        "title": "¿Quieres cifrar archivos mayores de 10 GB?",
-        "description": "Apoya el proyecto con R$ 10 y obtén acceso vitalicio a límites más altos.",
+        "title": "Límite de archivo: hasta 1 GB",
+        "description": "Para garantizar un procesamiento 100% local, seguro y sin bloqueos por falta de memoria (OOM) en tu dispositivo, el tamaño máximo permitido por archivo es de 1 GB.",
         "support": "Apoyar el proyecto",
         "back": "Volver al cifrado",
         "close": "Cerrar aviso de límite"

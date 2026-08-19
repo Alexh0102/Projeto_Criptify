@@ -1,4 +1,6 @@
-﻿export type LimitedFeature = 'protected-link' | 'qr-code' | 'hidden-message'
+﻿import { MAX_FILE_SIZE } from './criptoveu'
+
+export type LimitedFeature = 'protected-link' | 'qr-code' | 'hidden-message'
 
 export type EmailValidationResult =
   | { valid: true; normalizedEmail: string }
@@ -18,7 +20,7 @@ const FREE_USAGE_STORAGE_KEY = 'criptoveu-free-usage-v1'
 const WINDOW_MS = 24 * 60 * 60 * 1000
 
 export const FREE_DAILY_GENERATION_LIMIT = 10
-export const FREE_FILE_SIZE_BYTES = 10 * 1024 * 1024 * 1024
+export const FREE_FILE_SIZE_BYTES = MAX_FILE_SIZE
 export const FREE_USAGE_CHANGE_EVENT = 'criptoveu-free-usage-change'
 
 export const LIMITED_FEATURE_LABELS: Record<LimitedFeature, string> = {

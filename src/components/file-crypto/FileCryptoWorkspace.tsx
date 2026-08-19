@@ -41,6 +41,7 @@ import {
   DEFAULT_FILE_SECURITY_PROFILE_ID,
   FILE_SECURITY_PROFILES,
   MAX_FILE_PACKAGE_OVERHEAD_BYTES,
+  MAX_FILE_SIZE,
   STREAMING_CHUNK_SIZE_BYTES,
   CriptoveuError,
   formatFileSize,
@@ -49,7 +50,6 @@ import {
   type FileSecurityReport,
   type FileSecurityProfileId,
 } from '../../lib/criptoveu'
-import { FREE_FILE_SIZE_BYTES } from '../../lib/premium'
 import { MAX_KEY_FILE_SIZE_BYTES } from '../../lib/key-file-protection'
 
 type Mode = 'encrypt' | 'decrypt'
@@ -210,14 +210,9 @@ export default function FileCryptoWorkspace() {
 
   const currentMode = MODE_COPY[mode]
   const totalSelectedSize = files.reduce((sum, currentFile) => sum + currentFile.size, 0)
-  const activeFileLimit = isPremium
-    ? null
-    : FREE_FILE_SIZE_BYTES +
-      (mode === 'decrypt' ? MAX_FILE_PACKAGE_OVERHEAD_BYTES : 0)
-  const fileLimitLabel =
-    isPremium
-      ? t('files.workspace.plan.unlimited')
-      : formatFileSize(FREE_FILE_SIZE_BYTES)
+  const activeFileLimit =
+    MAX_FILE_SIZE + (mode === 'decrypt' ? MAX_FILE_PACKAGE_OVERHEAD_BYTES : 0)
+  const fileLimitLabel = formatFileSize(MAX_FILE_SIZE)
   const resultUrl = previewItem?.url ?? results[0]?.url ?? null
   const resultName = previewItem?.name ?? results[0]?.name ?? ''
   const activePreviewItem = previewItem ?? results[0] ?? null
@@ -372,11 +367,36 @@ export default function FileCryptoWorkspace() {
     clearResults()
   }
 
-  function handleSelectedFiles(selectedFiles: FileList | File[] | null | undefined) {
+  function handleSelectedFiles(selectedFiles: FileList | File[] | null | undefined): boolean {
     const nextFiles = Array.from(selectedFiles ?? [])
 
     if (nextFiles.length === 0) {
-      return
+      return false
+    }
+
+    const maxAllowedBytes =
+      mode === 'decrypt'
+        ? MAX_FILE_SIZE + MAX_FILE_PACKAGE_OVERHEAD_BYTES
+        : MAX_FILE_SIZE
+
+    const oversizedFiles = nextFiles.filter(
+      (selectedFile) => selectedFile.size > maxAllowedBytes,
+    )
+
+    if (oversizedFiles.length > 0) {
+      setFiles([])
+      clearResults()
+      setStatus({
+        tone: 'error',
+        message: t('files.workspace.status.fileExceedsLimit', {
+          defaultValue:
+            'O arquivo selecionado excede o limite de 1 GB para processamento 100% local e seguro na memória do dispositivo.',
+        }),
+      })
+      if (mode === 'encrypt') {
+        setIsFileLimitDialogOpen(true)
+      }
+      return false
     }
 
     if (mode === 'decrypt') {
@@ -395,6 +415,7 @@ export default function FileCryptoWorkspace() {
       message: t('files.workspace.status.filesLoaded', { count: nextFiles.length }),
     })
     clearResults()
+    return true
   }
 
   function handleFileInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -536,16 +557,16 @@ export default function FileCryptoWorkspace() {
       return
     }
 
-    const oversizedFreeFiles =
-      activeFileLimit === null
-        ? []
-        : files.filter((selectedFile) => selectedFile.size > activeFileLimit)
+    const oversizedFiles = files.filter(
+      (selectedFile) => selectedFile.size > activeFileLimit,
+    )
 
-    if (oversizedFreeFiles.length > 0) {
+    if (oversizedFiles.length > 0) {
       setStatus({
         tone: 'error',
-        message: t('files.workspace.status.fileTooLarge', {
-          size: formatFileSize(FREE_FILE_SIZE_BYTES),
+        message: t('files.workspace.status.fileExceedsLimit', {
+          defaultValue:
+            'O arquivo selecionado excede o limite de 1 GB para processamento 100% local e seguro na memória do dispositivo.',
         }),
       })
       if (mode === 'encrypt') {
@@ -595,7 +616,7 @@ export default function FileCryptoWorkspace() {
                 )
               },
               {
-                maxFileSizeBytes: isPremium ? null : FREE_FILE_SIZE_BYTES,
+                maxFileSizeBytes: MAX_FILE_SIZE,
                 argon2MemoryMb:
                   mode === 'encrypt' ? securityProfile.memoryMb : undefined,
                 argon2Iterations:
@@ -1478,7 +1499,7 @@ export default function FileCryptoWorkspace() {
               <div className="min-w-0">
                 <div className="hero-badge">
                   <AlertCircle className="h-4 w-4" />
-                  {formatFileSize(FREE_FILE_SIZE_BYTES)}
+                  {formatFileSize(MAX_FILE_SIZE)}
                 </div>
                 <h2
                   id="file-limit-dialog-title"

@@ -10,7 +10,7 @@ const activationEmailPrompt =
   'Insira o e-mail onde você deseja receber a sua Chave de Ativação Vitalícia.'
 
 const freePlanItems = [
-  'Criptografia e recuperação de arquivos sem limite de usos; arquivos de até 10 GB.',
+  'Criptografia e recuperação de arquivos sem limite de usos; arquivos de até 1 GB.',
   'Até 10 gerações a cada 24h para Links Protegidos, QR Codes e Mensagens Ocultas.',
   'VéuNotes: totalmente ilimitado, sem restrições.',
 ]

@@ -91,6 +91,7 @@
       "openBetaAria": "Abrir recursos em beta",
       "beta": "Recursos em Beta",
       "betaShort": "Beta",
+      "back": "Voltar",
       "theme": "Tema",
       "enableLightTheme": "Ativar tema claro",
       "enableDarkTheme": "Ativar tema escuro"
@@ -346,7 +347,7 @@
       "eyebrow": "Criptografia de arquivos",
       "title": "Proteja ou recupere arquivos sem sair do navegador.",
       "description": "Pré-visualize vídeos, fotos, PDFs e documentos locais antes de proteger ou recuperar arquivos com senha, sem upload.",
-      "limitNotice": "Limite para arquivos até 10 GB",
+      "limitNotice": "Limite para arquivos até 1 GB",
       "help": {
         "how": {
           "title": "Como funciona",
@@ -439,6 +440,7 @@
         "keyGenerated": "Chave longa gerada localmente.",
         "missingFilesOrPassword": "Selecione um ou mais arquivos e informe uma senha para continuar.",
         "fileTooLarge": "Arquivo acima de {{size}}. Escolha um arquivo menor para continuar.",
+        "fileExceedsLimit": "O arquivo selecionado excede o limite de 1 GB para processamento 100% local e seguro na memória do dispositivo.",
         "preparingSecureEnvironment": "Preparando ambiente seguro",
         "processing": {
           "encrypt": "Protegendo arquivos localmente...",
@@ -492,8 +494,8 @@
         "additionalFiles": "+ {{count}} arquivo(s) adicional(is)"
       },
       "limitDialog": {
-        "title": "Quer criptografar arquivos maiores que 10 GB?",
-        "description": "Apoie o projeto com R$ 10 e tenha acesso vitalício a limites mais altos.",
+        "title": "Limite de arquivo: até 1 GB",
+        "description": "Para garantir o processamento 100% local, seguro e sem travamentos por falta de memória (OOM) no seu dispositivo, o tamanho máximo permitido por arquivo é de 1 GB.",
         "support": "Apoiar o projeto",
         "back": "Voltar para criptografia",
         "close": "Fechar aviso de limite"

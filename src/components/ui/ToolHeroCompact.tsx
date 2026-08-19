@@ -25,23 +25,23 @@ export default function ToolHeroCompact({
   return (
     <section className="cv-hero cv-tool-hero space-y-4">
       <div className="hero-badge">
-        <ShieldCheck className="h-4 w-4" />
-        {resolvedBadge}
+        <ShieldCheck className="h-4 w-4 shrink-0" />
+        <span className="truncate">{resolvedBadge}</span>
       </div>
 
       <div className="cv-tool-hero-grid grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="cv-hero-copy space-y-3">
-          <p className="text-xs uppercase tracking-[0.38em] text-zinc-500">{eyebrow}</p>
-          <h1 className="cv-hero-heading max-w-4xl text-3xl font-semibold tracking-tight text-white sm:text-[2.65rem] sm:leading-[1.05]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-500 sm:text-xs sm:tracking-[0.38em]">{eyebrow}</p>
+          <h1 className="cv-hero-heading max-w-4xl text-2xl font-bold tracking-tight text-white min-[380px]:text-3xl sm:text-[2.65rem] sm:leading-[1.05]">
             {title}
           </h1>
-          <p className="max-w-3xl text-sm leading-7 text-zinc-300 sm:text-[15px]">
+          <p className="max-w-3xl text-sm leading-relaxed text-zinc-300 sm:text-[15px] sm:leading-7">
             {description}
           </p>
           {notice ? <div className="cv-file-limit-notice">{notice}</div> : null}
         </div>
 
-        {actions ? <div className="cv-hero-actions shrink-0">{actions}</div> : null}
+        {actions ? <div className="cv-hero-actions flex flex-wrap gap-2 shrink-0">{actions}</div> : null}
       </div>
     </section>
   )

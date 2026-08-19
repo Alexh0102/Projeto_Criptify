@@ -3,6 +3,9 @@ import { useCallback, useState } from 'react'
 import {
   decryptFile,
   encryptFile,
+  MAX_FILE_SIZE,
+  MAX_FILE_PACKAGE_OVERHEAD_BYTES,
+  MAX_FILE_SIZE_EXCEEDED_MESSAGE,
   type FileEncryptionOptions,
   type ProcessResult,
 } from '../lib/criptoveu'
@@ -29,6 +32,15 @@ export function useStreamingCrypto() {
       onProgress?: (value: number, label: string) => void,
       options?: FileEncryptionOptions,
     ): Promise<ProcessResult> => {
+      const maxAllowedBytes =
+        mode === 'decrypt'
+          ? MAX_FILE_SIZE + MAX_FILE_PACKAGE_OVERHEAD_BYTES
+          : MAX_FILE_SIZE
+
+      if (file.size > maxAllowedBytes) {
+        throw new Error(MAX_FILE_SIZE_EXCEEDED_MESSAGE)
+      }
+
       const operation = mode === 'encrypt' ? encryptFile : decryptFile
 
       setIsProcessing(true)
