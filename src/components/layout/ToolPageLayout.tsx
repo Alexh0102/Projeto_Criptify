@@ -7,6 +7,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 
 import { betaResourceDefinitions, toolDefinitions } from '../../config/tools'
 import { useTheme } from '../../context/theme'
+import { isNativeApp } from '../../lib/platform'
 import BrandLogo from '../ui/BrandLogo'
 import InstallAppButton from '../ui/InstallAppButton'
 import LanguageSwitcher from './LanguageSwitcher'
@@ -26,10 +27,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
 
   useEffect(() => {
     const checkNative = () => {
-      const native =
-        Capacitor.isNativePlatform() ||
-        (window as any).Capacitor?.isNative ||
-        Capacitor.getPlatform() !== 'web'
+      const native = isNativeApp() || Capacitor.getPlatform() !== 'web'
       setIsNative(native)
     }
 

@@ -5,13 +5,21 @@ import { Capacitor } from '@capacitor/core'
  * Usado para diferenciar comportamento entre PWA (navegador) e App Nativo (Capacitor)
  */
 
+interface CapacitorGlobal {
+  isNative?: boolean
+}
+
 export function isNativeApp(): boolean {
   if (typeof window === 'undefined') {
     return false
   }
 
+  const customWindow = window as Window & { Capacitor?: CapacitorGlobal }
+
   return Boolean(
     Capacitor.isNativePlatform() ||
+    customWindow.Capacitor?.isNative ||
+    Capacitor.getPlatform() !== 'web' ||
     window.location.protocol === 'capacitor:' ||
     window.location.protocol === 'ionic:'
   )
