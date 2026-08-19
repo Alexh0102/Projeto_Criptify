@@ -73,7 +73,11 @@ const INTEGRITY_HEADER_LENGTH_BYTES =
   CHUNK_RECORD_LENGTH_BYTES * 2
 export const ARGON2_FILE_ITERATIONS = 2
 export const STREAMING_CHUNK_SIZE_BYTES = 2 * 1024 * 1024
-export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024 * 1024
+export const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1 GB em bytes (1073741824 bytes)
+export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE
+export const MAX_FILE_SIZE_READABLE = '1 GB'
+export const MAX_FILE_SIZE_EXCEEDED_MESSAGE =
+  'O arquivo selecionado excede o limite de 1 GB para processamento 100% local e seguro na memória do dispositivo.'
 export const MAX_FILE_PACKAGE_OVERHEAD_BYTES = 2 * 1024 * 1024
 
 type ProgressCallback = (value: number, label: string) => void
@@ -702,7 +706,7 @@ function inferMimeTypeFromName(fileName: string) {
 
 export function assertSupportedFileSize(
   file: File,
-  { maxFileSizeBytes = MAX_FILE_SIZE_BYTES }: FileSizeGuardOptions = {},
+  { maxFileSizeBytes = MAX_FILE_SIZE }: FileSizeGuardOptions = {},
 ) {
   if (maxFileSizeBytes === null) {
     return
@@ -711,7 +715,9 @@ export function assertSupportedFileSize(
   if (file.size > maxFileSizeBytes) {
     throw new CriptoveuError(
       'FILE_TOO_LARGE',
-      `Arquivo excede o limite suportado de ${formatFileSize(maxFileSizeBytes)}.`,
+      maxFileSizeBytes === MAX_FILE_SIZE
+        ? MAX_FILE_SIZE_EXCEEDED_MESSAGE
+        : `Arquivo excede o limite suportado de ${formatFileSize(maxFileSizeBytes)}.`,
     )
   }
 }
@@ -1025,7 +1031,7 @@ export async function encryptFile(
 
 function assertSupportedPackageSize(
   file: File,
-  { maxFileSizeBytes = MAX_FILE_SIZE_BYTES }: FileSizeGuardOptions = {},
+  { maxFileSizeBytes = MAX_FILE_SIZE }: FileSizeGuardOptions = {},
 ) {
   if (maxFileSizeBytes === null) {
     return
@@ -1037,19 +1043,23 @@ function assertSupportedPackageSize(
   if (file.size > maximumPackageSize) {
     throw new CriptoveuError(
       'FILE_TOO_LARGE',
-      `Pacote excede o limite suportado de ${formatFileSize(maximumPackageSize)}.`,
+      maxFileSizeBytes === MAX_FILE_SIZE
+        ? MAX_FILE_SIZE_EXCEEDED_MESSAGE
+        : `Pacote excede o limite suportado de ${formatFileSize(maximumPackageSize)}.`,
     )
   }
 }
 
 function assertRecoveredFileSize(
   blob: Blob,
-  { maxFileSizeBytes = MAX_FILE_SIZE_BYTES }: FileSizeGuardOptions = {},
+  { maxFileSizeBytes = MAX_FILE_SIZE }: FileSizeGuardOptions = {},
 ) {
   if (maxFileSizeBytes !== null && blob.size > maxFileSizeBytes) {
     throw new CriptoveuError(
       'FILE_TOO_LARGE',
-      `O conteúdo recuperado excede o limite suportado de ${formatFileSize(maxFileSizeBytes)}.`,
+      maxFileSizeBytes === MAX_FILE_SIZE
+        ? MAX_FILE_SIZE_EXCEEDED_MESSAGE
+        : `O conteúdo recuperado excede o limite suportado de ${formatFileSize(maxFileSizeBytes)}.`,
     )
   }
 }

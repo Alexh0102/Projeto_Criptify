@@ -94,6 +94,8 @@ html[data-theme='light'] {
 html {
   min-width: 320px;
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 body {
@@ -103,6 +105,9 @@ body {
   background: var(--app-bg);
   background-color: var(--app-bg-solid);
   color: var(--app-text);
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 
 .seo-fallback {
@@ -287,12 +292,16 @@ select {
     background: var(--btn-primary-bg);
     color: var(--btn-primary-text);
     box-shadow: var(--btn-primary-shadow);
-    @apply inline-flex items-center justify-center gap-2 rounded-[22px] px-5 py-3.5 text-sm font-semibold transition duration-200;
+    @apply inline-flex items-center justify-center gap-2 rounded-[20px] px-4 py-3 text-sm font-bold transition duration-200 sm:rounded-[22px] sm:px-5 sm:py-3.5;
   }
 
   .btn-primary:hover {
     transform: translateY(-1px);
     filter: saturate(1.04);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
   }
 
   .btn-primary:disabled {
@@ -313,11 +322,15 @@ select {
     background: var(--btn-secondary-bg);
     border: 1px solid var(--btn-secondary-border);
     color: var(--btn-secondary-text);
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition duration-200 backdrop-blur-lg;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition duration-200 backdrop-blur-lg;
   }
 
   .btn-secondary:hover {
     transform: translateY(-1px);
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.98);
   }
 
   .btn-secondary:disabled,
@@ -537,44 +550,45 @@ html[data-theme='light'] .cv-note-warning {
 @media (max-width: 768px) {
   .cv-shell-header {
     top: 0;
-    padding-inline: 0.9rem;
-    padding-block: 0.85rem;
-    border-radius: 22px;
+    padding-inline: 0.75rem;
+    padding-block: 0.75rem;
+    border-radius: 20px;
   }
 
   .cv-shell-header-inner {
-    gap: 0.8rem;
-    align-items: flex-start;
-    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    flex-wrap: nowrap;
   }
 
   .cv-shell-header-brand {
-    flex: 1 1 100%;
-    max-width: 100%;
+    flex: 0 1 auto;
+    max-width: 70%;
     min-width: 0;
   }
 
   .cv-shell-header-actions {
-    width: 100%;
-    flex-shrink: 1;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 0.75rem;
+    width: auto;
+    flex: 1 0 auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
   }
 
   .cv-header-install {
-    flex: 1 1 220px;
-    min-width: min(100%, 220px);
+    flex: 0 1 auto;
+    min-width: 0;
   }
 
   .cv-header-install > button {
-    width: 100%;
-    min-height: 3rem;
-    justify-content: center;
+    width: auto;
+    min-height: 2.5rem;
+    padding-inline: 0.75rem;
   }
 
   .cv-header-theme {
-    margin-left: auto;
+    width: 2.5rem !important;
+    height: 2.5rem !important;
   }
 
   .cv-shell-main {

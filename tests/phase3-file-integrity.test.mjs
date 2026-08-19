@@ -420,3 +420,37 @@ test('CSP autoriza somente as políticas nomeadas dos Workers locais', async () 
     assert.match(config, /worker-src 'self' blob:/)
   }
 })
+
+test('limite maximo de arquivo e 1 GB (1073741824 bytes) e rejeita arquivos maiores', async () => {
+  assert.equal(criptoveu.MAX_FILE_SIZE, 1024 * 1024 * 1024)
+  assert.equal(criptoveu.MAX_FILE_SIZE_BYTES, 1024 * 1024 * 1024)
+
+  const oversizedMockFile = {
+    name: 'grande.iso',
+    size: 1024 * 1024 * 1024 + 1,
+    type: 'application/octet-stream',
+    lastModified: Date.now(),
+  }
+
+  assert.throws(
+    () => criptoveu.assertSupportedFileSize(oversizedMockFile),
+    {
+      code: 'FILE_TOO_LARGE',
+      message:
+        'O arquivo selecionado excede o limite de 1 GB para processamento 100% local e seguro na memória do dispositivo.',
+    },
+  )
+
+  await assert.rejects(
+    () =>
+      criptoveu.encryptFile(
+        oversizedMockFile,
+        'senha-teste',
+      ),
+    {
+      code: 'FILE_TOO_LARGE',
+      message:
+        'O arquivo selecionado excede o limite de 1 GB para processamento 100% local e seguro na memória do dispositivo.',
+    },
+  )
+})

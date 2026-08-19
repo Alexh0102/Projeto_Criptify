@@ -24,11 +24,18 @@ type IntegrityResponse =
     }
 
 const workerScope = self as unknown as DedicatedWorkerGlobalScope
+const MAX_SAFE_WORKER_BLOB_SIZE_BYTES = 1024 * 1024 * 1024 + 2 * 1024 * 1024
 
 workerScope.onmessage = async (event: MessageEvent<IntegrityRequest>) => {
   const { id, blob, chunkSize } = event.data
 
   try {
+    if (blob.size > MAX_SAFE_WORKER_BLOB_SIZE_BYTES) {
+      throw new Error(
+        'O arquivo selecionado excede o limite de 1 GB para processamento 100% local e seguro na memória do dispositivo.',
+      )
+    }
+
     if (
       !Number.isSafeInteger(chunkSize) ||
       chunkSize < 64 * 1024 ||
