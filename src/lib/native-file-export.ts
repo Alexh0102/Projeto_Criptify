@@ -1,8 +1,11 @@
 import { Capacitor } from '@capacitor/core'
 import { Directory, Filesystem } from '@capacitor/filesystem'
 
-import { STREAMING_CHUNK_SIZE_BYTES, encodeBytesToBase64 } from './criptoveu'
+import { encodeBytesToBase64 } from './criptoveu'
 import { isNativeApp } from './platform'
+
+export const NATIVE_EXPORT_CHUNK_SIZE_BYTES = 4 * 1024 * 1024
+const SMALL_NATIVE_EXPORT_LIMIT_BYTES = 10 * 1024 * 1024
 
 function sanitizeFileName(fileName: string) {
   return Array.from(fileName, (character) => {
@@ -12,6 +15,17 @@ function sanitizeFileName(fileName: string) {
       ? '_'
       : character
   }).join('')
+}
+
+function triggerBrowserDownload(file: Blob, fileName: string) {
+  const url = URL.createObjectURL(file)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 export function supportsNativeFileExport() {
@@ -24,50 +38,78 @@ export async function exportFileToNativeDownloads(
   onProgress?: (progress: number) => void,
 ) {
   if (!supportsNativeFileExport()) {
-    throw new Error('A exportacao nativa nao esta disponivel nesta plataforma.')
+    triggerBrowserDownload(file, fileName)
+    return
   }
 
   const safeFileName = sanitizeFileName(fileName)
-  const isAndroid = Capacitor.getPlatform() === 'android'
-  const directory = isAndroid ? Directory.ExternalStorage : Directory.Documents
-  const path = isAndroid ? `Download/${safeFileName}` : safeFileName
+  const directory = Directory.Documents
+  const path = safeFileName
 
   try {
     await Filesystem.requestPermissions()
 
-    for (let offset = 0; offset < file.size || (file.size === 0 && offset === 0); offset += STREAMING_CHUNK_SIZE_BYTES) {
-      const chunk = new Uint8Array(
-        await file
-          .slice(offset, Math.min(file.size, offset + STREAMING_CHUNK_SIZE_BYTES))
-          .arrayBuffer(),
+    if (file.size < SMALL_NATIVE_EXPORT_LIMIT_BYTES) {
+      const data = encodeBytesToBase64(
+        new Uint8Array(await file.arrayBuffer()),
       )
-      const data = encodeBytesToBase64(chunk)
-      const options = {
+      await Filesystem.writeFile({
         path,
         data,
         directory,
         recursive: true,
-      }
+      })
+      onProgress?.(100)
+    } else {
+      await Filesystem.writeFile({
+        path,
+        data: '',
+        directory,
+        recursive: true,
+      })
 
-      if (offset === 0) {
-        await Filesystem.writeFile(options)
-      } else {
-        await Filesystem.appendFile(options)
-      }
+      for (
+        let offset = 0;
+        offset < file.size;
+        offset += NATIVE_EXPORT_CHUNK_SIZE_BYTES
+      ) {
+        const chunk = new Uint8Array(
+          await file
+            .slice(offset, Math.min(file.size, offset + NATIVE_EXPORT_CHUNK_SIZE_BYTES))
+            .arrayBuffer(),
+        )
 
-      chunk.fill(0)
-      onProgress?.(
-        file.size === 0
-          ? 100
-          : Math.round((Math.min(file.size, offset + STREAMING_CHUNK_SIZE_BYTES) / file.size) * 100),
+        try {
+          await Filesystem.appendFile({
+            path,
+            data: encodeBytesToBase64(chunk),
+            directory,
+          })
+        } finally {
+          chunk.fill(0)
+        }
+
+        onProgress?.(
+          Math.round(
+            (Math.min(file.size, offset + NATIVE_EXPORT_CHUNK_SIZE_BYTES) /
+              file.size) *
+              100,
+          ),
+        )
+      }
+    }
+
+    const storedFile = await Filesystem.stat({ path, directory })
+    if (storedFile.size !== file.size) {
+      throw new Error(
+        `Gravacao incompleta: tamanho esperado ${file.size} bytes, mas apenas ${storedFile.size} bytes foram gravados. Verifique o espaco disponivel no dispositivo.`,
       )
     }
   } catch (error) {
-    await Filesystem.deleteFile({ path, directory }).catch(() => undefined)
-    throw new Error(
-      error instanceof Error
-        ? `Nao foi possivel gravar o arquivo em Download: ${error.message}`
-        : 'Nao foi possivel gravar o arquivo em Download.',
-    )
+    if (Capacitor.isNativePlatform()) {
+      throw error
+    }
+
+    triggerBrowserDownload(file, safeFileName)
   }
 }

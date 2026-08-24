@@ -142,7 +142,7 @@ export type ProcessResult = {
   blob: Blob
   downloadName: string
   securityReport: FileSecurityReport
-  dispose?: () => Promise<void>
+  dispose?: () => void | Promise<void>
 }
 
 type OpfsStorageManager = StorageManager & {
@@ -219,6 +219,7 @@ type OpfsWorkerResponse =
       id: number
       type: 'SUCCESS'
       resultFile: File
+      expectedSize: number
       downloadName: string
       securityReport: FileSecurityReport
       tempFileName: string
@@ -632,9 +633,26 @@ async function processFileWithOpfs(
       }
 
       const resultFile = event.data.resultFile
+      const expectedSize = event.data.expectedSize
       const downloadName = event.data.downloadName
       const securityReport = event.data.securityReport
       const tempFileName = event.data.tempFileName
+
+      if (resultFile.size !== expectedSize) {
+        worker.postMessage({
+          id: requestId,
+          type: 'CLEANUP',
+          tempFileName,
+        })
+        reject(
+          new CriptoveuError(
+            'INTEGRITY_FAILED',
+            `Gravacao OPFS incompleta: tamanho esperado ${expectedSize} bytes, mas foram recebidos ${resultFile.size} bytes.`,
+          ),
+        )
+        return
+      }
+
       let cleanupRequested = false
       const dispose = () => {
         if (cleanupRequested) {

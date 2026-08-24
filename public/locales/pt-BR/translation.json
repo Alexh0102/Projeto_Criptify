@@ -431,6 +431,8 @@
         "filesReady_one": "Arquivo pronto para processamento",
         "filesReady_other": "Arquivos prontos para processamento",
         "filesLoaded": "Conteúdo carregado com sucesso. Tudo continua 100% no navegador.",
+        "storageSpaceWarning": "O espaço livre estimado pode ser insuficiente. Reserve pelo menos {{size}} para processar os arquivos selecionados.",
+        "unsupportedRecoveryFormat": "Selecione um arquivo .criptoveu ou .cryptify. O seletor aceita todos os arquivos para facilitar o acesso ao armazenamento do dispositivo.",
         "filesLoadedWithRejected": "{{valid}} arquivo(s) carregado(s). {{rejected}} foram ignorado(s) por exceder o limite gratuito.",
         "copyNeedsPassword": "Digite ou gere uma chave antes de tentar copiar.",
         "clipboardUnavailable": "A API de clipboard não está disponível neste navegador.",
@@ -452,11 +454,13 @@
         "processCompleted_one": "Processo concluído",
         "processCompleted_other": "{{count}} arquivos concluídos",
         "encryptedWithFailures": "{{processed}} arquivo(s) protegido(s) com sucesso. {{failures}} falhou(ram).",
+        "failureDetail": "Detalhe: {{detail}}",
         "encryptedSuccess": "{{count}} arquivo(s) protegido(s) com sucesso. Os downloads foram iniciados.",
         "decryptedWithFailures": "{{processed}} arquivo(s) recuperado(s) com sucesso. {{failures}} falhou(ram).",
         "decryptedWithPreviews": "{{processed}} arquivo(s) recuperado(s) com sucesso. {{previews}} prévia(s) segura(s) disponível(is).",
         "decryptedSuccess": "{{count}} arquivo(s) recuperado(s) com sucesso. Baixe os arquivos para abrir no aplicativo correspondente.",
-        "unexpectedProcessingError": "Ocorreu um erro inesperado ao processar os arquivos."
+        "unexpectedProcessingError": "Ocorreu um erro inesperado ao processar os arquivos.",
+        "unexpectedDownloadFailure": "Não foi possível exportar o arquivo. Verifique o espaço disponível e tente novamente."
       },
       "plan": {
         "unlimited": "Ilimitado para apoiadores",
@@ -600,6 +604,9 @@
         "packageGenerated": "Pacote gerado",
         "readyToReview": "{{label}} pronto para revisar",
         "fileReady": "Arquivo pronto",
+        "saved": "Arquivo salvo",
+        "savedNativeNotice": "Arquivo salvo automaticamente em: Armazenamento Interno > Documents",
+        "savedWebNotice": "Arquivo transferido para a pasta Downloads do seu navegador",
         "source": "Origem: {{name}}",
         "localPreview": "Prévia local sem envio para servidores",
         "downloadAllHint": "Use Baixar todos para salvar tudo de uma vez.",
