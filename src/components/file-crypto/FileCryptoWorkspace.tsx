@@ -393,8 +393,8 @@ export default function FileCryptoWorkspace() {
     }
 
     const maxAllowedBytes = opfsAvailable
-      ? null
-      : mode === 'decrypt'
+  ? null
+  : mode === 'decrypt'
         ? MAX_FILE_SIZE + MAX_FILE_PACKAGE_OVERHEAD_BYTES
         : MAX_FILE_SIZE
 
