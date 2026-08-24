@@ -78,6 +78,7 @@ type WorkerResponse =
       id: number
       type: 'SUCCESS'
       resultFile: File
+      expectedSize: number
       downloadName: string
       securityReport: FileSecurityReport
       tempFileName: string
@@ -871,6 +872,7 @@ async function encryptFileToOpfs(
   return {
     downloadName: `${request.file.name}.criptoveu`,
     mimeType: 'application/octet-stream',
+    expectedSize: writeOffset,
     securityReport: buildSecurityReport('encrypt', packageFormat, manifest, 0),
   }
 }
@@ -1183,6 +1185,7 @@ async function decryptFileToOpfs(
   return {
     downloadName: manifest.originalName,
     mimeType: manifest.mimeType,
+    expectedSize: writeOffset,
     securityReport: buildSecurityReport(
       'decrypt',
       format,
@@ -1209,6 +1212,12 @@ async function handleRequest(request: WorkerRequest) {
     accessHandle.close()
     accessHandle = null
     const storedFile = await tempFileHandle.getFile()
+    if (storedFile.size !== result.expectedSize) {
+      throw new WorkerCryptoError(
+        'INTEGRITY_FAILED',
+        `Gravacao local incompleta: tamanho esperado ${result.expectedSize} bytes, mas foram persistidos ${storedFile.size} bytes. Verifique o espaco disponivel no dispositivo.`,
+      )
+    }
     const resultFile = new File([storedFile], result.downloadName, {
       type: result.mimeType,
     })
@@ -1219,6 +1228,7 @@ async function handleRequest(request: WorkerRequest) {
       id: request.id,
       type: 'SUCCESS',
       resultFile,
+      expectedSize: result.expectedSize,
       downloadName: result.downloadName,
       securityReport: result.securityReport,
       tempFileName,

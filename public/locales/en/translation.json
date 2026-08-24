@@ -382,6 +382,8 @@
         "filesReady_one": "File ready for processing",
         "filesReady_other": "Files ready for processing",
         "filesLoaded": "Content loaded successfully. Everything stays 100% in the browser.",
+        "storageSpaceWarning": "The estimated free space may be insufficient. Reserve at least {{size}} to process the selected files.",
+        "unsupportedRecoveryFormat": "Select a .criptoveu or .cryptify file. The picker accepts all files to make device storage easier to access.",
         "filesLoadedWithRejected": "{{valid}} file(s) loaded. {{rejected}} were skipped for exceeding the free limit.",
         "copyNeedsPassword": "Type or generate a key before trying to copy.",
         "clipboardUnavailable": "Clipboard API is not available in this browser.",
@@ -400,11 +402,13 @@
         "processCompleted_one": "Process completed",
         "processCompleted_other": "{{count}} files completed",
         "encryptedWithFailures": "{{processed}} file(s) protected successfully. {{failures}} failed.",
+        "failureDetail": "Details: {{detail}}",
         "encryptedSuccess": "{{count}} file(s) protected successfully. Downloads have started.",
         "decryptedWithFailures": "{{processed}} file(s) recovered successfully. {{failures}} failed.",
         "decryptedWithPreviews": "{{processed}} file(s) recovered successfully. {{previews}} safe preview(s) available.",
         "decryptedSuccess": "{{count}} file(s) recovered successfully. Download the files to open them in the corresponding app.",
-        "unexpectedProcessingError": "An unexpected error occurred while processing the files."
+        "unexpectedProcessingError": "An unexpected error occurred while processing the files.",
+        "unexpectedDownloadFailure": "The file could not be exported. Check available storage and try again."
       },
       "plan": {
         "unlimited": "Unlimited for supporters",
@@ -542,6 +546,9 @@
         "packageGenerated": "Package generated",
         "readyToReview": "{{label}} ready to review",
         "fileReady": "File ready",
+        "saved": "File saved",
+        "savedNativeNotice": "File saved automatically to: Internal Storage > Documents",
+        "savedWebNotice": "File transferred to your browser's Downloads folder",
         "source": "Source: {{name}}",
         "localPreview": "Local preview without server upload",
         "downloadAllHint": "Use Download all to save everything at once.",

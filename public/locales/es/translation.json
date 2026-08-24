@@ -382,6 +382,8 @@
         "filesReady_one": "Archivo listo para procesar",
         "filesReady_other": "Archivos listos para procesar",
         "filesLoaded": "Contenido cargado con éxito. Todo sigue 100% en el navegador.",
+        "storageSpaceWarning": "El espacio libre estimado puede ser insuficiente. Reserva al menos {{size}} para procesar los archivos seleccionados.",
+        "unsupportedRecoveryFormat": "Selecciona un archivo .criptoveu o .cryptify. El selector acepta todos los archivos para facilitar el acceso al almacenamiento del dispositivo.",
         "filesLoadedWithRejected": "{{valid}} archivo(s) cargado(s). Se omitieron {{rejected}} por superar el límite gratuito.",
         "copyNeedsPassword": "Escribe o genera una clave antes de intentar copiar.",
         "clipboardUnavailable": "La API de portapapeles no está disponible en este navegador.",
@@ -400,11 +402,13 @@
         "processCompleted_one": "Proceso completado",
         "processCompleted_other": "{{count}} archivos completados",
         "encryptedWithFailures": "{{processed}} archivo(s) protegido(s) con éxito. Fallaron {{failures}}.",
+        "failureDetail": "Detalle: {{detail}}",
         "encryptedSuccess": "{{count}} archivo(s) protegido(s) con éxito. Las descargas han comenzado.",
         "decryptedWithFailures": "{{processed}} archivo(s) recuperado(s) con éxito. Fallaron {{failures}}.",
         "decryptedWithPreviews": "{{processed}} archivo(s) recuperado(s) con éxito. Hay {{previews}} vista(s) previa(s) segura(s) disponible(s).",
         "decryptedSuccess": "{{count}} archivo(s) recuperado(s) con éxito. Descárgalos para abrirlos en la app correspondiente.",
-        "unexpectedProcessingError": "Ocurrió un error inesperado al procesar los archivos."
+        "unexpectedProcessingError": "Ocurrió un error inesperado al procesar los archivos.",
+        "unexpectedDownloadFailure": "No fue posible exportar el archivo. Comprueba el espacio disponible e inténtalo de nuevo."
       },
       "plan": {
         "unlimited": "Ilimitado para apoyadores",
@@ -542,6 +546,9 @@
         "packageGenerated": "Paquete generado",
         "readyToReview": "{{label}} listo para revisar",
         "fileReady": "Archivo listo",
+        "saved": "Archivo guardado",
+        "savedNativeNotice": "Archivo guardado automáticamente en: Almacenamiento interno > Documents",
+        "savedWebNotice": "Archivo transferido a la carpeta Descargas de tu navegador",
         "source": "Origen: {{name}}",
         "localPreview": "Vista previa local sin subida a servidores",
         "downloadAllHint": "Usa Descargar todo para guardar todo de una vez.",

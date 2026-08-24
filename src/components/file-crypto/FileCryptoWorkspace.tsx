@@ -74,7 +74,8 @@ type ResultItem = {
   sourceName: string
   preview: PreviewMetadata
   securityReport: FileSecurityReport
-  dispose?: () => void
+  savedWithSuccess: boolean
+  dispose?: () => void | Promise<void>
 }
 
 const MODE_COPY: Record<
@@ -107,6 +108,33 @@ const STATUS_STYLES: Record<StatusTone, string> = {
 }
 
 const FILE_SECURITY_PROFILE_STORAGE_KEY = 'criptoveu-file-security-profile-v3'
+const STORAGE_RESERVE_MULTIPLIER = 2.5
+const SUPPORTED_RECOVERY_EXTENSIONS = ['.criptoveu', '.cryptify'] as const
+
+async function hasInsufficientStorage(fileSize: number) {
+  if (typeof navigator === 'undefined' || !navigator.storage?.estimate) {
+    return false
+  }
+
+  try {
+    const estimate = await navigator.storage.estimate()
+    const quota = estimate.quota
+    const usage = estimate.usage ?? 0
+
+    if (
+      typeof quota !== 'number' ||
+      !Number.isFinite(quota) ||
+      typeof usage !== 'number' ||
+      !Number.isFinite(usage)
+    ) {
+      return false
+    }
+
+    return Math.max(0, quota - usage) < fileSize * STORAGE_RESERVE_MULTIPLIER
+  } catch {
+    return false
+  }
+}
 
 function loadSecurityProfileId(): FileSecurityProfileId {
   try {
@@ -119,6 +147,13 @@ function loadSecurityProfileId(): FileSecurityProfileId {
   } catch {
     return DEFAULT_FILE_SECURITY_PROFILE_ID
   }
+}
+
+function hasSupportedRecoveryExtension(fileName: string) {
+  const normalizedName = fileName.toLowerCase()
+  return SUPPORTED_RECOVERY_EXTENSIONS.some((extension) =>
+    normalizedName.endsWith(extension),
+  )
 }
 
 function downloadBlobUrl(url: string, fileName: string) {
@@ -157,6 +192,8 @@ export default function FileCryptoWorkspace() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [hasStorageWarning, setHasStorageWarning] = useState(false)
+  const [exportNotice, setExportNotice] = useState<string | null>(null)
   const [isFileLimitDialogOpen, setIsFileLimitDialogOpen] = useState(false)
   const [securityProfileId, setSecurityProfileId] =
     useState<FileSecurityProfileId>(loadSecurityProfileId)
@@ -330,6 +367,18 @@ export default function FileCryptoWorkspace() {
   }, [isFileLimitDialogOpen])
 
   useEffect(() => {
+    if (!exportNotice) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setExportNotice(null)
+    }, 5000)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [exportNotice])
+
+  useEffect(() => {
     return () => {
       for (const url of resultUrlRef.current) {
         URL.revokeObjectURL(url)
@@ -353,6 +402,7 @@ export default function FileCryptoWorkspace() {
     setResults([])
     setPreviewItem(null)
     setIsPreviewOpen(false)
+    setExportNotice(null)
     streamingCrypto.resetProgress()
   }
 
@@ -375,13 +425,30 @@ export default function FileCryptoWorkspace() {
       message: t(`files.workspace.status.mode.${resolvedMode}`),
     })
     setFiles([])
+    setHasStorageWarning(false)
     clearResults()
   }
 
-  function handleSelectedFiles(selectedFiles: FileList | File[] | null | undefined): boolean {
+  async function handleSelectedFiles(selectedFiles: FileList | File[] | null | undefined): Promise<boolean> {
     const nextFiles = Array.from(selectedFiles ?? [])
 
     if (nextFiles.length === 0) {
+      return false
+    }
+
+    if (
+      mode === 'decrypt' &&
+      nextFiles.some(
+        (selectedFile) => !hasSupportedRecoveryExtension(selectedFile.name),
+      )
+    ) {
+      setFiles([])
+      setHasStorageWarning(false)
+      clearResults()
+      setStatus({
+        tone: 'error',
+        message: t('files.workspace.status.unsupportedRecoveryFormat'),
+      })
       return false
     }
 
@@ -416,6 +483,13 @@ export default function FileCryptoWorkspace() {
       setKeyFile(null)
     }
 
+    const selectedSize = nextFiles.reduce(
+      (sum, selectedFile) => sum + selectedFile.size,
+      0,
+    )
+    const storageWarning = await hasInsufficientStorage(selectedSize)
+    setHasStorageWarning(storageWarning)
+
     setFiles(nextFiles)
     setProgress(0)
     setProgressLabel(
@@ -425,21 +499,27 @@ export default function FileCryptoWorkspace() {
     )
     setStatus({
       tone: 'info',
-      message: t('files.workspace.status.filesLoaded', { count: nextFiles.length }),
+      message: storageWarning
+        ? t('files.workspace.status.storageSpaceWarning', {
+            size: formatFileSize(
+              Math.ceil(selectedSize * STORAGE_RESERVE_MULTIPLIER),
+            ),
+          })
+        : t('files.workspace.status.filesLoaded', { count: nextFiles.length }),
     })
     clearResults()
     return true
   }
 
   function handleFileInputChange(event: ChangeEvent<HTMLInputElement>) {
-    handleSelectedFiles(event.target.files)
+    void handleSelectedFiles(event.target.files)
     event.target.value = ''
   }
 
   function handleDrop(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault()
     setIsDragging(false)
-    handleSelectedFiles(event.dataTransfer.files)
+    void handleSelectedFiles(event.dataTransfer.files)
   }
 
   function handleDragOver(event: DragEvent<HTMLLabelElement>) {
@@ -457,17 +537,41 @@ export default function FileCryptoWorkspace() {
   }
 
   async function handleDownloadResult(result: ResultItem) {
-    if (supportsNativeFileExport()) {
-      try {
-        await exportFileToNativeDownloads(result.blob, result.name)
-        return
-      } catch {
-        downloadBlobUrl(result.url, result.name)
-        return
-      }
+    if (result.savedWithSuccess) {
+      setExportNotice(
+        supportsNativeFileExport()
+          ? t('files.workspace.results.savedNativeNotice')
+          : t('files.workspace.results.savedWebNotice'),
+      )
+      return
     }
 
-    downloadBlobUrl(result.url, result.name)
+    if (supportsNativeFileExport()) {
+      await exportFileToNativeDownloads(result.blob, result.name)
+      await result.dispose?.()
+    } else {
+      downloadBlobUrl(result.url, result.name)
+      await result.dispose?.()
+    }
+
+    result.savedWithSuccess = true
+    setResults((currentResults) =>
+      currentResults.map((currentResult) =>
+        currentResult.id === result.id
+          ? { ...currentResult, savedWithSuccess: true }
+          : currentResult,
+      ),
+    )
+  }
+
+  function handleDownloadFailure(error: unknown) {
+    setStatus({
+      tone: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : t('files.workspace.status.unexpectedDownloadFailure'),
+    })
   }
 
   function handleKeyFileInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -502,20 +606,19 @@ export default function FileCryptoWorkspace() {
     })
   }
 
-  function handleDownloadSecurityReport(result: ResultItem) {
+  async function handleDownloadSecurityReport(result: ResultItem) {
     const reportBlob = new Blob(
       [JSON.stringify(result.securityReport, null, 2)],
       { type: 'application/json' },
     )
-    const reportUrl = URL.createObjectURL(reportBlob)
 
     try {
-      downloadBlobUrl(
-        reportUrl,
+      await exportFileToNativeDownloads(
+        reportBlob,
         `${result.name}.relatorio-seguranca.json`,
       )
-    } finally {
-      URL.revokeObjectURL(reportUrl)
+    } catch (error) {
+      handleDownloadFailure(error)
     }
   }
 
@@ -526,7 +629,7 @@ export default function FileCryptoWorkspace() {
       return
     }
 
-    void handleDownloadResult(targetResult)
+    void handleDownloadResult(targetResult).catch(handleDownloadFailure)
   }
 
   function handleDownloadAll() {
@@ -536,7 +639,7 @@ export default function FileCryptoWorkspace() {
 
     results.forEach((result, index) => {
       window.setTimeout(() => {
-        void handleDownloadResult(result)
+        void handleDownloadResult(result).catch(handleDownloadFailure)
       }, index * 120)
     })
   }
@@ -580,6 +683,8 @@ export default function FileCryptoWorkspace() {
       return
     }
 
+    setHasStorageWarning(await hasInsufficientStorage(totalSelectedSize))
+
     const oversizedFiles =
       activeFileLimit === null
         ? []
@@ -614,6 +719,7 @@ export default function FileCryptoWorkspace() {
 
       for (const [index, currentFile] of files.entries()) {
         const currentStep = index + 1
+        let processedResult: ResultItem | null = null
 
         try {
           const { blob, downloadName, securityReport, dispose } =
@@ -662,7 +768,7 @@ export default function FileCryptoWorkspace() {
               ? getUniversalPreviewMetadata(blob.type)
               : ({ kind: 'none', label: t('common.file') } as PreviewMetadata)
 
-          const processedResult: ResultItem = {
+          processedResult = {
             id: `${downloadName}-${index}-${blob.size}`,
             name: downloadName,
             blob,
@@ -671,17 +777,22 @@ export default function FileCryptoWorkspace() {
             sourceName: currentFile.name,
             preview: nextPreview,
             securityReport,
+            savedWithSuccess: false,
             dispose,
           }
-          processedResults.push(processedResult)
-
           if (mode === 'encrypt') {
             await handleDownloadResult(processedResult)
           }
+
+          processedResults.push(processedResult)
         } catch (error) {
+          if (processedResult) {
+            URL.revokeObjectURL(processedResult.url)
+            await processedResult.dispose?.()
+          }
           failures.push(
             `${currentFile.name}: ${
-              error instanceof CriptoveuError
+              error instanceof Error
                 ? error.message
                 : t('files.workspace.status.unexpectedFileFailure')
             }`,
@@ -724,18 +835,22 @@ export default function FileCryptoWorkspace() {
         message:
           mode === 'encrypt'
             ? failures.length > 0
-              ? t('files.workspace.status.encryptedWithFailures', {
+              ? `${t('files.workspace.status.encryptedWithFailures', {
                   processed: processedResults.length,
                   failures: failures.length,
-                })
+                })} ${t('files.workspace.status.failureDetail', {
+                  detail: failures[0],
+                })}`
               : t('files.workspace.status.encryptedSuccess', {
                   count: processedResults.length,
                 })
             : failures.length > 0
-              ? t('files.workspace.status.decryptedWithFailures', {
+              ? `${t('files.workspace.status.decryptedWithFailures', {
                   processed: processedResults.length,
                   failures: failures.length,
-                })
+                })} ${t('files.workspace.status.failureDetail', {
+                  detail: failures[0],
+                })}`
               : previewableResults.length > 0
                 ? t('files.workspace.status.decryptedWithPreviews', {
                     processed: processedResults.length,
@@ -770,6 +885,24 @@ export default function FileCryptoWorkspace() {
 
   return (
     <>
+      {exportNotice ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-x-4 top-4 z-50 mx-auto flex max-w-xl items-start gap-3 rounded-[24px] border border-cyan-300/30 bg-zinc-950/95 p-4 text-sm text-cyan-50 shadow-2xl shadow-black/30 backdrop-blur"
+        >
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
+          <p className="min-w-0 flex-1 leading-6">{exportNotice}</p>
+          <button
+            type="button"
+            onClick={() => setExportNotice(null)}
+            className="shrink-0 rounded-full p-1 text-cyan-100/70 transition hover:bg-white/10 hover:text-white"
+            aria-label={t('common.close')}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
       <div className="grid min-w-0 gap-5 overflow-hidden pb-28 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:pb-0">
         <section className="panel-surface min-w-0 rounded-[32px] p-5 sm:p-6">
           <div className="space-y-5">
@@ -831,7 +964,7 @@ export default function FileCryptoWorkspace() {
                 type="file"
                 className="hidden"
                 multiple
-                accept={mode === 'decrypt' ? '.criptoveu,.cryptify' : undefined}
+                accept={mode === 'decrypt' ? '*/*' : undefined}
                 onChange={handleFileInputChange}
               />
 
@@ -902,6 +1035,19 @@ export default function FileCryptoWorkspace() {
                 </div>
               </div>
             </label>
+
+            {files.length > 0 && hasStorageWarning ? (
+              <div className="flex items-start gap-3 rounded-[24px] border border-amber-400/25 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <p>
+                  {t('files.workspace.status.storageSpaceWarning', {
+                    size: formatFileSize(
+                      Math.ceil(totalSelectedSize * STORAGE_RESERVE_MULTIPLIER),
+                    ),
+                  })}
+                </p>
+              </div>
+            ) : null}
 
             {mode === 'decrypt' && files.length > 0 ? (
               <section className="surface-primary rounded-[28px] p-5">
@@ -1325,11 +1471,25 @@ export default function FileCryptoWorkspace() {
 
                         <button
                           type="button"
-                          onClick={() => handleDownloadResult(result)}
-                          className="btn-secondary w-full"
+                          onClick={() =>
+                            void handleDownloadResult(result).catch(
+                              handleDownloadFailure,
+                            )
+                          }
+                          className={`btn-secondary w-full ${
+                            result.savedWithSuccess
+                              ? 'border-emerald-400/35 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/50 hover:bg-emerald-400/15'
+                              : ''
+                          }`}
                         >
-                          <Download className="h-4 w-4" />
-                          {t('common.download')}
+                          {result.savedWithSuccess ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                          {result.savedWithSuccess
+                            ? t('files.workspace.results.saved')
+                            : t('common.download')}
                         </button>
                       </div>
                     </div>
@@ -1449,7 +1609,11 @@ export default function FileCryptoWorkspace() {
                           fileName={result.name}
                           isInactive={isInactive}
                           onOpen={() => handleOpenPreview(result)}
-                          onDownload={() => handleDownloadResult(result)}
+                          onDownload={() =>
+                            void handleDownloadResult(result).catch(
+                              handleDownloadFailure,
+                            )
+                          }
                         />
                       </div>
                     ) : null}
