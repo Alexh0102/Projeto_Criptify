@@ -12,6 +12,8 @@ O projeto foi construído com foco em privacidade: arquivos, senhas, mensagens e
 
 **Repositório:** https://github.com/Alexh0102/Projeto_Criptoveu
 
+**Aplicativo Android:** [Baixar o APK mais recente](https://github.com/Alexh0102/Projeto_Criptoveu/releases/latest/download/CriptoVeu.apk)
+
 > Aviso importante: o CriptoVéu não deve ser interpretado como uma solução “100% segura” ou como substituto para auditoria criptográfica formal. A segurança final depende da senha escolhida, do dispositivo, do navegador, da integridade do código JavaScript entregue ao usuário e do ambiente de execução.
 
 ---
@@ -93,7 +95,7 @@ A ferramenta de arquivos aceita múltiplos arquivos no modo de proteção e gera
 
 A criptografia e a descriptografia acontecem em blocos de até **2 MB**. Em navegadores com suporte a manipuladores síncronos do OPFS, o Web Worker dedicado grava cada registro diretamente em um arquivo temporário no OPFS, sem acumular o pacote ou o arquivo recuperado na RAM. O arquivo temporário é sincronizado, fechado, convertido em um snapshot `File` e removido depois que o resultado é entregue à aplicação.
 
-O caminho OPFS mantém a memória proporcional ao bloco ativo, aos dados de autenticação e ao perfil Argon2id selecionado, em vez de proporcional ao tamanho total do arquivo. Em navegadores sem a API OPFS necessária, a implementação existente em memória continua disponível e aplica o limite de segurança de 1 GB.
+O caminho OPFS remove o limite fixo anterior de 1 GB imposto pela aplicação. O limite prático passa a ser a quota de armazenamento disponível para o navegador, enquanto a memória permanece proporcional ao bloco ativo, aos dados de autenticação e ao perfil Argon2id selecionado, em vez de proporcional ao tamanho total do arquivo. Em navegadores sem a API OPFS necessária, o caminho alternativo continua disponível com uma proteção conservadora de 1 GB.
 
 Formato atual do pacote V4:
 

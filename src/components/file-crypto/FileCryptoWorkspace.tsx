@@ -221,9 +221,6 @@ export default function FileCryptoWorkspace() {
   const activeFileLimit = opfsAvailable
     ? null
     : MAX_FILE_SIZE + (mode === 'decrypt' ? MAX_FILE_PACKAGE_OVERHEAD_BYTES : 0)
-  const fileLimitLabel = opfsAvailable
-    ? t('files.workspace.quickFacts.opfsStorage')
-    : formatFileSize(MAX_FILE_SIZE)
   const resultUrl = previewItem?.url ?? results[0]?.url ?? null
   const resultName = previewItem?.name ?? results[0]?.name ?? ''
   const activePreviewItem = previewItem ?? results[0] ?? null
@@ -235,10 +232,6 @@ export default function FileCryptoWorkspace() {
         mode === 'encrypt'
           ? t('files.workspace.quickFacts.anyFile')
           : t('files.workspace.quickFacts.criptoveuFiles'),
-    },
-    {
-      label: t('files.workspace.quickFacts.planLimit'),
-      value: fileLimitLabel,
     },
     {
       label: t('files.workspace.quickFacts.activeTier'),
@@ -877,10 +870,6 @@ export default function FileCryptoWorkspace() {
                             : t('files.workspace.upload.filesReady_other')
                           : t('files.workspace.upload.noFiles')}
                       </p>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {t('files.workspace.upload.planLimit', { limit: fileLimitLabel })}
-                      </p>
-
                       {files.length > 0 ? (
                         <div className="mt-3 space-y-2">
                           {files.slice(0, 4).map((selectedFile) => (

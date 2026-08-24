@@ -12,6 +12,8 @@ CriptoVéu was built with privacy in mind: files, passwords, messages, and notes
 
 **Repository:** https://github.com/Alexh0102/Projeto_Criptoveu
 
+**Android app:** [Download the latest APK](https://github.com/Alexh0102/Projeto_Criptoveu/releases/latest/download/CriptoVeu.apk)
+
 > Important notice: CriptoVéu must not be considered a “100% secure” solution or a substitute for a formal cryptographic audit. Final security depends on the selected password, device, browser, integrity of the JavaScript delivered to the user, and execution environment.
 
 ---
@@ -102,7 +104,7 @@ The file tool accepts multiple files in protection mode and creates `.criptoveu`
 
 Encryption and decryption take place in chunks of up to **2 MB**. On browsers that support OPFS synchronous access handles, the dedicated worker writes each record directly to temporary OPFS storage instead of accumulating the package or recovered file in RAM. The temporary entry is flushed, closed, converted to a `File` snapshot, and removed after the result is handed back to the application.
 
-The OPFS path keeps memory proportional to the active chunk, authentication data, and the selected Argon2id profile, rather than to the total file size. On browsers without the required OPFS API, the existing in-memory implementation remains available and enforces the 1 GB safety limit.
+The OPFS path removes the previous fixed 1 GB application limit. Its practical boundary is the storage quota available to the browser, while memory remains proportional to the active chunk, authentication data, and selected Argon2id profile rather than to the total file size. On browsers without the required OPFS API, the compatibility fallback remains available with a conservative 1 GB safety guard.
 
 Current V4 package format:
 

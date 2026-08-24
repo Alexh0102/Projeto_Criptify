@@ -314,7 +314,6 @@
       "eyebrow": "Cifrado de archivos",
       "title": "Protege o recupera archivos sin salir del navegador.",
       "description": "Previsualiza vídeos, fotos, PDFs y documentos locales antes de proteger o recuperar archivos com contraseña, sin subir nada.",
-      "limitNotice": "Límite para archivos de hasta 1 GB",
       "help": {
         "how": { "title": "Cómo funciona", "content": "Eliges los archivos, defines la contraseña y el procesamiento ocurre localmente en el navegador." },
         "privacy": { "title": "Privacidad", "content": "Tus archivos no salen del dispositivo. El resultado se genera localmente para descargarlo." }
@@ -417,8 +416,6 @@
         "formats": "Formatos compatibles",
         "anyFile": "Cualquier archivo",
         "criptoveuFiles": "Archivos .criptoveu",
-        "planLimit": "Límite del plan",
-        "opfsStorage": "Límite del almacenamiento local",
         "activeTier": "Capa activa",
         "processing": "Procesamiento",
         "blocksOf": "Bloques de {{size}}",
@@ -439,7 +436,6 @@
         "filesReady_one": "1 archivo listo para procesar",
         "filesReady_other": "{{count}} archivos listos para procesar",
         "noFiles": "Ningún archivo cargado",
-        "planLimit": "Límite del plan: {{limit}}",
         "additionalFiles": "+ {{count}} archivo(s) adicional(es)"
       },
       "limitDialog": {
