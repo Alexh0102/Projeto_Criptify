@@ -1,5 +1,6 @@
 ﻿const LEGACY_FILE_HEADER_TEXT = 'CRIPTIFY1'
 import argon2WorkerUrl from '../workers/argon2.worker.ts?worker&url'
+import opfsCryptoWorkerUrl from '../workers/opfs-crypto.worker.ts?worker&url'
 import {
   FileIntegrityError,
   MAX_FILE_INTEGRITY_MANIFEST_BYTES,
@@ -141,6 +142,11 @@ export type ProcessResult = {
   blob: Blob
   downloadName: string
   securityReport: FileSecurityReport
+  dispose?: () => Promise<void>
+}
+
+type OpfsStorageManager = StorageManager & {
+  getDirectory?: () => Promise<unknown>
 }
 
 export type FilePackageFormat =
@@ -202,6 +208,32 @@ export type FileSecurityReport = {
   note: string
 }
 
+type OpfsWorkerResponse =
+  | {
+      id: number
+      type: 'PROGRESS'
+      value: number
+      label: string
+    }
+  | {
+      id: number
+      type: 'SUCCESS'
+      resultFile: File
+      downloadName: string
+      securityReport: FileSecurityReport
+      tempFileName: string
+    }
+  | {
+      id: number
+      type: 'CLEANUP_DONE'
+    }
+  | {
+      id: number
+      type: 'ERROR'
+      code: CriptoveuError['code'] | 'OPFS_UNSUPPORTED'
+      message: string
+    }
+
 export type TextEncryptionResult = {
   ciphertext: string
   iv: Uint8Array<ArrayBuffer>
@@ -239,6 +271,22 @@ export class CriptoveuError extends Error {
     this.name = 'CriptoveuError'
     this.code = code
   }
+}
+
+class OpfsUnavailableError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'OpfsUnavailableError'
+  }
+}
+
+export function supportsOpfsCrypto() {
+  if (typeof Worker === 'undefined' || typeof navigator === 'undefined') {
+    return false
+  }
+
+  const storage = navigator.storage as OpfsStorageManager | undefined
+  return typeof storage?.getDirectory === 'function'
 }
 
 function waitForPaint() {
@@ -491,6 +539,8 @@ type Argon2WorkerResponse =
 
 let argon2RequestId = 0
 let trustedArgon2WorkerUrl: string | null = null
+let opfsRequestId = 0
+let trustedOpfsWorkerUrl: string | null = null
 
 type TrustedTypesFactory = {
   createPolicy: (
@@ -515,6 +565,125 @@ function createArgon2Worker() {
 
   return new Worker(trustedArgon2WorkerUrl ?? argon2WorkerUrl, {
     type: 'module',
+  })
+}
+
+function createOpfsCryptoWorker() {
+  const trustedTypes = (
+    globalThis as typeof globalThis & { trustedTypes?: TrustedTypesFactory }
+  ).trustedTypes
+
+  if (trustedTypes && trustedOpfsWorkerUrl === null) {
+    const policy = trustedTypes.createPolicy('criptoveu-opfs-crypto-worker', {
+      createScriptURL: (url) => url,
+    })
+    trustedOpfsWorkerUrl = policy.createScriptURL(opfsCryptoWorkerUrl)
+  }
+
+  return new Worker(trustedOpfsWorkerUrl ?? opfsCryptoWorkerUrl, {
+    type: 'module',
+  })
+}
+
+async function processFileWithOpfs(
+  mode: 'encrypt' | 'decrypt',
+  file: File,
+  password: string,
+  onProgress?: ProgressCallback,
+  options?: FileEncryptionOptions,
+): Promise<ProcessResult> {
+  const requestId = (opfsRequestId += 1)
+
+  return new Promise<ProcessResult>((resolve, reject) => {
+    const worker = createOpfsCryptoWorker()
+    let cleanupPromise: Promise<void> | null = null
+    let resolveCleanup: (() => void) | null = null
+
+    worker.onmessage = (event: MessageEvent<OpfsWorkerResponse>) => {
+      if (event.data.id !== requestId) {
+        return
+      }
+
+      if (event.data.type === 'PROGRESS') {
+        onProgress?.(event.data.value, event.data.label)
+        return
+      }
+
+      if (event.data.type === 'CLEANUP_DONE') {
+        resolveCleanup?.()
+        resolveCleanup = null
+        worker.terminate()
+        return
+      }
+
+      if (event.data.type === 'ERROR') {
+        worker.terminate()
+        if (event.data.code === 'OPFS_UNSUPPORTED') {
+          reject(new OpfsUnavailableError(event.data.message))
+          return
+        }
+
+        reject(new CriptoveuError(event.data.code, event.data.message))
+        return
+      }
+
+      if (event.data.type !== 'SUCCESS') {
+        return
+      }
+
+      const resultFile = event.data.resultFile
+      const downloadName = event.data.downloadName
+      const securityReport = event.data.securityReport
+      const tempFileName = event.data.tempFileName
+      let cleanupRequested = false
+      const dispose = () => {
+        if (cleanupRequested) {
+          return cleanupPromise ?? Promise.resolve()
+        }
+
+        cleanupRequested = true
+        cleanupPromise = new Promise<void>((resolve) => {
+          resolveCleanup = resolve
+          worker.postMessage({
+            id: requestId,
+            type: 'CLEANUP',
+            tempFileName,
+          })
+        })
+
+        return cleanupPromise
+      }
+
+      resolve({
+        blob: resultFile,
+        downloadName,
+        securityReport,
+        dispose,
+      })
+    }
+
+    worker.onerror = () => {
+      worker.terminate()
+      reject(
+        new CriptoveuError(
+          'INVALID_FILE',
+          'Falha ao carregar o Worker de criptografia OPFS.',
+        ),
+      )
+    }
+
+    worker.postMessage({
+      id: requestId,
+      mode,
+      file,
+      password,
+      options: {
+        argon2MemoryMb: options?.argon2MemoryMb,
+        argon2Iterations: options?.argon2Iterations,
+        keyFile: options?.keyFile ?? null,
+        recoverable: options?.recoverable,
+      },
+    })
   })
 }
 
@@ -757,7 +926,6 @@ export async function encryptFile(
   onProgress?: ProgressCallback,
   options?: FileEncryptionOptions,
 ): Promise<ProcessResult> {
-  assertSupportedFileSize(file, options)
   const keyFile = options?.keyFile ?? null
   const useRecoverableParity = options?.recoverable === true
   const packageFormat: FileIntegrityFormat = useRecoverableParity
@@ -791,6 +959,24 @@ export async function encryptFile(
       throw error
     }
   }
+
+  if (supportsOpfsCrypto()) {
+    try {
+      return await processFileWithOpfs(
+        'encrypt',
+        file,
+        password,
+        onProgress,
+        options,
+      )
+    } catch (error) {
+      if (!(error instanceof OpfsUnavailableError)) {
+        throw error
+      }
+    }
+  }
+
+  assertSupportedFileSize(file, options)
 
   await reportProgress(onProgress, 5, 'Preparando Escudo de Integridade')
   const salt = randomBytes(SALT_LENGTH_BYTES)
@@ -2531,10 +2717,32 @@ export async function decryptFile(
   onProgress?: ProgressCallback,
   options?: FileEncryptionOptions,
 ): Promise<ProcessResult> {
-  assertSupportedPackageSize(file, options)
   const modernHeader = await file
     .slice(0, INTEGRITY_CHUNKED_FILE_HEADER_BYTES.length)
     .text()
+
+  if (
+    supportsOpfsCrypto() &&
+    (modernHeader === KEY_FILE_CHUNKED_FILE_HEADER_TEXT ||
+      modernHeader === RECOVERABLE_CHUNKED_FILE_HEADER_TEXT ||
+      modernHeader === INTEGRITY_CHUNKED_FILE_HEADER_TEXT)
+  ) {
+    try {
+      return await processFileWithOpfs(
+        'decrypt',
+        file,
+        password,
+        onProgress,
+        options,
+      )
+    } catch (error) {
+      if (!(error instanceof OpfsUnavailableError)) {
+        throw error
+      }
+    }
+  }
+
+  assertSupportedPackageSize(file, options)
   let result: ProcessResult
 
   if (modernHeader === KEY_FILE_CHUNKED_FILE_HEADER_TEXT) {

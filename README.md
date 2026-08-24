@@ -57,6 +57,7 @@ Main features:
 - AES-256-GCM via the Web Crypto API.
 - Argon2id v1.3 via WebAssembly in Web Workers (`hash-wasm`).
 - 2 MB chunked file processing with an encrypted integrity manifest (V4/V5).
+- OPFS-backed file encryption and decryption in a dedicated Web Worker when `createSyncAccessHandle` is available.
 - Dual protection with password + key file (V5).
 - Portable encrypted note vault (VéuNotes / `PORTABLE_VAULT1`).
 - URL hash payload serialization for links and QR codes; payloads are never sent in HTTP requests.
@@ -99,7 +100,9 @@ Additional technologies:
 
 The file tool accepts multiple files in protection mode and creates `.criptoveu` packages.
 
-Encryption takes place in chunks of up to **2 MB**, reducing memory consumption and allowing larger files to be processed more reliably.
+Encryption and decryption take place in chunks of up to **2 MB**. On browsers that support OPFS synchronous access handles, the dedicated worker writes each record directly to temporary OPFS storage instead of accumulating the package or recovered file in RAM. The temporary entry is flushed, closed, converted to a `File` snapshot, and removed after the result is handed back to the application.
+
+The OPFS path keeps memory proportional to the active chunk, authentication data, and the selected Argon2id profile, rather than to the total file size. On browsers without the required OPFS API, the existing in-memory implementation remains available and enforces the 1 GB safety limit.
 
 Current V4 package format:
 
@@ -143,7 +146,9 @@ Technical details:
 - Password-free inspection validates only package structure and uses the phrase **plausible structure**. Authenticity requires the correct password.
 - Each result can produce a local JSON report containing the format, KDF, Argon2id parameters, block count, and verification status.
 - Reading remains compatible with `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2`, and `CRIPTIFY1`.
-- Recommended file limit: **2 GB**.
+- With OPFS, the practical limit is the available local storage and browser quota. The fallback path is limited to **1 GB**.
+
+In the Capacitor Android app, completed results are exported to `Download/` through the native Filesystem plugin, one 2 MB Base64-encoded slice at a time. On Android versions where `ExternalStorage` is unavailable, the WebView download manager is used as a fallback.
 
 > Note: the manifest SHA-256 complements AES-GCM authentication and enables explicit post-recovery verification. It does not replace AES-GCM or make a password-free structure “verified.”
 

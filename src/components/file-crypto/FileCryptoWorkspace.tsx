@@ -46,11 +46,16 @@ import {
   CriptoveuError,
   formatFileSize,
   inspectCriptoveuPackage,
+  supportsOpfsCrypto,
   type FilePackageInspection,
   type FileSecurityReport,
   type FileSecurityProfileId,
 } from '../../lib/criptoveu'
 import { MAX_KEY_FILE_SIZE_BYTES } from '../../lib/key-file-protection'
+import {
+  exportFileToNativeDownloads,
+  supportsNativeFileExport,
+} from '../../lib/native-file-export'
 
 type Mode = 'encrypt' | 'decrypt'
 type StatusTone = 'info' | 'success' | 'error'
@@ -69,6 +74,7 @@ type ResultItem = {
   sourceName: string
   preview: PreviewMetadata
   securityReport: FileSecurityReport
+  dispose?: () => void
 }
 
 const MODE_COPY: Record<
@@ -158,10 +164,12 @@ export default function FileCryptoWorkspace() {
   const keyFileInputId = useId()
   const passwordInputId = useId()
   const resultUrlRef = useRef<string[]>([])
+  const resultCleanupRef = useRef<(() => void)[]>([])
   const resultPanelRef = useRef<HTMLDivElement | null>(null)
   const isInactive = useInactivity({ disabled: results.length === 0 && !isPreviewOpen })
   const streamingCrypto = useStreamingCrypto()
   const { isPremium, tier } = usePremium()
+  const opfsAvailable = supportsOpfsCrypto()
   const canUseSecureProcessing =
     window.isSecureContext && typeof window.crypto?.subtle !== 'undefined'
   const securityProfile =
@@ -210,9 +218,12 @@ export default function FileCryptoWorkspace() {
 
   const currentMode = MODE_COPY[mode]
   const totalSelectedSize = files.reduce((sum, currentFile) => sum + currentFile.size, 0)
-  const activeFileLimit =
-    MAX_FILE_SIZE + (mode === 'decrypt' ? MAX_FILE_PACKAGE_OVERHEAD_BYTES : 0)
-  const fileLimitLabel = formatFileSize(MAX_FILE_SIZE)
+  const activeFileLimit = opfsAvailable
+    ? null
+    : MAX_FILE_SIZE + (mode === 'decrypt' ? MAX_FILE_PACKAGE_OVERHEAD_BYTES : 0)
+  const fileLimitLabel = opfsAvailable
+    ? t('files.workspace.quickFacts.opfsStorage')
+    : formatFileSize(MAX_FILE_SIZE)
   const resultUrl = previewItem?.url ?? results[0]?.url ?? null
   const resultName = previewItem?.name ?? results[0]?.name ?? ''
   const activePreviewItem = previewItem ?? results[0] ?? null
@@ -330,6 +341,9 @@ export default function FileCryptoWorkspace() {
       for (const url of resultUrlRef.current) {
         URL.revokeObjectURL(url)
       }
+      for (const cleanup of resultCleanupRef.current) {
+        cleanup()
+      }
     }
   }, [])
 
@@ -337,8 +351,12 @@ export default function FileCryptoWorkspace() {
     for (const url of resultUrlRef.current) {
       URL.revokeObjectURL(url)
     }
+    for (const cleanup of resultCleanupRef.current) {
+      cleanup()
+    }
 
     resultUrlRef.current = []
+    resultCleanupRef.current = []
     setResults([])
     setPreviewItem(null)
     setIsPreviewOpen(false)
@@ -374,13 +392,15 @@ export default function FileCryptoWorkspace() {
       return false
     }
 
-    const maxAllowedBytes =
-      mode === 'decrypt'
+    const maxAllowedBytes = opfsAvailable
+      ? null
+      : mode === 'decrypt'
         ? MAX_FILE_SIZE + MAX_FILE_PACKAGE_OVERHEAD_BYTES
         : MAX_FILE_SIZE
 
     const oversizedFiles = nextFiles.filter(
-      (selectedFile) => selectedFile.size > maxAllowedBytes,
+      (selectedFile) =>
+        maxAllowedBytes !== null && selectedFile.size > maxAllowedBytes,
     )
 
     if (oversizedFiles.length > 0) {
@@ -443,7 +463,17 @@ export default function FileCryptoWorkspace() {
     setIsDragging(false)
   }
 
-  function handleDownloadResult(result: ResultItem) {
+  async function handleDownloadResult(result: ResultItem) {
+    if (supportsNativeFileExport()) {
+      try {
+        await exportFileToNativeDownloads(result.blob, result.name)
+        return
+      } catch {
+        downloadBlobUrl(result.url, result.name)
+        return
+      }
+    }
+
     downloadBlobUrl(result.url, result.name)
   }
 
@@ -503,7 +533,7 @@ export default function FileCryptoWorkspace() {
       return
     }
 
-    handleDownloadResult(targetResult)
+    void handleDownloadResult(targetResult)
   }
 
   function handleDownloadAll() {
@@ -513,7 +543,7 @@ export default function FileCryptoWorkspace() {
 
     results.forEach((result, index) => {
       window.setTimeout(() => {
-        downloadBlobUrl(result.url, result.name)
+        void handleDownloadResult(result)
       }, index * 120)
     })
   }
@@ -557,9 +587,10 @@ export default function FileCryptoWorkspace() {
       return
     }
 
-    const oversizedFiles = files.filter(
-      (selectedFile) => selectedFile.size > activeFileLimit,
-    )
+    const oversizedFiles =
+      activeFileLimit === null
+        ? []
+        : files.filter((selectedFile) => selectedFile.size > activeFileLimit)
 
     if (oversizedFiles.length > 0) {
       setStatus({
@@ -592,7 +623,7 @@ export default function FileCryptoWorkspace() {
         const currentStep = index + 1
 
         try {
-          const { blob, downloadName, securityReport } =
+          const { blob, downloadName, securityReport, dispose } =
             await streamingCrypto.processFile(
               mode,
               currentFile,
@@ -616,7 +647,7 @@ export default function FileCryptoWorkspace() {
                 )
               },
               {
-                maxFileSizeBytes: MAX_FILE_SIZE,
+                maxFileSizeBytes: opfsAvailable ? undefined : MAX_FILE_SIZE,
                 argon2MemoryMb:
                   mode === 'encrypt' ? securityProfile.memoryMb : undefined,
                 argon2Iterations:
@@ -638,7 +669,7 @@ export default function FileCryptoWorkspace() {
               ? getUniversalPreviewMetadata(blob.type)
               : ({ kind: 'none', label: t('common.file') } as PreviewMetadata)
 
-          processedResults.push({
+          const processedResult: ResultItem = {
             id: `${downloadName}-${index}-${blob.size}`,
             name: downloadName,
             blob,
@@ -647,10 +678,12 @@ export default function FileCryptoWorkspace() {
             sourceName: currentFile.name,
             preview: nextPreview,
             securityReport,
-          })
+            dispose,
+          }
+          processedResults.push(processedResult)
 
           if (mode === 'encrypt') {
-            downloadBlobUrl(nextUrl, downloadName)
+            await handleDownloadResult(processedResult)
           }
         } catch (error) {
           failures.push(
@@ -665,6 +698,9 @@ export default function FileCryptoWorkspace() {
       }
 
       resultUrlRef.current = processedResults.map((result) => result.url)
+      resultCleanupRef.current = processedResults.flatMap((result) =>
+        result.dispose ? [result.dispose] : [],
+      )
       setResults(processedResults)
       setPreviewItem(null)
 

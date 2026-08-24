@@ -418,6 +418,7 @@
         "anyFile": "Cualquier archivo",
         "criptoveuFiles": "Archivos .criptoveu",
         "planLimit": "Límite del plan",
+        "opfsStorage": "Límite del almacenamiento local",
         "activeTier": "Capa activa",
         "processing": "Procesamiento",
         "blocksOf": "Bloques de {{size}}",

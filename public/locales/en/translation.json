@@ -418,6 +418,7 @@
         "anyFile": "Any file",
         "criptoveuFiles": ".criptoveu files",
         "planLimit": "Plan limit",
+        "opfsStorage": "Local storage limit",
         "activeTier": "Active tier",
         "processing": "Processing",
         "blocksOf": "Blocks of {{size}}",
