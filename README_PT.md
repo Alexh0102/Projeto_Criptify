@@ -12,6 +12,8 @@ O projeto foi construído com foco em privacidade: arquivos, senhas, mensagens e
 
 **Repositório:** https://github.com/Alexh0102/Projeto_Criptoveu
 
+**Aplicativo Android:** [Baixar o APK mais recente](https://github.com/Alexh0102/Projeto_Criptoveu/releases/latest/download/CriptoVeu.apk)
+
 > Aviso importante: o CriptoVéu não deve ser interpretado como uma solução “100% segura” ou como substituto para auditoria criptográfica formal. A segurança final depende da senha escolhida, do dispositivo, do navegador, da integridade do código JavaScript entregue ao usuário e do ambiente de execução.
 
 ---
@@ -61,6 +63,7 @@ Principais recursos:
 - lucide-react para ícones.
 - Web Crypto API nativa do navegador.
 - hash-wasm para Argon2id em WebAssembly, executado em Web Worker.
+- OPFS para criptografia e descriptografia em um Web Worker dedicado quando `createSyncAccessHandle` está disponível.
 - qrcode para geração de QR Code.
 - jsqr para leitura de QR Code em imagens.
 - Service Worker e Web App Manifest para experiência PWA.
@@ -90,7 +93,9 @@ Principais recursos:
 
 A ferramenta de arquivos aceita múltiplos arquivos no modo de proteção e gera pacotes com extensão `.criptoveu`.
 
-A criptografia acontece em blocos de até **2 MB**, reduzindo o consumo de memória e permitindo processar arquivos maiores com mais estabilidade.
+A criptografia e a descriptografia acontecem em blocos de até **2 MB**. Em navegadores com suporte a manipuladores síncronos do OPFS, o Web Worker dedicado grava cada registro diretamente em um arquivo temporário no OPFS, sem acumular o pacote ou o arquivo recuperado na RAM. O arquivo temporário é sincronizado, fechado, convertido em um snapshot `File` e removido depois que o resultado é entregue à aplicação.
+
+O caminho OPFS remove o limite fixo anterior de 1 GB imposto pela aplicação. O limite prático passa a ser a quota de armazenamento disponível para o navegador, enquanto a memória permanece proporcional ao bloco ativo, aos dados de autenticação e ao perfil Argon2id selecionado, em vez de proporcional ao tamanho total do arquivo. Em navegadores sem a API OPFS necessária, o caminho alternativo continua disponível com uma proteção conservadora de 1 GB.
 
 Formato atual do pacote V4:
 
@@ -134,7 +139,9 @@ Detalhes técnicos:
 - O diagnóstico sem senha valida apenas a estrutura do pacote e usa a expressão **estrutura plausível**. Autenticidade exige a senha correta.
 - Cada resultado pode gerar um relatório JSON local com formato, KDF, parâmetros, contagem de blocos e estado da verificação.
 - Compatibilidade de leitura com `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1`.
-- Limite recomendado de arquivo: **2 GB**.
+- Com OPFS, o limite prático é o armazenamento local disponível e a quota do navegador. O caminho alternativo fica limitado a **1 GB**.
+
+No aplicativo Android com Capacitor, os resultados concluídos são exportados para `Download/` pelo plugin nativo Filesystem, uma fatia de 2 MB codificada em Base64 por vez. Em versões do Android que não permitem `ExternalStorage`, o gerenciador de downloads do WebView é usado como alternativa.
 
 > Observação: o SHA-256 do manifesto complementa a autenticação AES-GCM e permite verificação explícita pós-recuperação. Ele não substitui AES-GCM nem torna uma estrutura sem senha “verificada”.
 

@@ -415,7 +415,7 @@ test('CSP autoriza somente as políticas nomeadas dos Workers locais', async () 
   for (const config of [vercelConfig, netlifyConfig]) {
     assert.match(
       config,
-      /trusted-types criptoveu-argon2-worker criptoveu-integrity-worker/,
+      /trusted-types criptoveu-argon2-worker criptoveu-integrity-worker criptoveu-opfs-crypto-worker/,
     )
     assert.match(config, /worker-src 'self' blob:/)
   }

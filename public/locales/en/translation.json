@@ -314,7 +314,6 @@
       "eyebrow": "File encryption",
       "title": "Protect or recover files without leaving the browser.",
       "description": "Preview local videos, photos, PDFs, and documents before protecting or recovering files with a password, no upload required.",
-      "limitNotice": "File limit: up to 1 GB",
       "help": {
         "how": { "title": "How it works", "content": "You choose the files, set the password, and processing happens locally in the browser." },
         "privacy": { "title": "Privacy", "content": "Your files never leave the device. The result is generated locally for download." }
@@ -417,7 +416,6 @@
         "formats": "Supported formats",
         "anyFile": "Any file",
         "criptoveuFiles": ".criptoveu files",
-        "planLimit": "Plan limit",
         "activeTier": "Active tier",
         "processing": "Processing",
         "blocksOf": "Blocks of {{size}}",
@@ -438,7 +436,6 @@
         "filesReady_one": "1 file ready for processing",
         "filesReady_other": "{{count}} files ready for processing",
         "noFiles": "No file loaded",
-        "planLimit": "Plan limit: {{limit}}",
         "additionalFiles": "+ {{count}} additional file(s)"
       },
       "limitDialog": {

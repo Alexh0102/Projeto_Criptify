@@ -347,7 +347,6 @@
       "eyebrow": "Criptografia de arquivos",
       "title": "Proteja ou recupere arquivos sem sair do navegador.",
       "description": "Pré-visualize vídeos, fotos, PDFs e documentos locais antes de proteger ou recuperar arquivos com senha, sem upload.",
-      "limitNotice": "Limite para arquivos até 1 GB",
       "help": {
         "how": {
           "title": "Como funciona",
@@ -469,7 +468,6 @@
         "formats": "Formatos suportados",
         "anyFile": "Qualquer arquivo",
         "criptoveuFiles": "Arquivos .criptoveu",
-        "planLimit": "Limite do plano",
         "activeTier": "Camada ativa",
         "processing": "Processamento",
         "blocksOf": "Blocos de {{size}}",
@@ -490,7 +488,6 @@
         "filesReady_one": "1 arquivo pronto para processamento",
         "filesReady_other": "{{count}} arquivos prontos para processamento",
         "noFiles": "Nenhum arquivo carregado",
-        "planLimit": "Limite do plano: {{limit}}",
         "additionalFiles": "+ {{count}} arquivo(s) adicional(is)"
       },
       "limitDialog": {

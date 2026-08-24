@@ -10,7 +10,7 @@ const activationEmailPrompt =
   'Insira o e-mail onde você deseja receber a sua Chave de Ativação Vitalícia.'
 
 const freePlanItems = [
-  'Criptografia e recuperação de arquivos sem limite de usos; arquivos de até 1 GB.',
+  'Criptografia e recuperação de arquivos sem limite de usos ou de tamanho fixo.',
   'Até 10 gerações a cada 24h para Links Protegidos, QR Codes e Mensagens Ocultas.',
   'VéuNotes: totalmente ilimitado, sem restrições.',
 ]
@@ -36,7 +36,7 @@ const faqItems = [
   {
     title: 'O uso gratuito continua existindo?',
     content:
-      'Sim. A criptografia e a recuperação de arquivos não têm limite de quantidade de usos, respeitando apenas o limite gratuito de tamanho. Links Protegidos, QR Codes e Mensagens Ocultas oferecem 10 gerações a cada 24 horas.',
+      'Sim. A criptografia e a recuperação de arquivos não têm limite de quantidade de usos nem de tamanho fixo. Links Protegidos, QR Codes e Mensagens Ocultas oferecem 10 gerações a cada 24 horas.',
   },
   {
     title: 'Por que há limite em algumas ferramentas?',
