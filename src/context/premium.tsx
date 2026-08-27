@@ -25,7 +25,8 @@ import {
   normalizeLicenseKey,
   validateLicenseEmail,
 } from '../lib/premium'
-import { buildApiUrl } from '../lib/platform'
+import { comprarVitalicio, estaPremium, restaurarCompras } from '../lib/billing/play-billing'
+import { buildApiUrl, isNativeApp } from '../lib/platform'
 
 type PremiumTier = 'premium' | 'admin'
 
@@ -143,9 +144,11 @@ function getVerifyErrorMessage(response: VerifyLicenseResponse) {
 }
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
+  const nativeApp = isNativeApp()
   const [storedLicense, setStoredLicense] = useState<StoredPremiumLicense | null>(() =>
     safeReadStoredLicense(),
   )
+  const [hasNativePremium, setHasNativePremium] = useState(() => estaPremium())
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'checkout' | 'activate'>('checkout')
   const [modalTitle, setModalTitle] = useState(DEFAULT_MODAL_TITLE)
@@ -160,6 +163,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const [activationMessage, setActivationMessage] = useState('')
   const [isActivatingLicense, setIsActivatingLicense] = useState(false)
   const [isVerifyingLicense, setIsVerifyingLicense] = useState(false)
+  const [isPurchasingNative, setIsPurchasingNative] = useState(false)
 
   const saveActiveLicense = useCallback((license: StoredPremiumLicense) => {
     safeWriteStoredLicense(license)
@@ -219,6 +223,24 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   }, [verifyStoredLicense])
 
   useEffect(() => {
+    if (!nativeApp) {
+      return
+    }
+
+    let cancelled = false
+
+    void restaurarCompras().then((result) => {
+      if (!cancelled) {
+        setHasNativePremium(result.status === 'restored' || result.status === 'purchased' || estaPremium())
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [nativeApp])
+
+  useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
@@ -243,7 +265,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const requestPremiumAccess = useCallback((options?: PremiumModalOptions) => {
     setModalTitle(options?.title ?? DEFAULT_MODAL_TITLE)
     setModalDescription(options?.description ?? DEFAULT_MODAL_DESCRIPTION)
-    setModalMode(options?.mode ?? 'checkout')
+    setModalMode(isNativeApp() ? 'checkout' : options?.mode ?? 'checkout')
     setCheckoutError('')
     setCheckoutMessage('')
     setActivationError('')
@@ -293,6 +315,46 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsCreatingCheckout(false)
     }
+  }
+
+  async function handleNativePurchase() {
+    setIsPurchasingNative(true)
+    setCheckoutError('')
+    setCheckoutMessage('Abrindo a compra segura da Google Play...')
+
+    const result = await comprarVitalicio()
+
+    if (result.status === 'purchased') {
+      setHasNativePremium(true)
+      setCheckoutMessage('Compra concluída. O Premium já está liberado neste aparelho.')
+    } else if (result.status === 'pending') {
+      setCheckoutMessage('Pagamento pendente. O Premium será liberado quando a Google Play confirmar a compra.')
+    } else {
+      setCheckoutMessage('')
+      setCheckoutError(result.status === 'failed' ? result.message : 'A Google Play não está disponível neste aparelho.')
+    }
+
+    setIsPurchasingNative(false)
+  }
+
+  async function handleNativeRestore() {
+    setIsPurchasingNative(true)
+    setCheckoutError('')
+    setCheckoutMessage('Procurando compras anteriores na Google Play...')
+
+    const result = await restaurarCompras()
+
+    if (result.status === 'restored' || result.status === 'purchased') {
+      setHasNativePremium(true)
+      setCheckoutMessage('Compra restaurada. O Premium já está liberado neste aparelho.')
+    } else if (result.status === 'pending') {
+      setCheckoutMessage('Existe uma compra pendente. Aguarde a confirmação da Google Play.')
+    } else {
+      setCheckoutMessage('')
+      setCheckoutError(result.status === 'failed' ? result.message : 'A Google Play não está disponível neste aparelho.')
+    }
+
+    setIsPurchasingNative(false)
   }
 
   async function handleActivateLicense() {
@@ -349,7 +411,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   const contextValue = useMemo<PremiumContextValue>(
     () => ({
-      isPremium: Boolean(storedLicense),
+      isPremium: Boolean(storedLicense) || hasNativePremium,
       tier: storedLicense?.tier ?? null,
       licenseEmail: storedLicense?.email ?? '',
       isVerifyingLicense,
@@ -359,6 +421,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     }),
     [
       clearPremiumLicense,
+      hasNativePremium,
       isVerifyingLicense,
       openLicenseActivation,
       requestPremiumAccess,
@@ -402,7 +465,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {!nativeApp ? <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setModalMode('checkout')}
@@ -419,7 +482,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
                 <p className="text-sm font-semibold text-white">Ativar chave</p>
                 <p className="mt-1 text-xs leading-5 text-zinc-400">Valide a chave recebida por e-mail.</p>
               </button>
-            </div>
+            </div> : null}
 
             {storedLicense ? (
               <div className="mt-5 rounded-[24px] border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm text-emerald-50">
@@ -439,6 +502,49 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
             ) : null}
 
             {modalMode === 'checkout' ? (
+              nativeApp ? (
+                <div className="mt-5 surface-primary rounded-[26px] p-4 sm:p-5">
+                  <p className="text-sm font-semibold text-white">Compra única pela Google Play</p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-300">
+                    O Premium será liberado neste aparelho assim que a compra for confirmada. O desbloqueio não depende de e-mail nem de conexão com o servidor.
+                  </p>
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => void handleNativePurchase()}
+                      disabled={isPurchasingNative}
+                      className="btn-primary"
+                    >
+                      {isPurchasingNative ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
+                      Comprar na Google Play
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleNativeRestore()}
+                      disabled={isPurchasingNative}
+                      className="btn-secondary"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      Restaurar compras
+                    </button>
+                  </div>
+
+                  {checkoutError ? (
+                    <div className="mt-4 rounded-[20px] border border-rose-500/25 bg-rose-500/10 p-3 text-sm text-rose-100">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <p>{checkoutError}</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {checkoutMessage ? (
+                    <div className="mt-4 rounded-[20px] border border-cyan-500/25 bg-cyan-500/10 p-3 text-sm text-cyan-50">
+                      {checkoutMessage}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
               <div className="mt-5 surface-primary rounded-[26px] p-4 sm:p-5">
                 <label className="text-sm font-medium text-white" htmlFor="premium-checkout-email">
                   Insira o e-mail onde você deseja receber a sua Chave de Ativação Vitalícia
@@ -485,6 +591,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
                   </div>
                 ) : null}
               </div>
+              )
             ) : (
               <div className="mt-5 surface-primary rounded-[26px] p-4 sm:p-5">
                 <div className="grid gap-3">

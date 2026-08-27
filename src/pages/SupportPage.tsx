@@ -5,6 +5,7 @@ import ToolPageLayout from '../components/layout/ToolPageLayout'
 import HelpAccordion from '../components/ui/HelpAccordion'
 import ToolHeroCompact from '../components/ui/ToolHeroCompact'
 import { usePremium } from '../context/premium'
+import { isNativeApp } from '../lib/platform'
 
 const activationEmailPrompt =
   'Insira o e-mail onde você deseja receber a sua Chave de Ativação Vitalícia.'
@@ -47,6 +48,7 @@ const faqItems = [
 
 export default function SupportPage() {
   const { isPremium, tier, requestPremiumAccess, openLicenseActivation } = usePremium()
+  const nativeApp = isNativeApp()
 
   function handleSupportClick() {
     requestPremiumAccess({
@@ -62,11 +64,13 @@ export default function SupportPage() {
           eyebrow="Doação incentivada"
           badge="Projeto aberto"
           title="Apoie o CriptoVéu e libere processamento ilimitado."
-          description="Uma contribuição única ajuda a manter o projeto open-source ativo, independente e sem anúncios. Em troca, você recebe uma Chave de Ativação Vitalícia."
+          description={nativeApp
+            ? 'Uma compra única pela Google Play ajuda a manter o projeto open-source ativo, independente e sem anúncios. O Premium é liberado neste aparelho.'
+            : 'Uma contribuição única ajuda a manter o projeto open-source ativo, independente e sem anúncios. Em troca, você recebe uma Chave de Ativação Vitalícia.'}
           actions={
             <button type="button" onClick={handleSupportClick} className="btn-primary">
               <Crown className="h-4 w-4" />
-              Apoiar com R$ 10
+              {nativeApp ? 'Comprar na Google Play' : 'Apoiar com R$ 10'}
             </button>
           }
         />
@@ -77,12 +81,14 @@ export default function SupportPage() {
               <div>
                 <p className="text-xs uppercase tracking-[0.32em] text-emerald-50">Apoio ao projeto</p>
                 <h2 className="mt-2 text-xl font-semibold text-white sm:text-[1.8rem]">
-                  Apoie o CriptoVéu: contribua com o projeto e libere processamento ilimitado
+                  {nativeApp
+                    ? 'Apoie o CriptoVéu pela Google Play e libere processamento ilimitado'
+                    : 'Apoie o CriptoVéu: contribua com o projeto e libere processamento ilimitado'}
                 </h2>
               </div>
               <button type="button" onClick={handleSupportClick} className="btn-primary shrink-0">
                 <Crown className="h-4 w-4" />
-                Apoiar com R$ 10
+                {nativeApp ? 'Comprar na Google Play' : 'Apoiar com R$ 10'}
               </button>
             </div>
           </div>
@@ -101,6 +107,12 @@ export default function SupportPage() {
                     <span>{item}</span>
                   </div>
                 ))}
+                {!nativeApp ? (
+                  <div className="flex items-start gap-3 text-sm leading-6 text-zinc-200">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-100" />
+                    <span>Recibo e fatura em PDF enviados pela Stripe.</span>
+                  </div>
+                ) : null}
               </div>
               <p className="mt-5 rounded-[20px] border border-cyan-400/15 bg-cyan-400/[0.05] p-3 text-xs leading-6 text-zinc-400">
                 Transparência: o processamento é local. A cota de links, QRs e mensagens ocultas
@@ -123,9 +135,11 @@ export default function SupportPage() {
               <p className="mt-3 text-sm leading-7 text-zinc-300">
                 Uma microdoação única para ajudar a manter o software open-source ativo, livre de anúncios e independente.
               </p>
-              <p className="mt-3 text-xs leading-6 text-zinc-400">
-                Meios de pagamento aceitos: cartão de crédito, cartão de débito, Google Pay e boleto.
-              </p>
+              {!nativeApp ? (
+                <p className="mt-3 text-xs leading-6 text-zinc-400">
+                  Meios de pagamento aceitos: cartão de crédito, cartão de débito, Google Pay e boleto.
+                </p>
+              ) : null}
               <p className="mt-3 rounded-[20px] border border-cyan-400/15 bg-cyan-400/[0.05] p-3 text-xs leading-6 text-zinc-300">
                 Privacidade: a chave de apoio remove apenas os limites comunitários. Ela não
                 acessa arquivos, mensagens, senhas ou notas.
@@ -143,16 +157,20 @@ export default function SupportPage() {
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button type="button" onClick={handleSupportClick} className="btn-primary">
                   <Crown className="h-4 w-4" />
-                  Apoiar com R$ 10
+                  {nativeApp ? 'Comprar na Google Play' : 'Apoiar com R$ 10'}
                 </button>
-                <button type="button" onClick={openLicenseActivation} className="btn-secondary">
-                  Já tenho uma chave
-                </button>
+                {!nativeApp ? (
+                  <button type="button" onClick={openLicenseActivation} className="btn-secondary">
+                    Já tenho uma chave
+                  </button>
+                ) : null}
               </div>
 
               {isPremium ? (
                 <p className="mt-4 rounded-[20px] border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm text-emerald-50">
-                  {tier === 'admin' ? 'Acesso Admin ativo neste navegador.' : 'Apoiador Vitalício ativo neste navegador.'}
+                  {tier === 'admin'
+                    ? `Acesso Admin ativo ${nativeApp ? 'neste aparelho' : 'neste navegador'}.`
+                    : `Apoiador Vitalício ativo ${nativeApp ? 'neste aparelho' : 'neste navegador'}.`}
                 </p>
               ) : null}
             </article>
@@ -167,10 +185,12 @@ export default function SupportPage() {
                 Fluxo seguro
               </div>
               <h2 className="mt-4 text-xl font-semibold text-white sm:text-[1.9rem]">
-                O pagamento abre pela Stripe e a chave chega por e-mail.
+                {nativeApp ? 'A compra é processada pela Google Play.' : 'O pagamento abre pela Stripe e a chave chega por e-mail.'}
               </h2>
               <p className="mt-2.5 max-w-3xl text-sm leading-7 text-zinc-400 sm:text-base">
-                O e-mail é usado apenas para travar o checkout e entregar a chave matemática. A validação acontece no servidor, sem expor segredos no código público.
+                {nativeApp
+                  ? 'O Premium é liberado localmente após a confirmação da compra e continua disponível sem depender do servidor.'
+                  : 'O e-mail é usado apenas para travar o checkout e entregar a chave matemática. A validação acontece no servidor, sem expor segredos no código público.'}
               </p>
             </div>
             <Link to="/arquivos" className="btn-secondary shrink-0">
