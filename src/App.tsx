@@ -19,6 +19,7 @@ const LinkSecretPage = lazy(() => import('./pages/LinkSecretPage'))
 const QrSecretPage = lazy(() => import('./pages/QrSecretPage'))
 const SteganographyPage = lazy(() => import('./pages/SteganographyPage'))
 const VeuNotesPage = lazy(() => import('./pages/VeuNotesPage'))
+const SettingsPage = lazy(() => import('./components/settings/SettingsWorkspace'))
 
 function RouteFallback() {
   return (
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="/link-secreto" element={<LinkSecretPage />} />
             <Route path="/esteganografia" element={<SteganographyPage />} />
             <Route path="/veu-notes" element={<VeuNotesPage />} />
+            <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="/apoiar" element={<SupportPage />} />
             <Route path="/doacao" element={<SupportPage />} />
             <Route path="/privacidade" element={<PrivacyPage />} />
