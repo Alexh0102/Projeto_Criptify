@@ -107,8 +107,96 @@
       "betaDescription": "Try new features before they join the main list.",
       "home": "Home",
       "homeHelper": "Go back to the CriptoVéu overview.",
+      "settings": "Settings",
+      "settingsHelper": "Manage your profile and preferences on this device.",
       "closeToolsAria": "Close tools menu",
       "closeDrawerAria": "Close drawer"
+    }
+  },
+  "settings": {
+    "eyebrow": "Local preferences",
+    "badge": "Profile on this device",
+    "back": "Back",
+    "loading": "Loading local preferences...",
+    "title": "Settings and profile",
+    "description": "Personalize your experience without creating an account. This screen's data stays only in this browser or device.",
+    "profile": {
+      "eyebrow": "Local identity",
+      "title": "Your profile",
+      "description": "Use these details only to recognize your space on this device. They are not sent to CriptoVéu.",
+      "avatarLabel": "Choose local avatar",
+      "avatars": {
+        "shield-cyan": "Shield",
+        "lock": "Lock",
+        "terminal": "Terminal",
+        "sparkles": "Sparkles"
+      },
+      "nameLabel": "Display name",
+      "namePlaceholder": "What should we call you?",
+      "emailLabel": "Optional email",
+      "emailPlaceholder": "you@example.com",
+      "free": "Free plan",
+      "lifetime": "Lifetime supporter",
+      "activate": "Activate key",
+      "localNote": "This profile is not an account. There is no sync, login, or recovery on another device.",
+      "save": "Save profile",
+      "clear": "Clear profile",
+      "saved": "Profile saved only on this device."
+    },
+    "crypto": {
+      "eyebrow": "Encryption and export",
+      "title": "Processing preferences",
+      "description": "Choose the balance between memory, performance, and resistance to brute-force attempts.",
+      "profileLabel": "Default Argon2id profile",
+      "autoReport": "Generate JSON report automatically",
+      "autoReportNote": "An integrity report is exported with each completed result.",
+      "nativeDestination": "On Android, files and reports are written to Internal Storage > Documents.",
+      "browserDestination": "In the browser, files and reports are downloaded to your system's default folder.",
+      "localOnly": "Parameters apply only on this device."
+    },
+    "stats": {
+      "eyebrow": "Privacy dashboard",
+      "title": "Local statistics",
+      "description": "Track your usage without sending metrics or file names to servers.",
+      "encrypted": "Files protected",
+      "decrypted": "Files recovered",
+      "bytes": "Data processed",
+      "localNote": "Data is stored exclusively on this device."
+    },
+    "system": {
+      "eyebrow": "System preferences",
+      "title": "Language and appearance",
+      "languageLabel": "Language",
+      "themeLabel": "Theme"
+    },
+    "reset": {
+      "eyebrow": "Security zone",
+      "title": "Restore local settings",
+      "description": "Remove the profile, encryption preferences, and local statistics. The notes vault and licenses will not be deleted.",
+      "action": "Restore and clear local data",
+      "confirmTitle": "Confirm local cleanup",
+      "confirmDescription": "This resets your profile, preferences, and statistics on this device. Your files and notes remain intact.",
+      "cancel": "Cancel",
+      "confirm": "Clear local data only"
+    },
+    "preferences": {
+      "eyebrow": "Preferences",
+      "title": "Appearance and language",
+      "lightTheme": "Use light theme",
+      "darkTheme": "Use dark theme",
+      "languageNote": "Change the language with the selector at the top; it is also saved locally."
+    },
+    "access": {
+      "eyebrow": "Premium access",
+      "title": "Your access",
+      "active": "Premium access is active on this device.",
+      "description": "See the support options and limits available for your experience.",
+      "playAction": "View Google Play purchase",
+      "webAction": "View support and activation"
+    },
+    "data": {
+      "title": "Your data stays local",
+      "description": "The profile is separate from your notes vault, licenses, and usage counters. Clearing the profile does not delete any of them."
     }
   },
   "premium": {

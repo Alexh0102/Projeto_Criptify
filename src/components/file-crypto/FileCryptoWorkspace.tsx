@@ -38,7 +38,6 @@ import { useInactivity } from '../../hooks/useInactivity'
 import { useStreamingCrypto } from '../../hooks/useStreamingCrypto'
 import {
   ARGON2_FILE_ITERATIONS,
-  DEFAULT_FILE_SECURITY_PROFILE_ID,
   FILE_SECURITY_PROFILES,
   MAX_FILE_PACKAGE_OVERHEAD_BYTES,
   MAX_FILE_SIZE,
@@ -56,6 +55,12 @@ import {
   exportFileToNativeDownloads,
   supportsNativeFileExport,
 } from '../../lib/native-file-export'
+import {
+  getPreferencesSync,
+  getSecurityProfileIdFromPreferences,
+  incrementStats,
+  updatePreferences,
+} from '../../lib/storage/preferences-storage'
 
 type Mode = 'encrypt' | 'decrypt'
 type StatusTone = 'info' | 'success' | 'error'
@@ -136,19 +141,6 @@ async function hasInsufficientStorage(fileSize: number) {
   }
 }
 
-function loadSecurityProfileId(): FileSecurityProfileId {
-  try {
-    const storedValue = window.localStorage.getItem(FILE_SECURITY_PROFILE_STORAGE_KEY)
-    const selectedProfile = FILE_SECURITY_PROFILES.find(
-      (profile) => profile.id === storedValue,
-    )
-
-    return selectedProfile?.id ?? DEFAULT_FILE_SECURITY_PROFILE_ID
-  } catch {
-    return DEFAULT_FILE_SECURITY_PROFILE_ID
-  }
-}
-
 function hasSupportedRecoveryExtension(fileName: string) {
   const normalizedName = fileName.toLowerCase()
   return SUPPORTED_RECOVERY_EXTENSIONS.some((extension) =>
@@ -196,7 +188,7 @@ export default function FileCryptoWorkspace() {
   const [exportNotice, setExportNotice] = useState<string | null>(null)
   const [isFileLimitDialogOpen, setIsFileLimitDialogOpen] = useState(false)
   const [securityProfileId, setSecurityProfileId] =
-    useState<FileSecurityProfileId>(loadSecurityProfileId)
+    useState<FileSecurityProfileId>(getSecurityProfileIdFromPreferences)
   const fileInputId = useId()
   const keyFileInputId = useId()
   const passwordInputId = useId()
@@ -309,6 +301,13 @@ export default function FileCryptoWorkspace() {
   useEffect(() => {
     try {
       window.localStorage.setItem(FILE_SECURITY_PROFILE_STORAGE_KEY, securityProfileId)
+      const selectedProfile = FILE_SECURITY_PROFILES.find((profile) => profile.id === securityProfileId)
+
+      if (selectedProfile) {
+        void updatePreferences({
+          crypto: { defaultArgon2MemoryMb: selectedProfile.memoryMb },
+        })
+      }
     } catch {
       // A seleção em memória continua válida quando o armazenamento é bloqueado.
     }
@@ -716,6 +715,7 @@ export default function FileCryptoWorkspace() {
     try {
       const processedResults: ResultItem[] = []
       const failures: string[] = []
+      const localPreferences = getPreferencesSync()
 
       for (const [index, currentFile] of files.entries()) {
         const currentStep = index + 1
@@ -783,6 +783,12 @@ export default function FileCryptoWorkspace() {
           if (mode === 'encrypt') {
             await handleDownloadResult(processedResult)
           }
+
+          if (localPreferences.crypto.autoDownloadJsonReport) {
+            await handleDownloadSecurityReport(processedResult)
+          }
+
+          await incrementStats(1, currentFile.size, mode)
 
           processedResults.push(processedResult)
         } catch (error) {
