@@ -538,6 +538,11 @@
         "packageSaved": "Arquivo criptografado salvo com sucesso.",
         "saveCancelled": "Salvamento cancelado pelo usuário.",
         "saveFailed": "Não foi possível salvar o arquivo criptografado.",
+        "saveEncryptedFile": "Salvar arquivo criptografado",
+        "saveRecoveredFile": "Salvar arquivo recuperado",
+        "previewAvailable": "Integridade confirmada. Prévia disponível.",
+        "previewUnavailable": "A prévia não está disponível para este tipo de arquivo.",
+        "previewTooLarge": "O arquivo é muito grande para pré-visualização segura.",
         "processing": {
           "encrypt": "Protegendo arquivos localmente...",
           "decrypt": "Recuperando arquivos localmente..."
