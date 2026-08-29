@@ -121,6 +121,7 @@ export type FileEncryptionOptions = FileSizeGuardOptions & {
   argon2Iterations?: number
   keyFile?: File | null
   recoverable?: boolean
+  signal?: AbortSignal
 }
 
 export type Argon2Parameters = {
@@ -218,7 +219,6 @@ type OpfsWorkerResponse =
   | {
       id: number
       type: 'SUCCESS'
-      resultFile: File
       expectedSize: number
       downloadName: string
       securityReport: FileSecurityReport
@@ -597,6 +597,7 @@ async function processFileWithOpfs(
 
   return new Promise<ProcessResult>((resolve, reject) => {
     const worker = createOpfsCryptoWorker()
+    let settled = false
     let cleanupPromise: Promise<void> | null = null
     let resolveCleanup: (() => void) | null = null
 
@@ -618,6 +619,7 @@ async function processFileWithOpfs(
       }
 
       if (event.data.type === 'ERROR') {
+        settled = true
         worker.terminate()
         if (event.data.code === 'OPFS_UNSUPPORTED') {
           reject(new OpfsUnavailableError(event.data.message))
@@ -632,24 +634,16 @@ async function processFileWithOpfs(
         return
       }
 
-      const resultFile = event.data.resultFile
       const expectedSize = event.data.expectedSize
       const downloadName = event.data.downloadName
       const securityReport = event.data.securityReport
       const tempFileName = event.data.tempFileName
 
-      if (resultFile.size !== expectedSize) {
-        worker.postMessage({
-          id: requestId,
-          type: 'CLEANUP',
-          tempFileName,
-        })
-        reject(
-          new CriptoveuError(
-            'INTEGRITY_FAILED',
-            `Gravacao OPFS incompleta: tamanho esperado ${expectedSize} bytes, mas foram recebidos ${resultFile.size} bytes.`,
-          ),
-        )
+      const opfsRoot = (navigator.storage as OpfsStorageManager).getDirectory
+      if (!opfsRoot) {
+        worker.postMessage({ id: requestId, type: 'CLEANUP', tempFileName })
+        settled = true
+        reject(new CriptoveuError('INTEGRITY_FAILED', 'OPFS indisponível após a criptografia.'))
         return
       }
 
@@ -672,15 +666,37 @@ async function processFileWithOpfs(
         return cleanupPromise
       }
 
-      resolve({
-        blob: resultFile,
+      void opfsRoot().then(async (root) => {
+        const handle = await (root as { getFileHandle: (name: string) => Promise<{ getFile: () => Promise<File> }> }).getFileHandle(tempFileName)
+        const resultFile = await handle.getFile()
+        if (resultFile.size !== expectedSize) {
+          throw new CriptoveuError('INTEGRITY_FAILED', `Gravação OPFS incompleta: tamanho esperado ${expectedSize} bytes, mas foram recebidos ${resultFile.size} bytes.`)
+        }
+        if (settled) return
+        settled = true
+        resolve({
+          blob: resultFile,
         downloadName,
         securityReport,
-        dispose,
+          dispose,
+        })
+      }).catch((error) => {
+        worker.postMessage({ id: requestId, type: 'CLEANUP', tempFileName })
+        if (!settled) { settled = true; reject(error) }
       })
     }
 
+    const signal = options?.signal
+    const cancel = () => {
+      if (settled) return
+      worker.postMessage({ id: requestId, type: 'CANCEL' })
+      settled = true
+      reject(new DOMException('Processamento cancelado pelo usuário.', 'AbortError'))
+    }
+    signal?.addEventListener('abort', cancel, { once: true })
+
     worker.onerror = () => {
+      settled = true
       worker.terminate()
       reject(
         new CriptoveuError(

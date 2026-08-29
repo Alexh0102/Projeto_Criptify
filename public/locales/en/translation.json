@@ -482,6 +482,8 @@
         "fileTooLarge": "File is above {{size}}. Choose a smaller file to continue.",
         "fileExceedsLimit": "The selected file exceeds the 1 GB limit for 100% local and secure processing in device memory.",
         "preparingSecureEnvironment": "Preparing secure environment",
+        "savingDocuments": "Saving to Documents: {{written}} of {{total}}",
+        "cancelled": "Operation cancelled. Validated files remain in Documents.",
         "processing": { "encrypt": "Protecting files locally...", "decrypt": "Recovering files locally..." },
         "fileStep": "File {{current}}/{{total}} - {{label}}",
         "unexpectedFileFailure": "Unexpected failure while processing this file.",

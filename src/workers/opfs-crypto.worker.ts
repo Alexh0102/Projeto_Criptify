@@ -57,6 +57,8 @@ type CleanupRequest = {
   tempFileName: string
 }
 
+type CancelRequest = { id: number; type: 'CANCEL' }
+
 type WorkerErrorCode =
   | 'OPFS_UNSUPPORTED'
   | 'FILE_TOO_LARGE'
@@ -77,7 +79,6 @@ type WorkerResponse =
   | {
       id: number
       type: 'SUCCESS'
-      resultFile: File
       expectedSize: number
       downloadName: string
       securityReport: FileSecurityReport
@@ -180,12 +181,22 @@ const completedOpfsFiles = new Map<
   number,
   { root: OpfsDirectoryHandle; tempFileName: string }
 >()
+const cancelledRequests = new Set<number>()
+
+function throwIfCancelled(id: number) {
+  if (cancelledRequests.has(id)) {
+    throw new WorkerCryptoError('INVALID_FILE', 'Processamento cancelado pelo usuário.')
+  }
+}
 
 function postResponse(response: WorkerResponse) {
   workerScope.postMessage(response)
 }
 
 function postProgress(id: number, value: number, label: string) {
+  if (import.meta.env?.DEV) {
+    console.debug('[CriptoVéu][worker]', { stage: 'crypto-progress', id, chunkIndex: null, totalChunks: null, bytesWritten: null, expectedSize: null, value, label, elapsedMs: 0, freeStorageEstimate: null })
+  }
   postResponse({ id, type: 'PROGRESS', value, label })
 }
 
@@ -775,6 +786,7 @@ async function encryptFileToOpfs(
   postProgress(request.id, 26, 'Chave AES-GCM preparada')
 
   for (let chunkIndex = 0; chunkIndex < manifest.chunkCount; chunkIndex += 1) {
+    throwIfCancelled(request.id)
     const start = chunkIndex * CHUNK_SIZE_BYTES
     const end = Math.min(request.file.size, start + CHUNK_SIZE_BYTES)
     const plainChunk = new Uint8Array(
@@ -1073,6 +1085,7 @@ async function decryptFileToOpfs(
   }
 
   while (dataChunkIndex < parsedHeader.chunkCount) {
+    throwIfCancelled(request.id)
     const record = await readRecord(request.file, offset)
     const maximumLength = parsedHeader.chunkSize + AES_GCM_TAG_LENGTH_BYTES
     assertCiphertextLength(record.ciphertextLength, maximumLength)
@@ -1218,16 +1231,11 @@ async function handleRequest(request: WorkerRequest) {
         `Gravacao local incompleta: tamanho esperado ${result.expectedSize} bytes, mas foram persistidos ${storedFile.size} bytes. Verifique o espaco disponivel no dispositivo.`,
       )
     }
-    const resultFile = new File([storedFile], result.downloadName, {
-      type: result.mimeType,
-    })
-
     completedOpfsFiles.set(request.id, { root, tempFileName })
     keepTemporaryFile = true
     postResponse({
       id: request.id,
       type: 'SUCCESS',
-      resultFile,
       expectedSize: result.expectedSize,
       downloadName: result.downloadName,
       securityReport: result.securityReport,
@@ -1256,8 +1264,12 @@ async function cleanupTemporaryFile(request: CleanupRequest) {
   postResponse({ id: request.id, type: 'CLEANUP_DONE' })
 }
 
-workerScope.onmessage = (event: MessageEvent<WorkerRequest | CleanupRequest>) => {
-  if ('type' in event.data) {
+workerScope.onmessage = (event: MessageEvent<WorkerRequest | CleanupRequest | CancelRequest>) => {
+  if ('type' in event.data && event.data.type === 'CANCEL') {
+    cancelledRequests.add(event.data.id)
+    return
+  }
+  if ('type' in event.data && event.data.type === 'CLEANUP') {
     void cleanupTemporaryFile(event.data)
     return
   }

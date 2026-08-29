@@ -531,6 +531,8 @@
         "fileTooLarge": "Arquivo acima de {{size}}. Escolha um arquivo menor para continuar.",
         "fileExceedsLimit": "O arquivo selecionado excede o limite de 1 GB para processamento 100% local e seguro na memória do dispositivo.",
         "preparingSecureEnvironment": "Preparando ambiente seguro",
+        "savingDocuments": "Salvando em Documentos: {{written}} de {{total}}",
+        "cancelled": "Operação cancelada. Arquivos validados permanecem em Documentos.",
         "processing": {
           "encrypt": "Protegendo arquivos localmente...",
           "decrypt": "Recuperando arquivos localmente..."

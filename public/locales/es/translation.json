@@ -482,6 +482,8 @@
         "fileTooLarge": "El archivo supera {{size}}. Elige un archivo más pequeño para continuar.",
         "fileExceedsLimit": "El archivo seleccionado supera el límite de 1 GB para procesamiento 100% local e seguro en la memoria del dispositivo.",
         "preparingSecureEnvironment": "Preparando entorno seguro",
+        "savingDocuments": "Guardando en Documentos: {{written}} de {{total}}",
+        "cancelled": "Operación cancelada. Los archivos validados permanecen en Documentos.",
         "processing": { "encrypt": "Protegiendo archivos localmente...", "decrypt": "Recuperando archivos localmente..." },
         "fileStep": "Archivo {{current}}/{{total}} - {{label}}",
         "unexpectedFileFailure": "Fallo inesperado al procesar este archivo.",
