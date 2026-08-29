@@ -1,4 +1,5 @@
 export const MAX_AUTO_PREVIEW_SIZE_BYTES = 100 * 1024 * 1024
+export const MAX_NATIVE_PREVIEW_SIZE_BYTES = 50 * 1024 * 1024
 export const MAX_TEXT_PREVIEW_SIZE_BYTES = 5 * 1024 * 1024
 
 const MIME_BY_EXTENSION: Record<string, string> = {
@@ -39,6 +40,7 @@ export function getPreviewKind(
   fileName: string,
   resolvedMimeType: string,
   size: number,
+  maxPreviewSizeBytes = MAX_AUTO_PREVIEW_SIZE_BYTES,
 ): FilePreviewKind {
   const mimeType = resolvePreviewMimeType(fileName, resolvedMimeType)
   const kind = mimeType.startsWith('image/')
@@ -58,7 +60,7 @@ export function getPreviewKind(
 
   if (
     kind === 'unsupported' ||
-    size > MAX_AUTO_PREVIEW_SIZE_BYTES ||
+    size > maxPreviewSizeBytes ||
     (kind === 'text' && size > MAX_TEXT_PREVIEW_SIZE_BYTES)
   ) {
     return 'unsupported'

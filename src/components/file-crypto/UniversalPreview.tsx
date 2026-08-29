@@ -84,6 +84,24 @@ export default function UniversalPreview({
     }
   }, [isInactive])
 
+  useEffect(() => {
+    const container = containerRef.current
+
+    return () => {
+      const mediaElements = container?.querySelectorAll('video, audio') ?? []
+
+      for (const mediaElement of mediaElements) {
+        if (!(mediaElement instanceof HTMLMediaElement)) {
+          continue
+        }
+
+        mediaElement.pause()
+        mediaElement.removeAttribute('src')
+        mediaElement.load()
+      }
+    }
+  }, [url])
+
   function renderPreview() {
     if (metadata.kind === 'image') {
       if (imageFailed) {
