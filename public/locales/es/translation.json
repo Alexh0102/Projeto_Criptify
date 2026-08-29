@@ -420,6 +420,7 @@
       "localPreviewNote": "Vista previa local: este archivo se muestra directamente desde tu dispositivo. Puedes navegar por el vídeo o leer el documento sin subir nada a un servidor.",
       "hiddenByInactivity": "Vista previa oculta por inactividad.",
       "unsupported": "Este formato no tiene una vista previa segura en el navegador. Descarga el archivo para abrirlo en la app adecuada.",
+      "imageRenderFailed": "El archivo se recuperó con integridad confirmada, pero el navegador no pudo mostrar esta imagen. Aún puedes guardarlo.",
       "imageAlt": "Vista previa de {{fileName}}",
       "videoAria": "Vista previa de vídeo de {{fileName}}",
       "audioAria": "Vista previa de audio de {{fileName}}",

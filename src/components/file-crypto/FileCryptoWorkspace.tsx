@@ -756,7 +756,7 @@ export default function FileCryptoWorkspace() {
         let processedResult: ResultItem | null = null
 
         try {
-          const { blob, downloadName, securityReport, dispose } =
+          const { blob, downloadName, manifestMimeType, securityReport, dispose } =
             await streamingCrypto.processFile(
               mode,
               currentFile,
@@ -803,6 +803,17 @@ export default function FileCryptoWorkspace() {
             mode === 'decrypt'
               ? getUniversalPreviewMetadata(blob.type, downloadName, blob.size)
               : ({ kind: 'none', label: t('common.file') } as PreviewMetadata)
+
+          if (mode === 'decrypt' && import.meta.env.DEV) {
+            console.debug('[CriptoVéu][preview]', {
+              originalFileName: downloadName,
+              manifestMimeType: manifestMimeType ?? blob.type,
+              recoveredBlobType: blob.type,
+              fileSize: blob.size,
+              previewKind: nextPreview.kind,
+              reason: nextPreview.reason ?? null,
+            })
+          }
 
           processedResult = {
             id: `${downloadName}-${index}-${blob.size}`,
