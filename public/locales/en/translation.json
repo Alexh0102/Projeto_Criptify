@@ -420,6 +420,7 @@
       "localPreviewNote": "Local preview: this file is being shown directly from your device. You can scrub the video or read the document without uploading anything to a server.",
       "hiddenByInactivity": "Preview hidden due to inactivity.",
       "unsupported": "This format has no safe browser preview. Download the file to open it in the right app.",
+      "temporaryUnavailable": "The recovery was validated, but this temporary preview is unavailable in this browser.",
       "imageRenderFailed": "The file was recovered with confirmed integrity, but the browser could not render this image. You can still save it.",
       "imageAlt": "Preview of {{fileName}}",
       "videoAria": "Video preview of {{fileName}}",

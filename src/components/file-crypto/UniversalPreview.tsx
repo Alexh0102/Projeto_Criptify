@@ -23,6 +23,7 @@ type UniversalPreviewProps = {
   onOpen?: () => void
   onClose?: () => void
   onDownload?: (event: MouseEvent<HTMLButtonElement>) => void
+  previewUrlRevoked?: boolean
 }
 
 export default function UniversalPreview({
@@ -34,6 +35,7 @@ export default function UniversalPreview({
   onOpen,
   onClose,
   onDownload,
+  previewUrlRevoked = false,
 }: UniversalPreviewProps) {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -113,13 +115,44 @@ export default function UniversalPreview({
         )
       }
 
+      if (!url) {
+        return (
+          <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-5 text-sm leading-7 text-amber-50">
+            {t('files.preview.imageRenderFailed')}
+          </div>
+        )
+      }
+
       return (
         <img
           src={url}
           alt={t('files.preview.imageAlt', { fileName })}
-          onError={() => setImageFailed(true)}
-          className={`w-full rounded-2xl object-contain ${
-            expanded ? 'max-h-[76vh]' : 'max-h-[420px]'
+          onLoad={(event) => {
+            if (import.meta.env.DEV) {
+              console.debug('[CriptoVéu][preview-loaded]', {
+                fileName,
+                previewUrl: url,
+                naturalWidth: event.currentTarget.naturalWidth,
+                naturalHeight: event.currentTarget.naturalHeight,
+              })
+            }
+          }}
+          onError={(event) => {
+            if (import.meta.env.DEV) {
+              console.error('[CriptoVéu][preview-error]', {
+                fileName,
+                currentSrc: event.currentTarget.currentSrc,
+                previewBlobSize: blob.size,
+                previewBlobType: blob.type,
+                previewUrlIsBlob: url.startsWith('blob:'),
+                previewUrlRevoked,
+                cause: event.nativeEvent.type,
+              })
+            }
+            setImageFailed(true)
+          }}
+          className={`block h-auto w-auto max-w-full rounded-2xl object-contain ${
+            expanded ? 'max-h-[76vh]' : 'max-h-[65dvh]'
           }`}
         />
       )
