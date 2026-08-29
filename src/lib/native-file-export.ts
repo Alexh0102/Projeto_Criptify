@@ -9,6 +9,18 @@ const WATCHDOG_MS = 90_000
 const isDevelopment = import.meta.env.DEV
 
 type ExportProgress = { percent: number; bytesWritten: number; expectedSize: number; chunkIndex: number }
+type BrowserFileHandle = {
+  createWritable: () => Promise<{
+    write: (data: Blob) => Promise<void>
+    close: () => Promise<void>
+  }>
+}
+type BrowserWindow = Window & {
+  showSaveFilePicker?: (options?: {
+    suggestedName?: string
+    types?: Array<{ description: string; accept: Record<string, string[]> }>
+  }) => Promise<BrowserFileHandle>
+}
 
 function sanitizeFileName(fileName: string) {
   return Array.from(fileName, (character) => {
@@ -25,10 +37,33 @@ function triggerBrowserDownload(file: Blob, fileName: string) {
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 export function supportsNativeFileExport() { return isNativeApp() }
+
+export async function saveBlobInBrowser(fileBlob: Blob, fileName: string): Promise<void> {
+  const browserWindow = window as BrowserWindow
+  if (typeof browserWindow.showSaveFilePicker === 'function') {
+    if (isDevelopment) console.debug('[CriptoVéu][web-export]', { strategy: 'file-system-access', fileName, size: fileBlob.size })
+    try {
+      const fileHandle = await browserWindow.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: 'Pacote CriptoVéu', accept: { 'application/octet-stream': ['.criptoveu'] } }],
+      })
+      const writable = await fileHandle.createWritable()
+      await writable.write(fileBlob)
+      await writable.close()
+      return
+    } catch (error) {
+      if (isDevelopment) console.error('[CriptoVéu][web-export]', { stage: 'file-system-access', fileName, size: fileBlob.size, name: error instanceof Error ? error.name : undefined, message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined, error })
+      throw error
+    }
+  }
+
+  if (isDevelopment) console.debug('[CriptoVéu][web-export]', { strategy: 'blob-download', fileName, size: fileBlob.size })
+  triggerBrowserDownload(fileBlob, fileName)
+}
 
 async function getFreeStorageEstimate() {
   const estimate = await navigator.storage?.estimate?.()
@@ -56,7 +91,7 @@ export async function exportFileToNativeDownloads(
   fileName: string,
   onProgress?: (progress: number, detail?: ExportProgress) => void,
 ) {
-  if (!supportsNativeFileExport()) { triggerBrowserDownload(file, fileName); return }
+  if (!supportsNativeFileExport()) { await saveBlobInBrowser(file, fileName); return }
 
   const safeFileName = sanitizeFileName(fileName)
   const directory = Directory.Documents

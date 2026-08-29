@@ -533,6 +533,11 @@
         "preparingSecureEnvironment": "Preparando ambiente seguro",
         "savingDocuments": "Salvando em Documentos: {{written}} de {{total}}",
         "cancelled": "Operação cancelada. Arquivos validados permanecem em Documentos.",
+        "packageReady": "Pacote gerado. Escolha onde deseja salvá-lo.",
+        "savingPackage": "Salvando pacote criptografado...",
+        "packageSaved": "Arquivo criptografado salvo com sucesso.",
+        "saveCancelled": "Salvamento cancelado pelo usuário.",
+        "saveFailed": "Não foi possível salvar o arquivo criptografado.",
         "processing": {
           "encrypt": "Protegendo arquivos localmente...",
           "decrypt": "Recuperando arquivos localmente..."
