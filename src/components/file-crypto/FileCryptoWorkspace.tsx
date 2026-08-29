@@ -52,6 +52,7 @@ import {
 import { MAX_KEY_FILE_SIZE_BYTES } from '../../lib/key-file-protection'
 import {
   exportFileToNativeDownloads,
+  saveBlobInBrowser,
   supportsNativeFileExport,
 } from '../../lib/native-file-export'
 import {
@@ -145,15 +146,6 @@ function hasSupportedRecoveryExtension(fileName: string) {
   return SUPPORTED_RECOVERY_EXTENSIONS.some((extension) =>
     normalizedName.endsWith(extension),
   )
-}
-
-function downloadBlobUrl(url: string, fileName: string) {
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = fileName
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
 }
 
 function getFileIdentity(file: File, index: number) {
@@ -545,6 +537,11 @@ export default function FileCryptoWorkspace() {
       return
     }
 
+    setStatus({
+      tone: 'info',
+      message: t('files.workspace.status.savingPackage'),
+    })
+
     if (supportsNativeFileExport()) {
       await exportFileToNativeDownloads(result.blob, result.name, (value) => {
         const exportProgress = 90 + Math.round(value * 0.09)
@@ -557,7 +554,7 @@ export default function FileCryptoWorkspace() {
       })
       await result.dispose?.()
     } else {
-      downloadBlobUrl(result.url, result.name)
+      await saveBlobInBrowser(result.blob, result.name)
       await result.dispose?.()
     }
 
@@ -566,18 +563,34 @@ export default function FileCryptoWorkspace() {
       currentResults.map((currentResult) =>
         currentResult.id === result.id
           ? { ...currentResult, savedWithSuccess: true }
-          : currentResult,
+        : currentResult,
       ),
     )
+    setExportNotice(
+      supportsNativeFileExport()
+        ? t('files.workspace.results.savedNativeNotice')
+        : t('files.workspace.results.savedWebNotice'),
+    )
+    setStatus({
+      tone: 'success',
+      message: t('files.workspace.status.packageSaved'),
+    })
   }
 
   function handleDownloadFailure(error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      setExportNotice(t('files.workspace.status.saveCancelled'))
+      setStatus({
+        tone: 'info',
+        message: t('files.workspace.status.saveCancelled'),
+      })
+      return
+    }
     setStatus({
       tone: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : t('files.workspace.status.unexpectedDownloadFailure'),
+      message: error instanceof Error
+        ? `${t('files.workspace.status.saveFailed')}: ${error.message}`
+        : t('files.workspace.status.unexpectedDownloadFailure'),
     })
   }
 
@@ -734,6 +747,8 @@ export default function FileCryptoWorkspace() {
     try {
       const processedResults: ResultItem[] = []
       const failures: string[] = []
+      let saveCancelled = false
+      let savePending = false
       const localPreferences = getPreferencesSync()
 
       for (const [index, currentFile] of files.entries()) {
@@ -802,7 +817,15 @@ export default function FileCryptoWorkspace() {
             dispose,
           }
           if (mode === 'encrypt') {
-            await handleDownloadResult(processedResult, setProgress)
+            setStatus({
+              tone: 'info',
+              message: t('files.workspace.status.packageReady'),
+            })
+            if (supportsNativeFileExport()) {
+              await handleDownloadResult(processedResult, setProgress)
+            } else {
+              savePending = true
+            }
           }
 
           if (localPreferences.crypto.autoDownloadJsonReport) {
@@ -814,6 +837,15 @@ export default function FileCryptoWorkspace() {
           processedResults.push(processedResult)
         } catch (error) {
           if (error instanceof DOMException && error.name === 'AbortError') {
+            if (processedResult) {
+              saveCancelled = true
+              processedResults.push(processedResult)
+              setStatus({
+                tone: 'info',
+                message: t('files.workspace.status.saveCancelled'),
+              })
+              continue
+            }
             throw error
           }
           if (processedResult) {
@@ -872,9 +904,13 @@ export default function FileCryptoWorkspace() {
             }),
       )
       setStatus({
-        tone: failures.length > 0 ? 'error' : 'success',
+        tone: saveCancelled || savePending ? 'info' : failures.length > 0 ? 'error' : 'success',
         message:
-          mode === 'encrypt'
+          saveCancelled
+            ? t('files.workspace.status.saveCancelled')
+            : savePending
+              ? t('files.workspace.status.packageReady')
+            : mode === 'encrypt'
             ? failures.length > 0
               ? `${t('files.workspace.status.encryptedWithFailures', {
                   processed: processedResults.length,
