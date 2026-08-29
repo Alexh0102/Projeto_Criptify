@@ -87,6 +87,7 @@ type WorkerResponse =
       type: 'SUCCESS'
       expectedSize: number
       downloadName: string
+      mimeType: string
       securityReport: FileSecurityReport
       tempFileName: string
     }
@@ -1261,6 +1262,7 @@ async function handleRequest(request: WorkerRequest) {
       type: 'SUCCESS',
       expectedSize: result.expectedSize,
       downloadName: result.downloadName,
+      mimeType: result.mimeType,
       securityReport: result.securityReport,
       tempFileName,
     })

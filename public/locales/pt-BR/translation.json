@@ -459,6 +459,7 @@
       "localPreviewNote": "Pré-visualização local: este arquivo está sendo exibido diretamente do seu dispositivo. Você pode navegar pelo vídeo ou documento sem fazer upload para nenhum servidor.",
       "hiddenByInactivity": "Prévia ocultada por inatividade.",
       "unsupported": "Este formato não tem pré-visualização segura no navegador. Baixe o arquivo para abrir no aplicativo adequado.",
+      "imageRenderFailed": "O arquivo foi recuperado com integridade confirmada, mas o navegador não conseguiu renderizar esta imagem. Você ainda pode salvá-lo.",
       "imageAlt": "Prévia de {{fileName}}",
       "videoAria": "Prévia em vídeo de {{fileName}}",
       "audioAria": "Prévia em áudio de {{fileName}}",

@@ -37,9 +37,14 @@ export default function UniversalPreview({
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [textContent, setTextContent] = useState('')
+  const [imageFailed, setImageFailed] = useState(false)
   const metadata = getUniversalPreviewMetadata(blob.type, fileName, blob.size)
   const canExpand = !expanded && metadata.kind !== 'none'
   const previewKindLabel = t(`files.previewKinds.${metadata.kind}`)
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [blob, url])
 
   useEffect(() => {
     if (metadata.kind !== 'text') {
@@ -81,10 +86,19 @@ export default function UniversalPreview({
 
   function renderPreview() {
     if (metadata.kind === 'image') {
+      if (imageFailed) {
+        return (
+          <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-5 text-sm leading-7 text-amber-50">
+            {t('files.preview.imageRenderFailed')}
+          </div>
+        )
+      }
+
       return (
         <img
           src={url}
           alt={t('files.preview.imageAlt', { fileName })}
+          onError={() => setImageFailed(true)}
           className={`w-full rounded-2xl object-contain ${
             expanded ? 'max-h-[76vh]' : 'max-h-[420px]'
           }`}

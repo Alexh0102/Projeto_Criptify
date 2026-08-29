@@ -18,6 +18,7 @@ import {
   derivePasswordKeyFileMaterial,
 } from './key-file-protection'
 import { getOpfsRoot } from './opfs'
+import { resolvePreviewMimeType } from './file-preview'
 
 const LEGACY_CHUNKED_FILE_HEADER_TEXT = 'CRIPTIFY2'
 const PBKDF2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU2'
@@ -143,6 +144,7 @@ export type Argon2TextDecryptionInput = TextDecryptionInput &
 export type ProcessResult = {
   blob: Blob
   downloadName: string
+  manifestMimeType?: string
   securityReport: FileSecurityReport
   dispose?: () => void | Promise<void>
 }
@@ -222,6 +224,7 @@ type OpfsWorkerResponse =
       type: 'SUCCESS'
       expectedSize: number
       downloadName: string
+      mimeType: string
       securityReport: FileSecurityReport
       tempFileName: string
     }
@@ -656,6 +659,8 @@ async function processFileWithOpfs(
 
       const expectedSize = event.data.expectedSize
       const downloadName = event.data.downloadName
+      const resolvedMimeType = resolvePreviewMimeType(downloadName, event.data.mimeType)
+      const manifestMimeType = event.data.mimeType
       const securityReport = event.data.securityReport
       const tempFileName = event.data.tempFileName
 
@@ -688,8 +693,9 @@ async function processFileWithOpfs(
         if (settled) return
         settled = true
         resolve({
-          blob: resultFile,
+          blob: new File([resultFile], downloadName, { type: resolvedMimeType }),
           downloadName,
+          manifestMimeType,
           securityReport,
           dispose,
         })
@@ -2855,7 +2861,10 @@ export async function decryptFile(
   }
 
   assertRecoveredFileSize(result.blob, options)
-  return result
+  return {
+    ...result,
+    manifestMimeType: result.blob.type,
+  }
 }
 
 export function formatFileSize(bytes: number) {
