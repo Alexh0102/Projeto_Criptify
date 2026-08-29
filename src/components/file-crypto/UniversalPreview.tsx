@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import type { MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { getUniversalPreviewMetadata } from './preview-metadata'
@@ -21,7 +22,7 @@ type UniversalPreviewProps = {
   isInactive?: boolean
   onOpen?: () => void
   onClose?: () => void
-  onDownload?: () => void
+  onDownload?: (event: MouseEvent<HTMLButtonElement>) => void
 }
 
 export default function UniversalPreview({
@@ -185,6 +186,12 @@ export default function UniversalPreview({
     )
   }
 
+  function handleDownloadClick(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    onDownload?.(event)
+  }
+
   const PreviewIcon =
     metadata.kind === 'image'
       ? ImageIcon
@@ -221,7 +228,7 @@ export default function UniversalPreview({
           ) : null}
 
           {onDownload ? (
-            <button type="button" onClick={onDownload} className="btn-secondary w-full">
+            <button type="button" onClick={handleDownloadClick} className="btn-secondary w-full">
               <Download className="h-4 w-4" />
               {t('common.download')}
             </button>

@@ -16,7 +16,7 @@
   X,
 } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
-import type { ChangeEvent, DragEvent } from 'react'
+import type { ChangeEvent, DragEvent, MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -634,7 +634,14 @@ export default function FileCryptoWorkspace() {
     })
   }
 
-  async function handleDownloadSecurityReport(result: ResultItem) {
+  async function downloadSecurityReport(result: ResultItem) {
+    if (import.meta.env.DEV) {
+      console.debug('[CriptoVéu][click]', {
+        handler: 'downloadSecurityReport',
+        fileName: result.name,
+      })
+    }
+
     const reportBlob = new Blob(
       [JSON.stringify(result.securityReport, null, 2)],
       { type: 'application/json' },
@@ -650,14 +657,28 @@ export default function FileCryptoWorkspace() {
     }
   }
 
-  function handleDownload() {
+  async function saveRecoveredFile(result: ResultItem) {
+    if (import.meta.env.DEV) {
+      console.debug('[CriptoVéu][click]', {
+        handler: 'saveRecoveredFile',
+        fileName: result.name,
+      })
+    }
+
+    await handleDownloadResult(result)
+  }
+
+  function handleSaveRecoveredFromPreview(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+
     const targetResult = previewItem ?? results[0] ?? null
 
     if (!targetResult) {
       return
     }
 
-    void handleDownloadResult(targetResult).catch(handleDownloadFailure)
+    void saveRecoveredFile(targetResult).catch(handleDownloadFailure)
   }
 
   function handleDownloadAll() {
@@ -665,9 +686,16 @@ export default function FileCryptoWorkspace() {
       return
     }
 
+    if (import.meta.env.DEV) {
+      console.debug('[CriptoVéu][click]', {
+        handler: 'downloadAll',
+        count: results.length,
+      })
+    }
+
     results.forEach((result, index) => {
       window.setTimeout(() => {
-        void handleDownloadResult(result).catch(handleDownloadFailure)
+        void saveRecoveredFile(result).catch(handleDownloadFailure)
       }, index * 120)
     })
   }
@@ -697,6 +725,12 @@ export default function FileCryptoWorkspace() {
     }
     setIsPreviewOpen(false)
     setPreviewItem(null)
+  }
+
+  function handlePreviewBackdropClick(event: MouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) {
+      handleClosePreview()
+    }
   }
 
   async function handleProcess() {
@@ -862,8 +896,12 @@ export default function FileCryptoWorkspace() {
             await handleDownloadResult(processedResult, setProgress)
           }
 
-          if (localPreferences.crypto.autoDownloadJsonReport && supportsNativeFileExport()) {
-            await handleDownloadSecurityReport(processedResult)
+          if (
+            mode === 'encrypt' &&
+            localPreferences.crypto.autoDownloadJsonReport &&
+            supportsNativeFileExport()
+          ) {
+            await downloadSecurityReport(processedResult)
           }
 
           await incrementStats(1, currentFile.size, mode)
@@ -1617,11 +1655,11 @@ export default function FileCryptoWorkspace() {
 
                         <button
                           type="button"
-                          onClick={() =>
-                            void handleDownloadResult(result).catch(
-                              handleDownloadFailure,
-                            )
-                          }
+                          onClick={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            void saveRecoveredFile(result).catch(handleDownloadFailure)
+                          }}
                           className={`btn-secondary w-full ${
                             result.savedWithSuccess
                               ? 'border-emerald-400/35 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/50 hover:bg-emerald-400/15'
@@ -1716,9 +1754,11 @@ export default function FileCryptoWorkspace() {
 
                         <button
                           type="button"
-                          onClick={() =>
-                            handleDownloadSecurityReport(result)
-                          }
+                          onClick={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            void downloadSecurityReport(result)
+                          }}
                           className="btn-secondary shrink-0"
                         >
                           <Download className="h-4 w-4" />
@@ -1771,11 +1811,11 @@ export default function FileCryptoWorkspace() {
                           fileName={result.name}
                           isInactive={isInactive}
                           onOpen={() => handleOpenPreview(result)}
-                          onDownload={() =>
-                            void handleDownloadResult(result).catch(
-                              handleDownloadFailure,
-                            )
-                          }
+                          onDownload={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            void saveRecoveredFile(result).catch(handleDownloadFailure)
+                          }}
                         />
                       </div>
                     ) : null}
@@ -1804,15 +1844,8 @@ export default function FileCryptoWorkspace() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="recovered-file-preview-title"
+          onClick={handlePreviewBackdropClick}
         >
-          <button
-            type="button"
-            onClick={handleClosePreview}
-            className="absolute inset-0"
-            aria-label={t('files.workspace.preview.closeExpandedAria')}
-            autoFocus
-          />
-
           <div className="relative z-10 w-full max-w-6xl rounded-[32px] border border-white/10 bg-zinc-950/95 p-4 shadow-2xl shadow-black/40 sm:p-6">
             <h2 id="recovered-file-preview-title" className="sr-only">
               {t('files.workspace.preview.expandedAria')}
@@ -1824,7 +1857,7 @@ export default function FileCryptoWorkspace() {
               expanded
               isInactive={isInactive}
               onClose={handleClosePreview}
-              onDownload={handleDownload}
+              onDownload={handleSaveRecoveredFromPreview}
             />
           </div>
         </div>
