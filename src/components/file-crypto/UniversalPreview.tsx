@@ -37,7 +37,7 @@ export default function UniversalPreview({
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [textContent, setTextContent] = useState('')
-  const metadata = getUniversalPreviewMetadata(blob.type)
+  const metadata = getUniversalPreviewMetadata(blob.type, fileName, blob.size)
   const canExpand = !expanded && metadata.kind !== 'none'
   const previewKindLabel = t(`files.previewKinds.${metadata.kind}`)
 
@@ -50,7 +50,11 @@ export default function UniversalPreview({
 
     blob.text().then((content) => {
       if (isMounted) {
-        setTextContent(content)
+        setTextContent(
+          content.length > 100_000
+            ? `${content.slice(0, 100_000)}\n\n[Preview truncated for safety]`
+            : content,
+        )
       }
     })
 

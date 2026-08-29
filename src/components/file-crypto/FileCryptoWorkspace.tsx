@@ -801,7 +801,7 @@ export default function FileCryptoWorkspace() {
           const nextUrl = URL.createObjectURL(blob)
           const nextPreview =
             mode === 'decrypt'
-              ? getUniversalPreviewMetadata(blob.type)
+              ? getUniversalPreviewMetadata(blob.type, downloadName, blob.size)
               : ({ kind: 'none', label: t('common.file') } as PreviewMetadata)
 
           processedResult = {
@@ -828,7 +828,7 @@ export default function FileCryptoWorkspace() {
             }
           }
 
-          if (localPreferences.crypto.autoDownloadJsonReport) {
+          if (localPreferences.crypto.autoDownloadJsonReport && supportsNativeFileExport()) {
             await handleDownloadSecurityReport(processedResult)
           }
 
@@ -1591,15 +1591,23 @@ export default function FileCryptoWorkspace() {
                           )}
                           {result.savedWithSuccess
                             ? t('files.workspace.results.saved')
-                            : t('common.download')}
+                            : mode === 'encrypt'
+                              ? t('files.workspace.status.saveEncryptedFile')
+                              : t('files.workspace.status.saveRecoveredFile')}
                         </button>
                       </div>
                     </div>
 
                     <div className="mt-4 flex min-w-0 flex-col gap-2 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
                       <span>{formatFileSize(result.size)}</span>
-                      {mode === 'decrypt' && result.preview.kind !== 'none' ? (
-                        <span>{t('files.workspace.results.localPreview')}</span>
+                      {mode === 'decrypt' ? (
+                        <span>
+                          {result.preview.kind !== 'none'
+                            ? t('files.workspace.status.previewAvailable')
+                            : result.preview.reason === 'too-large'
+                              ? t('files.workspace.status.previewTooLarge')
+                              : t('files.workspace.status.previewUnavailable')}
+                        </span>
                       ) : null}
                     </div>
 
@@ -1743,16 +1751,20 @@ export default function FileCryptoWorkspace() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
-          aria-label={t('files.workspace.preview.expandedAria')}
+          aria-labelledby="recovered-file-preview-title"
         >
           <button
             type="button"
             onClick={handleClosePreview}
             className="absolute inset-0"
             aria-label={t('files.workspace.preview.closeExpandedAria')}
+            autoFocus
           />
 
           <div className="relative z-10 w-full max-w-6xl rounded-[32px] border border-white/10 bg-zinc-950/95 p-4 shadow-2xl shadow-black/40 sm:p-6">
+            <h2 id="recovered-file-preview-title" className="sr-only">
+              {t('files.workspace.preview.expandedAria')}
+            </h2>
             <UniversalPreview
               url={activePreviewItem.url}
               blob={activePreviewItem.blob}
