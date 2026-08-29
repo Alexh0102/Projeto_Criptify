@@ -5,7 +5,12 @@ import {
   resolvePreviewMimeType,
 } from '../../lib/file-preview'
 
-export { getPreviewKind, MAX_AUTO_PREVIEW_SIZE_BYTES, MAX_TEXT_PREVIEW_SIZE_BYTES, resolvePreviewMimeType }
+export {
+  getPreviewKind,
+  MAX_AUTO_PREVIEW_SIZE_BYTES,
+  MAX_TEXT_PREVIEW_SIZE_BYTES,
+  resolvePreviewMimeType,
+}
 
 export type PreviewKind = 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'none'
 
