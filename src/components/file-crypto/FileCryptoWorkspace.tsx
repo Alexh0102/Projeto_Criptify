@@ -184,6 +184,7 @@ export default function FileCryptoWorkspace() {
   const keyFileInputId = useId()
   const passwordInputId = useId()
   const resultUrlRef = useRef<string[]>([])
+  const previewUrlRef = useRef<string | null>(null)
   const resultCleanupRef = useRef<(() => void)[]>([])
   const abortControllerRef = useRef<AbortController | null>(null)
   const resultPanelRef = useRef<HTMLDivElement | null>(null)
@@ -374,6 +375,9 @@ export default function FileCryptoWorkspace() {
       for (const url of resultUrlRef.current) {
         URL.revokeObjectURL(url)
       }
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+      }
       for (const cleanup of resultCleanupRef.current) {
         cleanup()
       }
@@ -383,6 +387,10 @@ export default function FileCryptoWorkspace() {
   function clearResults() {
     for (const url of resultUrlRef.current) {
       URL.revokeObjectURL(url)
+    }
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
     }
     for (const cleanup of resultCleanupRef.current) {
       cleanup()
@@ -669,11 +677,24 @@ export default function FileCryptoWorkspace() {
       return
     }
 
-    setPreviewItem(result)
+    const previewResult =
+      supportsNativeFileExport() && !result.url
+        ? { ...result, url: URL.createObjectURL(result.blob) }
+        : result
+
+    if (previewResult !== result) {
+      previewUrlRef.current = previewResult.url
+    }
+
+    setPreviewItem(previewResult)
     setIsPreviewOpen(true)
   }
 
   function handleClosePreview() {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
     setIsPreviewOpen(false)
     setPreviewItem(null)
   }
@@ -798,7 +819,7 @@ export default function FileCryptoWorkspace() {
               },
             )
 
-          const nextUrl = URL.createObjectURL(blob)
+          const nextUrl = supportsNativeFileExport() ? '' : URL.createObjectURL(blob)
           const nextPreview =
             mode === 'decrypt'
               ? getUniversalPreviewMetadata(blob.type, downloadName, blob.size)
@@ -837,6 +858,8 @@ export default function FileCryptoWorkspace() {
             } else {
               savePending = true
             }
+          } else if (supportsNativeFileExport()) {
+            await handleDownloadResult(processedResult, setProgress)
           }
 
           if (localPreferences.crypto.autoDownloadJsonReport && supportsNativeFileExport()) {
@@ -880,7 +903,9 @@ export default function FileCryptoWorkspace() {
         }
       }
 
-      resultUrlRef.current = processedResults.map((result) => result.url)
+      resultUrlRef.current = processedResults
+        .map((result) => result.url)
+        .filter(Boolean)
       resultCleanupRef.current = processedResults.flatMap((result) =>
         result.dispose ? [result.dispose] : [],
       )
@@ -940,13 +965,21 @@ export default function FileCryptoWorkspace() {
                   detail: failures[0],
                 })}`
               : previewableResults.length > 0
-                ? t('files.workspace.status.decryptedWithPreviews', {
-                    processed: processedResults.length,
-                    previews: previewableResults.length,
-                  })
-                : t('files.workspace.status.decryptedSuccess', {
-                    count: processedResults.length,
-                  }),
+                ? t(
+                    supportsNativeFileExport()
+                    ? 'files.workspace.status.decryptedWithPreviewsNative'
+                      : 'files.workspace.status.decryptedWithPreviews',
+                    {
+                      processed: processedResults.length,
+                      previews: previewableResults.length,
+                    },
+                  )
+                : t(
+                    supportsNativeFileExport()
+                      ? 'files.workspace.status.decryptedSuccessNative'
+                      : 'files.workspace.status.decryptedSuccess',
+                    { count: processedResults.length },
+                  ),
       })
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
@@ -1601,7 +1634,9 @@ export default function FileCryptoWorkspace() {
                             <Download className="h-4 w-4" />
                           )}
                           {result.savedWithSuccess
-                            ? t('files.workspace.results.saved')
+                            ? supportsNativeFileExport()
+                              ? t('files.workspace.results.savedNative')
+                              : t('files.workspace.results.saved')
                             : mode === 'encrypt'
                               ? t('files.workspace.status.saveEncryptedFile')
                               : t('files.workspace.status.saveRecoveredFile')}
@@ -1609,7 +1644,8 @@ export default function FileCryptoWorkspace() {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex min-w-0 flex-col gap-2 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="mt-4 flex min-w-0 flex-col gap-2 text-xs text-zinc-500 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                      <span>{t('files.workspace.results.fileType', { type: result.blob.type || t('common.file') })}</span>
                       <span>{formatFileSize(result.size)}</span>
                       {mode === 'decrypt' ? (
                         <span>
@@ -1618,6 +1654,11 @@ export default function FileCryptoWorkspace() {
                             : result.preview.reason === 'too-large'
                               ? t('files.workspace.status.previewTooLarge')
                               : t('files.workspace.status.previewUnavailable')}
+                        </span>
+                      ) : null}
+                      {supportsNativeFileExport() && result.savedWithSuccess ? (
+                        <span className="text-emerald-200">
+                          {t('files.workspace.results.savedNativeNotice')}
                         </span>
                       ) : null}
                     </div>
@@ -1722,7 +1763,7 @@ export default function FileCryptoWorkspace() {
                       ) : null}
                     </div>
 
-                    {mode === 'decrypt' && result.preview.kind !== 'none' ? (
+                    {mode === 'decrypt' && result.preview.kind !== 'none' && !supportsNativeFileExport() ? (
                       <div className="mt-4 surface-primary min-w-0 overflow-hidden rounded-[24px] p-3 sm:p-4">
                         <UniversalPreview
                           url={result.url}
