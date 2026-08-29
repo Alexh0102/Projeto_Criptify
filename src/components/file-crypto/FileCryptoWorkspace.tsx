@@ -15,6 +15,7 @@
   Upload,
   X,
 } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -34,6 +35,7 @@ import {
   getUniversalPreviewMetadata,
   type PreviewMetadata,
 } from './preview-metadata'
+import { resolvePreviewMimeType } from '../../lib/file-preview'
 import { useInactivity } from '../../hooks/useInactivity'
 import { useStreamingCrypto } from '../../hooks/useStreamingCrypto'
 import {
@@ -74,7 +76,6 @@ type ResultItem = {
   id: string
   name: string
   blob: Blob
-  url: string
   size: number
   sourceName: string
   preview: PreviewMetadata
@@ -172,6 +173,8 @@ export default function FileCryptoWorkspace() {
   >({})
   const [isInspectingPackages, setIsInspectingPackages] = useState(false)
   const [previewItem, setPreviewItem] = useState<ResultItem | null>(null)
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -183,7 +186,6 @@ export default function FileCryptoWorkspace() {
   const fileInputId = useId()
   const keyFileInputId = useId()
   const passwordInputId = useId()
-  const resultUrlRef = useRef<string[]>([])
   const previewUrlRef = useRef<string | null>(null)
   const resultCleanupRef = useRef<(() => void)[]>([])
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -243,7 +245,6 @@ export default function FileCryptoWorkspace() {
   const activeFileLimit = opfsAvailable
     ? null
     : MAX_FILE_SIZE + (mode === 'decrypt' ? MAX_FILE_PACKAGE_OVERHEAD_BYTES : 0)
-  const resultUrl = previewItem?.url ?? results[0]?.url ?? null
   const resultName = previewItem?.name ?? results[0]?.name ?? ''
   const activePreviewItem = previewItem ?? results[0] ?? null
   const preview = activePreviewItem?.preview ?? { kind: 'none', label: t('common.file') }
@@ -324,6 +325,8 @@ export default function FileCryptoWorkspace() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setIsPreviewOpen(false)
+        setPreviewItem(null)
+        setPreviewBlob(null)
       }
     }
 
@@ -371,10 +374,18 @@ export default function FileCryptoWorkspace() {
   }, [exportNotice])
 
   useEffect(() => {
+    if (isPreviewOpen || !previewUrlRef.current) {
+      return
+    }
+
+    const url = previewUrlRef.current
+    previewUrlRef.current = null
+    setPreviewUrl(null)
+    URL.revokeObjectURL(url)
+  }, [isPreviewOpen])
+
+  useEffect(() => {
     return () => {
-      for (const url of resultUrlRef.current) {
-        URL.revokeObjectURL(url)
-      }
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current)
       }
@@ -385,21 +396,15 @@ export default function FileCryptoWorkspace() {
   }, [])
 
   function clearResults() {
-    for (const url of resultUrlRef.current) {
-      URL.revokeObjectURL(url)
-    }
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current)
-      previewUrlRef.current = null
-    }
     for (const cleanup of resultCleanupRef.current) {
       cleanup()
     }
 
-    resultUrlRef.current = []
     resultCleanupRef.current = []
     setResults([])
     setPreviewItem(null)
+    setPreviewBlob(null)
+    setPreviewUrl(null)
     setIsPreviewOpen(false)
     setExportNotice(null)
     streamingCrypto.resetProgress()
@@ -705,26 +710,46 @@ export default function FileCryptoWorkspace() {
       return
     }
 
-    const previewResult =
-      supportsNativeFileExport() && !result.url
-        ? { ...result, url: URL.createObjectURL(result.blob) }
-        : result
+    const resolvedMimeType = resolvePreviewMimeType(result.name, result.blob.type)
+    const nextPreviewBlob = new Blob([result.blob], { type: resolvedMimeType })
 
-    if (previewResult !== result) {
-      previewUrlRef.current = previewResult.url
+    if (nextPreviewBlob.size === 0) {
+      setStatus({
+        tone: 'error',
+        message: t('files.preview.temporaryUnavailable'),
+      })
+      return
     }
 
-    setPreviewItem(previewResult)
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(nextPreviewBlob)
+    previewUrlRef.current = nextPreviewUrl
+
+    if (import.meta.env.DEV) {
+      console.debug('[CriptoVéu][preview-open]', {
+        originalFileName: result.name,
+        resolvedMimeType,
+        previewBlobSize: nextPreviewBlob.size,
+        previewBlobType: nextPreviewBlob.type,
+        previewUrl: nextPreviewUrl,
+        userAgent: navigator.userAgent,
+        capacitorNative: Capacitor.isNativePlatform(),
+      })
+    }
+
+    setPreviewItem(result)
+    setPreviewBlob(nextPreviewBlob)
+    setPreviewUrl(nextPreviewUrl)
     setIsPreviewOpen(true)
   }
 
   function handleClosePreview() {
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current)
-      previewUrlRef.current = null
-    }
     setIsPreviewOpen(false)
     setPreviewItem(null)
+    setPreviewBlob(null)
   }
 
   function handlePreviewBackdropClick(event: MouseEvent<HTMLDivElement>) {
@@ -853,7 +878,6 @@ export default function FileCryptoWorkspace() {
               },
             )
 
-          const nextUrl = supportsNativeFileExport() ? '' : URL.createObjectURL(blob)
           const nextPreview =
             mode === 'decrypt'
               ? getUniversalPreviewMetadata(blob.type, downloadName, blob.size)
@@ -874,7 +898,6 @@ export default function FileCryptoWorkspace() {
             id: `${downloadName}-${index}-${blob.size}`,
             name: downloadName,
             blob,
-            url: nextUrl,
             size: blob.size,
             sourceName: currentFile.name,
             preview: nextPreview,
@@ -921,7 +944,6 @@ export default function FileCryptoWorkspace() {
             throw error
           }
           if (processedResult) {
-            URL.revokeObjectURL(processedResult.url)
             await processedResult.dispose?.()
           }
           failures.push(
@@ -941,9 +963,6 @@ export default function FileCryptoWorkspace() {
         }
       }
 
-      resultUrlRef.current = processedResults
-        .map((result) => result.url)
-        .filter(Boolean)
       resultCleanupRef.current = processedResults.flatMap((result) =>
         result.dispose ? [result.dispose] : [],
       )
@@ -1803,22 +1822,6 @@ export default function FileCryptoWorkspace() {
                       ) : null}
                     </div>
 
-                    {mode === 'decrypt' && result.preview.kind !== 'none' && !supportsNativeFileExport() ? (
-                      <div className="mt-4 surface-primary min-w-0 overflow-hidden rounded-[24px] p-3 sm:p-4">
-                        <UniversalPreview
-                          url={result.url}
-                          blob={result.blob}
-                          fileName={result.name}
-                          isInactive={isInactive}
-                          onOpen={() => handleOpenPreview(result)}
-                          onDownload={(event) => {
-                            event.preventDefault()
-                            event.stopPropagation()
-                            void saveRecoveredFile(result).catch(handleDownloadFailure)
-                          }}
-                        />
-                      </div>
-                    ) : null}
                   </article>
                 ))}
               </div>
@@ -1838,7 +1841,7 @@ export default function FileCryptoWorkspace() {
         loading={isProcessing}
       />
 
-      {isPreviewOpen && activePreviewItem && resultUrl && preview.kind !== 'none' ? (
+      {isPreviewOpen && activePreviewItem && previewUrl && preview.kind !== 'none' ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-sm"
           role="dialog"
@@ -1851,8 +1854,8 @@ export default function FileCryptoWorkspace() {
               {t('files.workspace.preview.expandedAria')}
             </h2>
             <UniversalPreview
-              url={activePreviewItem.url}
-              blob={activePreviewItem.blob}
+              url={previewUrl}
+              blob={previewBlob ?? activePreviewItem.blob}
               fileName={resultName}
               expanded
               isInactive={isInactive}
