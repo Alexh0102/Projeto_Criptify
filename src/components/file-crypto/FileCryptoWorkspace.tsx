@@ -38,7 +38,6 @@ import { useInactivity } from '../../hooks/useInactivity'
 import { useStreamingCrypto } from '../../hooks/useStreamingCrypto'
 import {
   ARGON2_FILE_ITERATIONS,
-  DEFAULT_FILE_SECURITY_PROFILE_ID,
   FILE_SECURITY_PROFILES,
   MAX_FILE_PACKAGE_OVERHEAD_BYTES,
   MAX_FILE_SIZE,
@@ -56,6 +55,12 @@ import {
   exportFileToNativeDownloads,
   supportsNativeFileExport,
 } from '../../lib/native-file-export'
+import {
+  getPreferencesSync,
+  getSecurityProfileIdFromPreferences,
+  incrementStats,
+  updatePreferences,
+} from '../../lib/storage/preferences-storage'
 
 type Mode = 'encrypt' | 'decrypt'
 type StatusTone = 'info' | 'success' | 'error'
@@ -136,19 +141,6 @@ async function hasInsufficientStorage(fileSize: number) {
   }
 }
 
-function loadSecurityProfileId(): FileSecurityProfileId {
-  try {
-    const storedValue = window.localStorage.getItem(FILE_SECURITY_PROFILE_STORAGE_KEY)
-    const selectedProfile = FILE_SECURITY_PROFILES.find(
-      (profile) => profile.id === storedValue,
-    )
-
-    return selectedProfile?.id ?? DEFAULT_FILE_SECURITY_PROFILE_ID
-  } catch {
-    return DEFAULT_FILE_SECURITY_PROFILE_ID
-  }
-}
-
 function hasSupportedRecoveryExtension(fileName: string) {
   const normalizedName = fileName.toLowerCase()
   return SUPPORTED_RECOVERY_EXTENSIONS.some((extension) =>
@@ -196,12 +188,13 @@ export default function FileCryptoWorkspace() {
   const [exportNotice, setExportNotice] = useState<string | null>(null)
   const [isFileLimitDialogOpen, setIsFileLimitDialogOpen] = useState(false)
   const [securityProfileId, setSecurityProfileId] =
-    useState<FileSecurityProfileId>(loadSecurityProfileId)
+    useState<FileSecurityProfileId>(getSecurityProfileIdFromPreferences)
   const fileInputId = useId()
   const keyFileInputId = useId()
   const passwordInputId = useId()
   const resultUrlRef = useRef<string[]>([])
   const resultCleanupRef = useRef<(() => void)[]>([])
+  const abortControllerRef = useRef<AbortController | null>(null)
   const resultPanelRef = useRef<HTMLDivElement | null>(null)
   const isInactive = useInactivity({ disabled: results.length === 0 && !isPreviewOpen })
   const streamingCrypto = useStreamingCrypto()
@@ -309,6 +302,13 @@ export default function FileCryptoWorkspace() {
   useEffect(() => {
     try {
       window.localStorage.setItem(FILE_SECURITY_PROFILE_STORAGE_KEY, securityProfileId)
+      const selectedProfile = FILE_SECURITY_PROFILES.find((profile) => profile.id === securityProfileId)
+
+      if (selectedProfile) {
+        void updatePreferences({
+          crypto: { defaultArgon2MemoryMb: selectedProfile.memoryMb },
+        })
+      }
     } catch {
       // A seleção em memória continua válida quando o armazenamento é bloqueado.
     }
@@ -536,7 +536,7 @@ export default function FileCryptoWorkspace() {
     setIsDragging(false)
   }
 
-  async function handleDownloadResult(result: ResultItem) {
+  async function handleDownloadResult(result: ResultItem, onExportProgress?: (value: number) => void) {
     if (result.savedWithSuccess) {
       setExportNotice(
         supportsNativeFileExport()
@@ -547,7 +547,15 @@ export default function FileCryptoWorkspace() {
     }
 
     if (supportsNativeFileExport()) {
-      await exportFileToNativeDownloads(result.blob, result.name)
+      await exportFileToNativeDownloads(result.blob, result.name, (value) => {
+        const exportProgress = 90 + Math.round(value * 0.09)
+        setProgress(exportProgress)
+        onExportProgress?.(exportProgress)
+        setProgressLabel(t('files.workspace.status.savingDocuments', {
+          written: formatFileSize(Math.round((result.size * value) / 100)),
+          total: formatFileSize(result.size),
+        }))
+      })
       await result.dispose?.()
     } else {
       downloadBlobUrl(result.url, result.name)
@@ -683,7 +691,17 @@ export default function FileCryptoWorkspace() {
       return
     }
 
-    setHasStorageWarning(await hasInsufficientStorage(totalSelectedSize))
+    const insufficientStorage = await hasInsufficientStorage(totalSelectedSize)
+    setHasStorageWarning(insufficientStorage)
+    if (insufficientStorage) {
+      setStatus({
+        tone: 'error',
+        message: t('files.workspace.status.storageSpaceWarning', {
+          size: formatFileSize(Math.ceil(totalSelectedSize * STORAGE_RESERVE_MULTIPLIER)),
+        }),
+      })
+      return
+    }
 
     const oversizedFiles =
       activeFileLimit === null
@@ -705,6 +723,7 @@ export default function FileCryptoWorkspace() {
     }
 
     setIsProcessing(true)
+    abortControllerRef.current = new AbortController()
     setProgress(4)
     setProgressLabel(t('files.workspace.status.preparingSecureEnvironment'))
     setStatus({
@@ -716,6 +735,7 @@ export default function FileCryptoWorkspace() {
     try {
       const processedResults: ResultItem[] = []
       const failures: string[] = []
+      const localPreferences = getPreferencesSync()
 
       for (const [index, currentFile] of files.entries()) {
         const currentStep = index + 1
@@ -734,7 +754,8 @@ export default function FileCryptoWorkspace() {
                   startProgress +
                   ((endProgress - startProgress) * value) / 100
 
-                setProgress(Math.round(aggregateProgress))
+                const cryptoProgress = Math.min(85, Math.round(aggregateProgress * 0.85))
+                setProgress(cryptoProgress)
                 setProgressLabel(
                   files.length === 1
                     ? label
@@ -759,6 +780,7 @@ export default function FileCryptoWorkspace() {
                     : keyFile,
                 recoverable:
                   mode === 'encrypt' ? useRecoverableParity : undefined,
+                signal: abortControllerRef.current.signal,
               },
             )
 
@@ -781,11 +803,20 @@ export default function FileCryptoWorkspace() {
             dispose,
           }
           if (mode === 'encrypt') {
-            await handleDownloadResult(processedResult)
+            await handleDownloadResult(processedResult, setProgress)
           }
+
+          if (localPreferences.crypto.autoDownloadJsonReport) {
+            await handleDownloadSecurityReport(processedResult)
+          }
+
+          await incrementStats(1, currentFile.size, mode)
 
           processedResults.push(processedResult)
         } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            throw error
+          }
           if (processedResult) {
             URL.revokeObjectURL(processedResult.url)
             await processedResult.dispose?.()
@@ -861,6 +892,7 @@ export default function FileCryptoWorkspace() {
                   }),
       })
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
       setProgress(0)
       setProgressLabel(t('files.workspace.status.processingFailed'))
       setStatus({
@@ -871,8 +903,16 @@ export default function FileCryptoWorkspace() {
             : t('files.workspace.status.unexpectedProcessingError'),
       })
     } finally {
+      abortControllerRef.current = null
       setIsProcessing(false)
     }
+  }
+
+  function handleCancel() {
+    abortControllerRef.current?.abort()
+    setIsProcessing(false)
+    setProgressLabel(t('files.workspace.status.cancelled'))
+    setStatus({ tone: 'info', message: t('files.workspace.status.cancelled') })
   }
 
   const StatusIcon = isProcessing
@@ -1303,7 +1343,7 @@ export default function FileCryptoWorkspace() {
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <button
                   type="button"
-                  onClick={handleProcess}
+                  onClick={isProcessing ? handleCancel : handleProcess}
                   disabled={
                     files.length === 0 ||
                     !password ||
@@ -1314,13 +1354,13 @@ export default function FileCryptoWorkspace() {
                   className="btn-primary hidden lg:inline-flex"
                 >
                   {isProcessing ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    <X className="h-4 w-4" />
                   ) : mode === 'encrypt' ? (
                     <Lock className="h-4 w-4" />
                   ) : (
                     <Unlock className="h-4 w-4" />
                   )}
-                  {t(currentMode.action)}
+                  {isProcessing ? t('common.cancel') : t(currentMode.action)}
                 </button>
 
                 <button
@@ -1627,15 +1667,11 @@ export default function FileCryptoWorkspace() {
       </div>
 
       <MobileStickyCTA
-        label={t(currentMode.action)}
-        icon={mode === 'encrypt' ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
-        onClick={handleProcess}
+        label={isProcessing ? t('common.cancel') : t(currentMode.action)}
+        icon={isProcessing ? <X className="h-5 w-5" /> : mode === 'encrypt' ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
+        onClick={isProcessing ? handleCancel : handleProcess}
         disabled={
-          files.length === 0 ||
-          !password ||
-          (keyFileIsRequired && !keyFile) ||
-          isProcessing ||
-          !canUseSecureProcessing
+          !isProcessing && (files.length === 0 || !password || (keyFileIsRequired && !keyFile) || !canUseSecureProcessing)
         }
         loading={isProcessing}
       />

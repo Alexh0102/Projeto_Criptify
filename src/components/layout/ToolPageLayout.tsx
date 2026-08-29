@@ -1,4 +1,4 @@
-﻿import { ArrowLeft, FlaskConical, Grid2x2, MoonStar, SunMedium, X } from 'lucide-react'
+﻿import { ArrowLeft, FlaskConical, Grid2x2, MoonStar, Settings, SunMedium, X } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -228,6 +228,24 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
                   {t('layout.drawer.homeHelper')}
                 </p>
               </NavLink>
+
+              {activeDrawer === 'tools' ? (
+                <NavLink
+                  to="/configuracoes"
+                  onClick={() => setActiveDrawer(null)}
+                  className={({ isActive }) =>
+                    `${isActive ? 'surface-primary ring-1 ring-cyan-500/30' : 'surface-secondary'} rounded-[20px] px-3.5 py-3.5 text-left transition active:scale-[0.98] sm:rounded-[24px] sm:px-4 sm:py-4`
+                  }
+                >
+                  <div className="flex items-center gap-2 text-sm font-bold text-white sm:text-base">
+                    <Settings className="h-4 w-4 text-cyan-200" />
+                    {t('layout.drawer.settings')}
+                  </div>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-400 sm:mt-1 sm:text-xs">
+                    {t('layout.drawer.settingsHelper')}
+                  </p>
+                </NavLink>
+              ) : null}
 
               {drawerItems.map((tool) => (
                 <NavLink

@@ -107,8 +107,96 @@
       "betaDescription": "Experimente recursos novos antes de entrarem na lista principal.",
       "home": "Home",
       "homeHelper": "Voltar para a visão geral do CriptoVéu.",
+      "settings": "Configurações",
+      "settingsHelper": "Gerencie seu perfil e preferências neste dispositivo.",
       "closeToolsAria": "Fechar menu de ferramentas",
       "closeDrawerAria": "Fechar drawer"
+    }
+  },
+  "settings": {
+    "eyebrow": "Preferências locais",
+    "badge": "Perfil neste dispositivo",
+    "back": "Voltar",
+    "loading": "Carregando preferências locais...",
+    "title": "Configurações e perfil",
+    "description": "Personalize sua experiência sem criar uma conta. Os dados desta tela ficam somente neste navegador ou aparelho.",
+    "profile": {
+      "eyebrow": "Identidade local",
+      "title": "Seu perfil",
+      "description": "Use estes dados apenas para reconhecer seu espaço no dispositivo. Eles não são enviados ao CriptoVéu.",
+      "avatarLabel": "Escolher avatar local",
+      "avatars": {
+        "shield-cyan": "Escudo",
+        "lock": "Cadeado",
+        "terminal": "Terminal",
+        "sparkles": "Brilhos"
+      },
+      "nameLabel": "Nome de exibição",
+      "namePlaceholder": "Como você quer ser chamado?",
+      "emailLabel": "E-mail opcional",
+      "emailPlaceholder": "voce@exemplo.com",
+      "free": "Plano Gratuito",
+      "lifetime": "Apoiador Vitalício",
+      "activate": "Ativar chave",
+      "localNote": "Este perfil não é uma conta. Não há sincronização, login ou recuperação em outro dispositivo.",
+      "save": "Salvar perfil",
+      "clear": "Limpar perfil",
+      "saved": "Perfil salvo somente neste dispositivo."
+    },
+    "crypto": {
+      "eyebrow": "Criptografia e exportação",
+      "title": "Preferências de processamento",
+      "description": "Escolha o equilíbrio entre memória, desempenho e resistência contra tentativas de força bruta.",
+      "profileLabel": "Perfil Argon2id padrão",
+      "autoReport": "Gerar relatório JSON automaticamente",
+      "autoReportNote": "Um relatório de integridade será exportado junto com cada resultado concluído.",
+      "nativeDestination": "No Android, arquivos e relatórios são gravados em Armazenamento Interno > Documents.",
+      "browserDestination": "No navegador, arquivos e relatórios são baixados pela pasta padrão do seu sistema.",
+      "localOnly": "Parâmetros aplicados somente neste dispositivo."
+    },
+    "stats": {
+      "eyebrow": "Painel de privacidade",
+      "title": "Estatísticas locais",
+      "description": "Acompanhe seu uso sem enviar métricas ou nomes de arquivos para servidores.",
+      "encrypted": "Arquivos protegidos",
+      "decrypted": "Arquivos recuperados",
+      "bytes": "Volume processado",
+      "localNote": "Dados armazenados exclusivamente na memória deste dispositivo."
+    },
+    "system": {
+      "eyebrow": "Preferências do sistema",
+      "title": "Idioma e aparência",
+      "languageLabel": "Idioma",
+      "themeLabel": "Tema"
+    },
+    "reset": {
+      "eyebrow": "Zona de segurança",
+      "title": "Restaurar configurações locais",
+      "description": "Remova o perfil, as preferências criptográficas e as estatísticas locais. O cofre de notas e as licenças não serão apagados.",
+      "action": "Restaurar e limpar dados locais",
+      "confirmTitle": "Confirmar limpeza local",
+      "confirmDescription": "Esta ação zera seu perfil, preferências e estatísticas deste dispositivo. Seus arquivos e notas continuam intactos.",
+      "cancel": "Cancelar",
+      "confirm": "Limpar somente dados locais"
+    },
+    "preferences": {
+      "eyebrow": "Preferências",
+      "title": "Aparência e idioma",
+      "lightTheme": "Usar tema claro",
+      "darkTheme": "Usar tema escuro",
+      "languageNote": "O idioma é alterado pelo seletor no topo e também fica salvo localmente."
+    },
+    "access": {
+      "eyebrow": "Acesso premium",
+      "title": "Seu acesso",
+      "active": "O acesso premium está ativo neste dispositivo.",
+      "description": "Veja as opções de apoio e os limites disponíveis para sua experiência.",
+      "playAction": "Ver compra na Google Play",
+      "webAction": "Ver apoio e ativação"
+    },
+    "data": {
+      "title": "Seus dados continuam locais",
+      "description": "O perfil é separado do cofre de notas, das licenças e dos contadores de uso. Limpar o perfil não apaga nenhum desses dados."
     }
   },
   "premium": {
@@ -443,6 +531,8 @@
         "fileTooLarge": "Arquivo acima de {{size}}. Escolha um arquivo menor para continuar.",
         "fileExceedsLimit": "O arquivo selecionado excede o limite de 1 GB para processamento 100% local e seguro na memória do dispositivo.",
         "preparingSecureEnvironment": "Preparando ambiente seguro",
+        "savingDocuments": "Salvando em Documentos: {{written}} de {{total}}",
+        "cancelled": "Operação cancelada. Arquivos validados permanecem em Documentos.",
         "processing": {
           "encrypt": "Protegendo arquivos localmente...",
           "decrypt": "Recuperando arquivos localmente..."

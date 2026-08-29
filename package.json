@@ -31,7 +31,8 @@
     "react-i18next": "^17.0.11",
     "react-router-dom": "7.18.2",
     "resend": "^6.18.1",
-    "stripe": "^22.4.0"
+    "stripe": "^22.4.0",
+    "@capacitor/preferences": "^8.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "8.4.2",
