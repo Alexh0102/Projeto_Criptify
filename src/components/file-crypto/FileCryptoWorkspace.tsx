@@ -42,7 +42,6 @@ import {
   MAX_FILE_PACKAGE_OVERHEAD_BYTES,
   MAX_FILE_SIZE,
   STREAMING_CHUNK_SIZE_BYTES,
-  CriptoveuError,
   formatFileSize,
   inspectCriptoveuPackage,
   supportsOpfsCrypto,
@@ -825,10 +824,16 @@ export default function FileCryptoWorkspace() {
             `${currentFile.name}: ${
               error instanceof Error
                 ? error.message
-                : t('files.workspace.status.unexpectedFileFailure')
+              : t('files.workspace.status.unexpectedFileFailure')
             }`,
           )
-          setProgress(Math.round(((index + 1) / files.length) * 100))
+          setProgressLabel(
+            t('files.workspace.status.processingFailedAt', {
+              defaultValue: 'Falha durante processamento local em {{progress}}% — {{stage}}',
+              progress,
+              stage: progressLabel,
+            }),
+          )
         }
       }
 
@@ -840,8 +845,13 @@ export default function FileCryptoWorkspace() {
       setPreviewItem(null)
 
       if (processedResults.length === 0) {
-        setProgress(0)
-        setProgressLabel(t('files.workspace.status.processingFailed'))
+        setProgressLabel(
+          t('files.workspace.status.processingFailedAt', {
+            defaultValue: 'Falha durante processamento local em {{progress}}% — {{stage}}',
+            progress,
+            stage: progressLabel,
+          }),
+        )
         setStatus({
           tone: 'error',
           message: failures[0] ?? t('files.workspace.status.noSuccessfulFiles'),
@@ -893,14 +903,30 @@ export default function FileCryptoWorkspace() {
       })
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
-      setProgress(0)
-      setProgressLabel(t('files.workspace.status.processingFailed'))
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : t('files.workspace.status.unexpectedProcessingError')
+      if (import.meta.env.DEV) {
+        console.error('[CriptoVéu][ui]', {
+          stage: progressLabel,
+          file: files[0]?.name ?? null,
+          size: totalSelectedSize,
+          progress,
+          chunkIndex: null,
+          error,
+        })
+      }
+      setProgressLabel(
+        t('files.workspace.status.processingFailedAt', {
+          defaultValue: 'Falha durante processamento local em {{progress}}% — {{stage}}',
+          progress,
+          stage: progressLabel,
+        }),
+      )
       setStatus({
         tone: 'error',
-        message:
-          error instanceof CriptoveuError
-            ? error.message
-            : t('files.workspace.status.unexpectedProcessingError'),
+        message: errorMessage,
       })
     } finally {
       abortControllerRef.current = null
