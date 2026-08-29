@@ -17,6 +17,7 @@ import {
   assertValidKeyFile,
   derivePasswordKeyFileMaterial,
 } from './key-file-protection'
+import { getOpfsRoot } from './opfs'
 
 const LEGACY_CHUNKED_FILE_HEADER_TEXT = 'CRIPTIFY2'
 const PBKDF2_CHUNKED_FILE_HEADER_TEXT = 'CRIPTOVEU2'
@@ -146,10 +147,6 @@ export type ProcessResult = {
   dispose?: () => void | Promise<void>
 }
 
-type OpfsStorageManager = StorageManager & {
-  getDirectory?: () => Promise<unknown>
-}
-
 export type FilePackageFormat =
   | 'CRIPTOVEU6'
   | 'CRIPTOVEU5'
@@ -215,6 +212,10 @@ type OpfsWorkerResponse =
       type: 'PROGRESS'
       value: number
       label: string
+      chunkIndex?: number
+      totalChunks?: number
+      bytesWritten?: number
+      expectedSize?: number
     }
   | {
       id: number
@@ -286,8 +287,7 @@ export function supportsOpfsCrypto() {
     return false
   }
 
-  const storage = navigator.storage as OpfsStorageManager | undefined
-  return typeof storage?.getDirectory === 'function'
+  return Boolean(navigator.storage)
 }
 
 function waitForPaint() {
@@ -598,6 +598,11 @@ async function processFileWithOpfs(
   return new Promise<ProcessResult>((resolve, reject) => {
     const worker = createOpfsCryptoWorker()
     let settled = false
+    let latestProgress = {
+      value: 0,
+      label: 'Preparando processamento OPFS',
+      chunkIndex: null as number | null,
+    }
     let cleanupPromise: Promise<void> | null = null
     let resolveCleanup: (() => void) | null = null
 
@@ -607,6 +612,11 @@ async function processFileWithOpfs(
       }
 
       if (event.data.type === 'PROGRESS') {
+        latestProgress = {
+          value: event.data.value,
+          label: event.data.label,
+          chunkIndex: event.data.chunkIndex ?? null,
+        }
         onProgress?.(event.data.value, event.data.label)
         return
       }
@@ -620,6 +630,16 @@ async function processFileWithOpfs(
 
       if (event.data.type === 'ERROR') {
         settled = true
+        if (import.meta.env.DEV) {
+          console.error('[CriptoVéu][opfs]', {
+            stage: 'worker-error',
+            file: file.name,
+            size: file.size,
+            progress: latestProgress.value,
+            chunkIndex: latestProgress.chunkIndex,
+            error: event.data.message,
+          })
+        }
         worker.terminate()
         if (event.data.code === 'OPFS_UNSUPPORTED') {
           reject(new OpfsUnavailableError(event.data.message))
@@ -638,14 +658,6 @@ async function processFileWithOpfs(
       const downloadName = event.data.downloadName
       const securityReport = event.data.securityReport
       const tempFileName = event.data.tempFileName
-
-      const opfsRoot = (navigator.storage as OpfsStorageManager).getDirectory
-      if (!opfsRoot) {
-        worker.postMessage({ id: requestId, type: 'CLEANUP', tempFileName })
-        settled = true
-        reject(new CriptoveuError('INTEGRITY_FAILED', 'OPFS indisponível após a criptografia.'))
-        return
-      }
 
       let cleanupRequested = false
       const dispose = () => {
@@ -666,7 +678,8 @@ async function processFileWithOpfs(
         return cleanupPromise
       }
 
-      void opfsRoot().then(async (root) => {
+      void (async () => {
+        const root = await getOpfsRoot()
         const handle = await (root as { getFileHandle: (name: string) => Promise<{ getFile: () => Promise<File> }> }).getFileHandle(tempFileName)
         const resultFile = await handle.getFile()
         if (resultFile.size !== expectedSize) {
@@ -676,11 +689,21 @@ async function processFileWithOpfs(
         settled = true
         resolve({
           blob: resultFile,
-        downloadName,
-        securityReport,
+          downloadName,
+          securityReport,
           dispose,
         })
-      }).catch((error) => {
+      })().catch((error) => {
+        if (import.meta.env.DEV) {
+          console.error('[CriptoVéu][opfs]', {
+            stage: 'read-result',
+            file: file.name,
+            size: file.size,
+            progress: latestProgress.value,
+            chunkIndex: latestProgress.chunkIndex,
+            error,
+          })
+        }
         worker.postMessage({ id: requestId, type: 'CLEANUP', tempFileName })
         if (!settled) { settled = true; reject(error) }
       })

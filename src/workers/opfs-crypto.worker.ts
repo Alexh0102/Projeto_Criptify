@@ -2,6 +2,8 @@
 
 import { argon2id, createSHA256, sha256 } from 'hash-wasm'
 
+import { getOpfsRoot } from '../lib/opfs'
+
 import {
   assertIntegrityHashes,
   parseFileIntegrityManifest,
@@ -75,6 +77,10 @@ type WorkerResponse =
       type: 'PROGRESS'
       value: number
       label: string
+      chunkIndex?: number
+      totalChunks?: number
+      bytesWritten?: number
+      expectedSize?: number
     }
   | {
       id: number
@@ -155,14 +161,6 @@ type OpfsDirectoryHandle = {
   removeEntry(name: string): Promise<void>
 }
 
-type WorkerWithOpfs = DedicatedWorkerGlobalScope & {
-  navigator: DedicatedWorkerGlobalScope['navigator'] & {
-    storage?: StorageManager & {
-      getDirectory?: () => Promise<OpfsDirectoryHandle>
-    }
-  }
-}
-
 class WorkerCryptoError extends Error {
   readonly code: WorkerErrorCode
 
@@ -176,7 +174,7 @@ class WorkerCryptoError extends Error {
   }
 }
 
-const workerScope = self as WorkerWithOpfs
+const workerScope = self as DedicatedWorkerGlobalScope
 const completedOpfsFiles = new Map<
   number,
   { root: OpfsDirectoryHandle; tempFileName: string }
@@ -193,11 +191,21 @@ function postResponse(response: WorkerResponse) {
   workerScope.postMessage(response)
 }
 
-function postProgress(id: number, value: number, label: string) {
+function postProgress(
+  id: number,
+  value: number,
+  label: string,
+  diagnostic: {
+    chunkIndex?: number
+    totalChunks?: number
+    bytesWritten?: number
+    expectedSize?: number
+  } = {},
+) {
   if (import.meta.env?.DEV) {
-    console.debug('[CriptoVéu][worker]', { stage: 'crypto-progress', id, chunkIndex: null, totalChunks: null, bytesWritten: null, expectedSize: null, value, label, elapsedMs: 0, freeStorageEstimate: null })
+    console.debug('[CriptoVéu][worker]', { stage: 'crypto-progress', id, chunkIndex: diagnostic.chunkIndex ?? null, totalChunks: diagnostic.totalChunks ?? null, bytesWritten: diagnostic.bytesWritten ?? null, expectedSize: diagnostic.expectedSize ?? null, value, label, elapsedMs: 0, freeStorageEstimate: null })
   }
-  postResponse({ id, type: 'PROGRESS', value, label })
+  postResponse({ id, type: 'PROGRESS', value, label, ...diagnostic })
 }
 
 function cloneBytes(source: Uint8Array) {
@@ -226,6 +234,10 @@ function getErrorCode(error: unknown): WorkerErrorCode {
     return 'INVALID_PASSWORD_OR_FILE'
   }
 
+  if (error instanceof Error && error.message.includes('OPFS não é suportado')) {
+    return 'OPFS_UNSUPPORTED'
+  }
+
   if (error && typeof error === 'object' && 'code' in error) {
     const code = (error as { code?: string }).code
 
@@ -247,8 +259,7 @@ function getErrorMessage(error: unknown) {
     : 'Falha no processamento local do arquivo.'
 }
 
-async function getOpfsRoot() {
-  const storage = workerScope.navigator.storage
+async function getWorkerOpfsRoot() {
   const fileHandleConstructor = (
     globalThis as typeof globalThis & {
       FileSystemFileHandle?: OpfsFileSystemFileHandleConstructor
@@ -256,7 +267,7 @@ async function getOpfsRoot() {
   ).FileSystemFileHandle
 
   if (
-    !storage?.getDirectory ||
+    !navigator.storage ||
     typeof fileHandleConstructor?.prototype?.createSyncAccessHandle !== 'function'
   ) {
     throw new WorkerCryptoError(
@@ -265,7 +276,7 @@ async function getOpfsRoot() {
     )
   }
 
-  return storage.getDirectory()
+  return await getOpfsRoot() as unknown as OpfsDirectoryHandle
 }
 
 function writeBytes(
@@ -850,6 +861,12 @@ async function encryptFileToOpfs(
           Math.round((processedBytes / Math.max(request.file.size, 1)) * 62),
       ),
       `Protegendo bloco ${chunkIndex + 1}`,
+      {
+        chunkIndex,
+        totalChunks: manifest.chunkCount,
+        bytesWritten: processedBytes,
+        expectedSize: request.file.size,
+      },
     )
   }
 
@@ -1143,6 +1160,12 @@ async function decryptFileToOpfs(
       request.id,
       Math.min(88, 16 + Math.round((offset / request.file.size) * 72)),
       `Abrindo bloco ${dataChunkIndex}`,
+      {
+        chunkIndex: dataChunkIndex,
+        totalChunks: parsedHeader.chunkCount,
+        bytesWritten: decryptedSize,
+        expectedSize: request.file.size,
+      },
     )
   }
 
@@ -1209,7 +1232,7 @@ async function decryptFileToOpfs(
 }
 
 async function handleRequest(request: WorkerRequest) {
-  const root = await getOpfsRoot()
+  const root = await getWorkerOpfsRoot()
   const tempFileName = randomTempName()
   const tempFileHandle = await root.getFileHandle(tempFileName, { create: true })
   let accessHandle: SyncAccessHandle | null = null
@@ -1274,9 +1297,22 @@ workerScope.onmessage = (event: MessageEvent<WorkerRequest | CleanupRequest | Ca
     return
   }
 
-  void handleRequest(event.data).catch((error: unknown) => {
+  if ('type' in event.data) return
+
+  const request = event.data as WorkerRequest
+  void handleRequest(request).catch((error: unknown) => {
+    if (import.meta.env.DEV) {
+      console.error('[CriptoVéu][worker]', {
+        stage: 'request-error',
+        file: request.file.name,
+        size: request.file.size,
+        progress: null,
+        chunkIndex: null,
+        error,
+      })
+    }
     postResponse({
-      id: event.data.id,
+      id: request.id,
       type: 'ERROR',
       code: getErrorCode(error),
       message: getErrorMessage(error),

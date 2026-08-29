@@ -540,6 +540,7 @@
         "fileStep": "Arquivo {{current}}/{{total}} - {{label}}",
         "unexpectedFileFailure": "Falha inesperada ao processar este arquivo.",
         "processingFailed": "Falha no processamento",
+        "processingFailedAt": "Falha durante processamento local em {{progress}}% — {{stage}}",
         "noSuccessfulFiles": "Nenhum arquivo foi processado com sucesso.",
         "processCompleted_one": "Processo concluído",
         "processCompleted_other": "{{count}} arquivos concluídos",
