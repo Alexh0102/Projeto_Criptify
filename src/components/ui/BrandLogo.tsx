@@ -15,17 +15,19 @@ export default function BrandLogo({
   const isHero = variant === 'hero'
   const frameClasses = isHero
     ? 'h-[76px] w-[76px] rounded-[26px] sm:h-[108px] sm:w-[108px]'
-    : 'h-[52px] w-[52px] rounded-[20px] sm:h-[62px] sm:w-[62px]'
+    : 'h-[44px] w-[44px] rounded-[16px] sm:h-[62px] sm:w-[62px]'
   const coreClasses = isHero
     ? 'rounded-[24px] sm:rounded-[30px]'
-    : 'rounded-[20px] sm:rounded-[21px]'
+    : 'rounded-[16px] sm:rounded-[21px]'
   const wrapperClasses = isHero
-    ? 'flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center'
-    : 'flex min-w-0 items-center gap-3 sm:gap-3.5'
-  const titleClasses = isHero ? 'text-xs sm:text-[13px]' : 'truncate text-[10px] sm:text-[11px]'
+    ? 'flex min-w-0 max-w-full flex-col items-start gap-3.5 sm:flex-row sm:items-center sm:gap-4'
+    : 'flex min-w-0 items-center gap-2.5 sm:gap-3.5'
+  const titleClasses = isHero
+    ? 'text-xs sm:text-[13px]'
+    : 'whitespace-nowrap text-[11px] font-bold tracking-[0.22em] text-cyan-100/80 sm:text-xs sm:tracking-[0.32em]'
   const taglineClasses = isHero
-    ? 'mt-2 max-w-xl text-sm leading-6 sm:text-base'
-    : 'mt-1 hidden text-sm min-[360px]:block'
+    ? 'mt-2 max-w-xl text-sm leading-6 text-zinc-300 sm:text-base sm:leading-7 break-words'
+    : 'mt-0.5 hidden text-xs text-zinc-400 md:block'
 
   return (
     <div className={`${wrapperClasses} ${className}`.trim()}>
@@ -48,11 +50,11 @@ export default function BrandLogo({
       </div>
 
       {showTagline ? (
-        <div className="min-w-0">
-          <p className={`uppercase tracking-[0.32em] text-cyan-100/80 ${titleClasses}`}>
+        <div className="min-w-0 max-w-full break-words">
+          <p className={`uppercase ${titleClasses}`}>
             {t('brand.name')}
           </p>
-          <p className={`text-zinc-400 ${taglineClasses}`}>{t('brand.tagline')}</p>
+          <p className={taglineClasses}>{t('brand.tagline')}</p>
         </div>
       ) : null}
     </div>

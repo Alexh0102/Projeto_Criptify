@@ -228,15 +228,15 @@ export default function InstallAppButton() {
         onClick={() => {
           void handlePrimaryClick()
         }}
-        className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-sm font-semibold transition duration-200 sm:px-4 ${
+        className={`inline-flex min-h-[2.35rem] sm:min-h-11 items-center justify-center gap-1.5 sm:gap-2 rounded-full border px-2.5 py-1.5 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-semibold transition duration-200 w-auto max-w-full shrink-0 ${
           isInstalled
             ? 'border-emerald-400/30 bg-emerald-500/12 text-emerald-50 shadow-[0_14px_30px_rgba(16,185,129,0.14)]'
             : 'border-cyan-400/30 bg-[linear-gradient(135deg,rgba(34,211,238,0.18),rgba(14,227,141,0.14))] text-cyan-50 shadow-[0_18px_42px_rgba(34,211,238,0.14)] hover:-translate-y-0.5 hover:border-cyan-300/40 hover:shadow-[0_22px_48px_rgba(34,211,238,0.18)]'
         }`}
         aria-label={isInstalled ? 'Aplicativo instalado' : 'Baixar aplicativo'}
       >
-        {isInstalled ? <CheckCircle2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-        <span className="hidden min-[360px]:inline">{isInstalled ? 'Instalado' : 'Baixar app'}</span>
+        {isInstalled ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Download className="h-4 w-4 shrink-0" />}
+        <span className="hidden min-[380px]:inline">{isInstalled ? 'Instalado' : 'Baixar app'}</span>
       </button>
 
       {isInstallSheetOpen ? (

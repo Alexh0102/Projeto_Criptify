@@ -119,42 +119,42 @@ export default function HomePage() {
   return (
     <ToolPageLayout showToolsDock>
       <section className="space-y-4 sm:space-y-6">
-        <section className="cv-hero surface-primary rounded-[28px] p-4 sm:rounded-[38px] sm:p-7">
-          <div className="cv-hero-brand mb-4 sm:mb-6">
+        <section className="cv-hero surface-primary w-full max-w-full min-w-0 rounded-[28px] p-4 sm:rounded-[38px] sm:p-7">
+          <div className="cv-hero-brand mb-4 min-w-0 max-w-full sm:mb-6">
             <BrandLogo variant="hero" showTagline />
           </div>
 
-          <div className="hero-badge">
+          <div className="hero-badge max-w-full">
             <ShieldCheck className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-            <span className="truncate">{t('home.hero.badge')}</span>
+            <span className="break-words sm:truncate">{t('home.hero.badge')}</span>
           </div>
 
-          <div className="cv-hero-copy mt-4 space-y-3 sm:space-y-4">
+          <div className="cv-hero-copy mt-4 min-w-0 max-w-full break-words space-y-3 sm:space-y-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-500 sm:text-xs sm:tracking-[0.38em]">
               {t('home.hero.eyebrow')}
             </p>
-            <h1 className="max-w-4xl text-2xl font-bold tracking-tight text-white min-[320px]:text-lg min-[380px]:text-2xl sm:text-5xl sm:leading-[1.02]">
+            <h1 className="min-w-0 max-w-4xl break-words text-2xl font-bold tracking-tight text-white min-[360px]:text-3xl sm:text-4xl md:text-5xl leading-tight sm:leading-[1.08]">
               {t('home.hero.title')}
             </h1>
-            <p className="max-w-3xl text-sm leading-relaxed text-zinc-300 sm:text-base sm:leading-7">
+            <p className="min-w-0 max-w-3xl break-words text-sm leading-relaxed text-zinc-300 sm:text-base sm:leading-7">
               {t('home.hero.description')}
             </p>
           </div>
 
-          <div className="cv-hero-actions mt-5 flex flex-col gap-2.5 min-[480px]:flex-row min-[480px]:flex-wrap sm:mt-6 sm:gap-3">
-            <Link to="/arquivos" className="btn-primary w-full min-[480px]:w-auto">
+          <div className="cv-hero-actions mt-5 flex w-full max-w-full flex-col gap-2.5 min-[480px]:flex-row min-[480px]:flex-wrap sm:mt-6 sm:gap-3">
+            <Link to="/arquivos" className="btn-primary w-full max-w-full min-[480px]:w-auto">
               <span className="truncate">{t('home.hero.filesCta')}</span>
               <ArrowRight className="h-4 w-4 shrink-0" />
             </Link>
-            <a href="#ferramentas" className="btn-secondary w-full min-[480px]:w-auto">
+            <a href="#ferramentas" className="btn-secondary w-full max-w-full min-[480px]:w-auto">
               <span className="truncate">{t('home.hero.toolsCta')}</span>
             </a>
-            <a href="#recursos-beta" className="btn-secondary w-full min-[480px]:w-auto">
+            <a href="#recursos-beta" className="btn-secondary w-full max-w-full min-[480px]:w-auto">
               <span className="truncate">{t('home.hero.betaCta')}</span>
             </a>
           </div>
 
-          <p className="mt-3.5 text-sm text-zinc-400">{t('home.hero.note')}</p>
+          <p className="mt-3.5 min-w-0 max-w-full break-words text-sm text-zinc-400">{t('home.hero.note')}</p>
         </section>
 
         <section className="surface-secondary rounded-[32px] p-4 sm:p-5">
@@ -165,7 +165,7 @@ export default function HomePage() {
             {t('home.trust.title')}
           </h2>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
             {trustItemKeys.map((key) => (
               <div key={key} className="surface-technical rounded-[22px] p-4">
                 <p className="text-sm font-semibold text-white sm:text-base">
@@ -190,7 +190,7 @@ export default function HomePage() {
             {t('home.useCases.description')}
           </p>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {useCaseKeys.map((key) => (
               <div key={key} className="surface-technical rounded-[20px] p-4">
                 <p className="text-sm font-semibold text-white sm:text-[15px]">
@@ -334,7 +334,7 @@ export default function HomePage() {
             {t('home.local.title')}
           </h2>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
             {localBenefitKeys.map((key) => (
               <div key={key} className="surface-technical rounded-[22px] p-4">
                 <p className="text-sm font-semibold text-white sm:text-base">
@@ -356,7 +356,7 @@ export default function HomePage() {
             {t('home.audience.title')}
           </h2>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             {audienceItems.map((item) => {
               const Icon = item.icon
 

@@ -1,4 +1,4 @@
-﻿import { ArrowLeft, FlaskConical, Grid2x2, MoonStar, Settings, SunMedium, X } from 'lucide-react'
+import { ArrowLeft, FlaskConical, Grid2x2, MoonStar, Settings, SunMedium, X } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -85,7 +85,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
       <div className="cv-shell-orb cv-shell-orb-bottom pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl" />
 
       <div className={`relative mx-auto flex w-full max-w-full lg:max-w-7xl flex-1 flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7 ${isNative && !isHomePage ? 'mt-[calc(60px+env(safe-area-inset-top))]' : ''}`}>
-        <header className="cv-shell-header panel-surface sticky top-3 z-40 w-full rounded-[22px] px-3 py-2.5 sm:rounded-[26px] sm:px-5 sm:py-3">
+        <header className="cv-shell-header panel-surface sticky top-0 z-40 w-full rounded-[20px] px-2.5 py-2 transition-all duration-200 sm:top-3 sm:rounded-[26px] sm:px-5 sm:py-3">
           <div className="cv-shell-header-inner flex w-full items-center justify-between gap-2 sm:gap-3">
             <Link
               to="/"
@@ -148,7 +148,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
           </div>
         </header>
 
-        <main className={`cv-shell-main flex-1 py-4 sm:py-7 ${showToolsDock ? 'pb-28 sm:pb-7' : ''}`}>{children}</main>
+        <main className={`cv-shell-main flex-1 py-4 sm:py-7 ${showToolsDock ? 'pb-32 sm:pb-8' : 'pb-8'} [padding-bottom:max(2rem,env(safe-area-inset-bottom))]`}>{children}</main>
 
         <footer className="mt-auto flex flex-col gap-3 border-t border-white/10 pt-5 text-sm text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
           <p>{t('layout.footer.summary')}</p>
