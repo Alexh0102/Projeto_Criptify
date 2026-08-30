@@ -5,7 +5,7 @@ export function registerServiceWorker() {
 
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/service-worker.js')
+      .register('/service-worker.js', { updateViaCache: 'none' })
       .then((registration) => {
         void registration.update()
       })
