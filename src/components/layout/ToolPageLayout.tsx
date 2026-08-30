@@ -86,16 +86,16 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
 
       <div className={`relative mx-auto flex w-full max-w-full lg:max-w-7xl flex-1 flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7 ${isNative && !isHomePage ? 'mt-[calc(60px+env(safe-area-inset-top))]' : ''}`}>
         <header className="cv-shell-header panel-surface sticky top-0 z-40 w-full rounded-[20px] px-2.5 py-2 transition-all duration-200 sm:top-3 sm:rounded-[26px] sm:px-5 sm:py-3">
-          <div className="cv-shell-header-inner flex w-full items-center justify-between gap-2 sm:gap-3">
+          <div className="cv-shell-header-inner flex w-full min-w-0 items-center justify-between gap-2 sm:gap-3">
             <Link
               to="/"
-              className="cv-shell-header-brand block min-w-0 flex-shrink transition hover:opacity-95"
+              className="cv-shell-header-brand block min-w-0 flex-1 transition hover:opacity-95"
               aria-label={t('layout.header.homeAria')}
             >
               <BrandLogo variant="header" showTagline />
             </Link>
 
-            <div className="cv-shell-header-actions flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <div className="cv-shell-header-actions flex min-w-0 max-w-full shrink-0 items-center gap-1.5 sm:gap-3">
               <button
                 type="button"
                 onClick={() => setActiveDrawer('tools')}
@@ -118,7 +118,7 @@ export default function ToolPageLayout({ children, showToolsDock = false }: Prop
 
               <LanguageSwitcher />
 
-              <div className="cv-header-install min-w-0">
+              <div className="cv-header-install min-w-0 shrink-0">
                 <InstallAppButton />
               </div>
 

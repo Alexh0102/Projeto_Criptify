@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3'
+const CACHE_VERSION = 'v5'
 const APP_SHELL_CACHE = `criptoveu-app-shell-${CACHE_VERSION}`
 const STATIC_CACHE = `criptoveu-static-${CACHE_VERSION}`
 const APP_SHELL_URLS = [
