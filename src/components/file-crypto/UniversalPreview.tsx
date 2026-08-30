@@ -1,9 +1,11 @@
 import {
   Download,
+  ExternalLink,
   FileText,
   Image as ImageIcon,
   Maximize2,
   Pause,
+  Share2,
   ShieldOff,
   Video,
   X,
@@ -23,6 +25,8 @@ type UniversalPreviewProps = {
   onOpen?: () => void
   onClose?: () => void
   onDownload?: (event: MouseEvent<HTMLButtonElement>) => void
+  onShare?: (event: MouseEvent<HTMLButtonElement>) => void
+  onOpenExternal?: (event: MouseEvent<HTMLButtonElement>) => void
   previewUrlRevoked?: boolean
 }
 
@@ -35,6 +39,8 @@ export default function UniversalPreview({
   onOpen,
   onClose,
   onDownload,
+  onShare,
+  onOpenExternal,
   previewUrlRevoked = false,
 }: UniversalPreviewProps) {
   const { t } = useTranslation()
@@ -115,7 +121,7 @@ export default function UniversalPreview({
         )
       }
 
-      if (!url) {
+      if (!url || blob.size === 0) {
         return (
           <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-5 text-sm leading-7 text-amber-50">
             {t('files.preview.imageRenderFailed')}
@@ -225,6 +231,18 @@ export default function UniversalPreview({
     onDownload?.(event)
   }
 
+  function handleShareClick(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    onShare?.(event)
+  }
+
+  function handleOpenExternalClick(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    onOpenExternal?.(event)
+  }
+
   const PreviewIcon =
     metadata.kind === 'image'
       ? ImageIcon
@@ -264,6 +282,20 @@ export default function UniversalPreview({
             <button type="button" onClick={handleDownloadClick} className="btn-secondary w-full">
               <Download className="h-4 w-4" />
               {t('common.download')}
+            </button>
+          ) : null}
+
+          {onShare ? (
+            <button type="button" onClick={handleShareClick} className="btn-secondary w-full">
+              <Share2 className="h-4 w-4" />
+              {t('files.workspace.results.share')}
+            </button>
+          ) : null}
+
+          {onOpenExternal ? (
+            <button type="button" onClick={handleOpenExternalClick} className="btn-secondary w-full">
+              <ExternalLink className="h-4 w-4" />
+              {t('files.workspace.results.openExternal')}
             </button>
           ) : null}
 

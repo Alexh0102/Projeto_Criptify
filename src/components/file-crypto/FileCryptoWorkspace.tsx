@@ -16,6 +16,9 @@
   X,
 } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
+import { Share } from '@capacitor/share'
+import { Directory, Filesystem } from '@capacitor/filesystem'
+import { FileOpener } from '@capawesome-team/capacitor-file-opener'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -54,6 +57,7 @@ import {
 import { MAX_KEY_FILE_SIZE_BYTES } from '../../lib/key-file-protection'
 import {
   exportFileToNativeDownloads,
+  sanitizeNativeFileName,
   saveBlobInBrowser,
   supportsNativeFileExport,
 } from '../../lib/native-file-export'
@@ -565,11 +569,13 @@ export default function FileCryptoWorkspace() {
           total: formatFileSize(result.size),
         }))
       })
-      await result.dispose?.()
     } else {
       await saveBlobInBrowser(result.blob, result.name)
-      await result.dispose?.()
     }
+
+    // Keep the OPFS-backed File alive while the result card and its preview
+    // remain mounted. Cleanup is centralized in clearResults/unmount so a
+    // successful export cannot invalidate a preview that is opened afterward.
 
     result.savedWithSuccess = true
     setResults((currentResults) =>
@@ -603,6 +609,62 @@ export default function FileCryptoWorkspace() {
       tone: 'error',
       message: error instanceof Error
         ? `${t('files.workspace.status.saveFailed')}: ${error.message}`
+        : t('files.workspace.status.unexpectedDownloadFailure'),
+    })
+  }
+
+  async function getSavedNativeFileUri(result: ResultItem) {
+    if (!supportsNativeFileExport()) {
+      throw new Error(t('files.workspace.results.nativeActionUnavailable'))
+    }
+
+    if (!result.savedWithSuccess) {
+      await handleDownloadResult(result)
+    }
+
+    const { uri } = await Filesystem.getUri({
+      directory: Directory.Documents,
+      path: sanitizeNativeFileName(result.name),
+    })
+
+    if (!uri) {
+      throw new Error(t('files.workspace.results.nativeActionUnavailable'))
+    }
+
+    return uri
+  }
+
+  async function handleShareResult(result: ResultItem) {
+    const uri = await getSavedNativeFileUri(result)
+    const canShare = await Share.canShare()
+    if (!canShare.value) {
+      throw new Error(t('files.workspace.results.shareUnavailable'))
+    }
+
+    await Share.share({
+      title: result.name,
+      files: [uri],
+      dialogTitle: t('files.workspace.results.share'),
+    })
+  }
+
+  async function handleOpenExternalResult(result: ResultItem) {
+    const uri = await getSavedNativeFileUri(result)
+    await FileOpener.openFile({
+      path: uri,
+      mimeType: resolvePreviewMimeType(result.name, result.blob.type),
+    })
+  }
+
+  function handleNativeActionFailure(error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return
+    }
+
+    setStatus({
+      tone: 'error',
+      message: error instanceof Error
+        ? error.message
         : t('files.workspace.status.unexpectedDownloadFailure'),
     })
   }
@@ -1694,10 +1756,37 @@ export default function FileCryptoWorkspace() {
                             ? supportsNativeFileExport()
                               ? t('files.workspace.results.savedNative')
                               : t('files.workspace.results.saved')
-                            : mode === 'encrypt'
-                              ? t('files.workspace.status.saveEncryptedFile')
-                              : t('files.workspace.status.saveRecoveredFile')}
+                              : mode === 'encrypt'
+                                ? t('files.workspace.status.saveEncryptedFile')
+                                : t('files.workspace.status.saveRecoveredFile')}
                         </button>
+
+                        {supportsNativeFileExport() && mode === 'decrypt' ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                void handleShareResult(result).catch(handleNativeActionFailure)
+                              }}
+                              className="btn-secondary w-full"
+                            >
+                              {t('files.workspace.results.share')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                void handleOpenExternalResult(result).catch(handleNativeActionFailure)
+                              }}
+                              className="btn-secondary w-full"
+                            >
+                              {t('files.workspace.results.openExternal')}
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </div>
 
@@ -1861,6 +1950,24 @@ export default function FileCryptoWorkspace() {
               isInactive={isInactive}
               onClose={handleClosePreview}
               onDownload={handleSaveRecoveredFromPreview}
+              onShare={
+                supportsNativeFileExport()
+                  ? () => {
+                      if (activePreviewItem) {
+                        void handleShareResult(activePreviewItem).catch(handleNativeActionFailure)
+                      }
+                    }
+                  : undefined
+              }
+              onOpenExternal={
+                supportsNativeFileExport()
+                  ? () => {
+                      if (activePreviewItem) {
+                        void handleOpenExternalResult(activePreviewItem).catch(handleNativeActionFailure)
+                      }
+                    }
+                  : undefined
+              }
             />
           </div>
         </div>

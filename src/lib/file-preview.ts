@@ -27,7 +27,7 @@ export function resolvePreviewMimeType(
 ): string {
   const declared = manifestMimeType?.trim().toLowerCase()
   if (declared && declared !== 'application/octet-stream') {
-    return declared
+    return declared === 'image/jpg' ? 'image/jpeg' : declared
   }
 
   const extension = fileName.split('.').pop()?.toLowerCase()
