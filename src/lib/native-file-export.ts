@@ -8,6 +8,12 @@ const WATCHDOG_MS = 90_000
 const isDevelopment = import.meta.env.DEV
 
 type ExportProgress = { percent: number; bytesWritten: number; expectedSize: number; chunkIndex: number }
+export type NativeExportContext = {
+  action: string
+  trigger: string
+  userInitiated: boolean
+  previewMode: boolean
+}
 type BrowserFileHandle = {
   createWritable: () => Promise<{
     write: (data: Blob) => Promise<void>
@@ -100,6 +106,12 @@ export async function exportFileToNativeDownloads(
   file: Blob,
   fileName: string,
   onProgress?: (progress: number, detail?: ExportProgress) => void,
+  context: NativeExportContext = {
+    action: 'exportFileToNativeDownloads',
+    trigger: 'unknown',
+    userInitiated: false,
+    previewMode: false,
+  },
 ) {
   if (!supportsNativeFileExport()) { await saveBlobInBrowser(file, fileName); return }
 
@@ -110,11 +122,17 @@ export async function exportFileToNativeDownloads(
   let bytesWritten = 0
   const expectedSize = file.size
   const startedAt = performance.now()
+  const exportLogContext = {
+    ...context,
+    fileName: safeFileName,
+    directory: 'Documents',
+    stack: new Error().stack,
+  }
 
   try {
     await Filesystem.requestPermissions()
     const freeStorageEstimate = await getFreeStorageEstimate()
-    if (isDevelopment) console.debug('[CriptoVéu][export]', { stage: 'preflight', chunkIndex: 0, totalChunks: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), bytesWritten, expectedSize, elapsedMs: Math.round(performance.now() - startedAt), freeStorageEstimate })
+    if (isDevelopment) console.debug('[CriptoVéu][export]', { ...exportLogContext, stage: 'preflight', chunkIndex: 0, totalChunks: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), bytesWritten, expectedSize, elapsedMs: Math.round(performance.now() - startedAt), freeStorageEstimate })
     if (freeStorageEstimate !== null && freeStorageEstimate < expectedSize * 2.5) {
       throw new Error(`Espaço insuficiente para exportar: exigidos ${Math.ceil(expectedSize * 2.5)} bytes, disponíveis ${freeStorageEstimate} bytes.`)
     }
@@ -131,19 +149,19 @@ export async function exportFileToNativeDownloads(
       } finally { chunk.fill(0) }
       bytesWritten = end
       const detail = { percent: expectedSize === 0 ? 100 : Math.round((bytesWritten / expectedSize) * 100), bytesWritten, expectedSize, chunkIndex }
-      if (isDevelopment) console.debug('[CriptoVéu][export]', { stage: 'appendFile', ...detail, totalChunks: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), elapsedMs: Math.round(performance.now() - startedAt), freeStorageEstimate })
+      if (isDevelopment) console.debug('[CriptoVéu][export]', { ...exportLogContext, stage: 'appendFile', ...detail, totalChunks: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), elapsedMs: Math.round(performance.now() - startedAt), freeStorageEstimate })
       onProgress?.(detail.percent, detail)
       await new Promise<void>((resolve) => window.setTimeout(resolve, 0))
     }
 
     const storedFile = await Filesystem.stat({ path: temporaryPath, directory })
-    if (isDevelopment) console.debug('[CriptoVéu][export]', { stage: 'stat', chunkIndex: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), totalChunks: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), bytesWritten, expectedSize, statSize: storedFile.size, elapsedMs: Math.round(performance.now() - startedAt), freeStorageEstimate })
+    if (isDevelopment) console.debug('[CriptoVéu][export]', { ...exportLogContext, stage: 'stat', chunkIndex: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), totalChunks: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), bytesWritten, expectedSize, statSize: storedFile.size, elapsedMs: Math.round(performance.now() - startedAt), freeStorageEstimate })
     if (storedFile.size !== expectedSize) throw new Error(`Gravação incompleta: tamanho esperado ${expectedSize} bytes, mas apenas ${storedFile.size} bytes foram gravados.`)
     await Filesystem.rename({ from: temporaryPath, to: safeFileName, directory })
     promoted = true
     onProgress?.(100, { percent: 100, bytesWritten, expectedSize, chunkIndex: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES) })
   } catch (error) {
-    if (isDevelopment) console.error('[CriptoVéu][export]', { stage: 'error', chunkIndex: Math.floor(bytesWritten / NATIVE_EXPORT_CHUNK_SIZE_BYTES), totalChunks: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), bytesWritten, expectedSize, elapsedMs: Math.round(performance.now() - startedAt), freeStorageEstimate: await getFreeStorageEstimate().catch(() => null), message: error instanceof Error ? error.message : String(error) })
+    if (isDevelopment) console.error('[CriptoVéu][export]', { ...exportLogContext, stage: 'error', chunkIndex: Math.floor(bytesWritten / NATIVE_EXPORT_CHUNK_SIZE_BYTES), totalChunks: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), bytesWritten, expectedSize, elapsedMs: Math.round(performance.now() - startedAt), freeStorageEstimate: await getFreeStorageEstimate().catch(() => null), message: error instanceof Error ? error.message : String(error) })
     if (!promoted) await Filesystem.deleteFile({ path: temporaryPath, directory }).catch(() => undefined)
     if (supportsNativeFileExport()) throw error
     triggerBrowserDownload(file, safeFileName)

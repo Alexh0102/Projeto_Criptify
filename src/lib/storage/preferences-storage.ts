@@ -18,7 +18,6 @@ export type LocalStats = {
 
 export type CryptoPreferences = {
   defaultArgon2MemoryMb: number
-  autoDownloadJsonReport: boolean
   saveChunkSize: number
 }
 
@@ -62,7 +61,6 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   },
   crypto: {
     defaultArgon2MemoryMb: DEFAULT_MEMORY_MB,
-    autoDownloadJsonReport: true,
     saveChunkSize: 4,
   },
   ui: {
@@ -99,7 +97,6 @@ function normalizePreferences(value: Partial<UserPreferences> | null | undefined
     },
     crypto: {
       defaultArgon2MemoryMb: isValidMemory(crypto?.defaultArgon2MemoryMb) ? crypto.defaultArgon2MemoryMb : DEFAULT_PREFERENCES.crypto.defaultArgon2MemoryMb,
-      autoDownloadJsonReport: typeof crypto?.autoDownloadJsonReport === 'boolean' ? crypto.autoDownloadJsonReport : DEFAULT_PREFERENCES.crypto.autoDownloadJsonReport,
       saveChunkSize: typeof crypto?.saveChunkSize === 'number' && crypto.saveChunkSize > 0 ? crypto.saveChunkSize : DEFAULT_PREFERENCES.crypto.saveChunkSize,
     },
     ui: {
@@ -133,7 +130,6 @@ function readStoredPreferences(): UserPreferences {
       crypto: {
         ...parsed?.crypto,
         defaultArgon2MemoryMb: parsed?.crypto?.defaultArgon2MemoryMb ?? legacyProfileDefinition?.memoryMb ?? DEFAULT_MEMORY_MB,
-        autoDownloadJsonReport: parsed?.crypto?.autoDownloadJsonReport ?? true,
         saveChunkSize: parsed?.crypto?.saveChunkSize ?? 4,
       },
     })
