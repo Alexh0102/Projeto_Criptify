@@ -1,4 +1,3 @@
-import { Capacitor } from '@capacitor/core'
 import { Directory, Filesystem } from '@capacitor/filesystem'
 
 import { encodeBytesToBase64 } from './criptoveu'
@@ -22,11 +21,18 @@ type BrowserWindow = Window & {
   }) => Promise<BrowserFileHandle>
 }
 
-function sanitizeFileName(fileName: string) {
+export function sanitizeNativeFileName(fileName: string) {
   return Array.from(fileName, (character) => {
     const codePoint = character.codePointAt(0) ?? 0
     return /[\\/:*?"<>|]/.test(character) || codePoint <= 0x1f ? '_' : character
   }).join('')
+}
+
+function createTemporaryExportPath(safeFileName: string) {
+  const uniqueId = typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  return `.${safeFileName}.${uniqueId}.criptoveu.part`
 }
 
 function triggerBrowserDownload(file: Blob, fileName: string) {
@@ -43,6 +49,10 @@ function triggerBrowserDownload(file: Blob, fileName: string) {
 export function supportsNativeFileExport() { return isNativeApp() }
 
 export async function saveBlobInBrowser(fileBlob: Blob, fileName: string): Promise<void> {
+  if (supportsNativeFileExport()) {
+    throw new Error('Exportação pelo navegador não está disponível no aplicativo nativo.')
+  }
+
   const browserWindow = window as BrowserWindow
   if (typeof browserWindow.showSaveFilePicker === 'function') {
     if (isDevelopment) console.debug('[CriptoVéu][web-export]', { strategy: 'file-system-access', fileName, size: fileBlob.size })
@@ -93,9 +103,9 @@ export async function exportFileToNativeDownloads(
 ) {
   if (!supportsNativeFileExport()) { await saveBlobInBrowser(file, fileName); return }
 
-  const safeFileName = sanitizeFileName(fileName)
+  const safeFileName = sanitizeNativeFileName(fileName)
   const directory = Directory.Documents
-  const temporaryPath = `.${safeFileName}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`
+  const temporaryPath = createTemporaryExportPath(safeFileName)
   let promoted = false
   let bytesWritten = 0
   const expectedSize = file.size
@@ -135,7 +145,7 @@ export async function exportFileToNativeDownloads(
   } catch (error) {
     if (isDevelopment) console.error('[CriptoVéu][export]', { stage: 'error', chunkIndex: Math.floor(bytesWritten / NATIVE_EXPORT_CHUNK_SIZE_BYTES), totalChunks: Math.ceil(expectedSize / NATIVE_EXPORT_CHUNK_SIZE_BYTES), bytesWritten, expectedSize, elapsedMs: Math.round(performance.now() - startedAt), freeStorageEstimate: await getFreeStorageEstimate().catch(() => null), message: error instanceof Error ? error.message : String(error) })
     if (!promoted) await Filesystem.deleteFile({ path: temporaryPath, directory }).catch(() => undefined)
-    if (Capacitor.isNativePlatform()) throw error
+    if (supportsNativeFileExport()) throw error
     triggerBrowserDownload(file, safeFileName)
   }
 }
