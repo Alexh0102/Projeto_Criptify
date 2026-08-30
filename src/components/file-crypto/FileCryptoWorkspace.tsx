@@ -57,12 +57,12 @@ import {
 import { MAX_KEY_FILE_SIZE_BYTES } from '../../lib/key-file-protection'
 import {
   exportFileToNativeDownloads,
+  type NativeExportContext,
   sanitizeNativeFileName,
   saveBlobInBrowser,
   supportsNativeFileExport,
 } from '../../lib/native-file-export'
 import {
-  getPreferencesSync,
   getSecurityProfileIdFromPreferences,
   incrementStats,
   updatePreferences,
@@ -85,6 +85,8 @@ type ResultItem = {
   preview: PreviewMetadata
   securityReport: FileSecurityReport
   savedWithSuccess: boolean
+  savedToDocuments: boolean
+  nativePath: string | null
   dispose?: () => void | Promise<void>
 }
 
@@ -544,14 +546,18 @@ export default function FileCryptoWorkspace() {
     setIsDragging(false)
   }
 
-  async function handleDownloadResult(result: ResultItem, onExportProgress?: (value: number) => void) {
+  async function handleDownloadResult(
+    result: ResultItem,
+    onExportProgress?: (value: number) => void,
+    exportContext?: NativeExportContext,
+  ): Promise<string | null> {
     if (result.savedWithSuccess) {
       setExportNotice(
         supportsNativeFileExport()
           ? t('files.workspace.results.savedNativeNotice')
           : t('files.workspace.results.savedWebNotice'),
       )
-      return
+      return result.nativePath
     }
 
     setStatus({
@@ -568,7 +574,16 @@ export default function FileCryptoWorkspace() {
           written: formatFileSize(Math.round((result.size * value) / 100)),
           total: formatFileSize(result.size),
         }))
+      }, exportContext)
+      const safeFileName = sanitizeNativeFileName(result.name)
+      const storedFile = await Filesystem.stat({
+        directory: Directory.Documents,
+        path: safeFileName,
       })
+      if (storedFile.size !== result.size) {
+        throw new Error(`Gravação incompleta: tamanho esperado ${result.size} bytes, mas apenas ${storedFile.size} bytes foram confirmados em Documents.`)
+      }
+      result.nativePath = safeFileName
     } else {
       await saveBlobInBrowser(result.blob, result.name)
     }
@@ -578,11 +593,17 @@ export default function FileCryptoWorkspace() {
     // successful export cannot invalidate a preview that is opened afterward.
 
     result.savedWithSuccess = true
+    result.savedToDocuments = supportsNativeFileExport()
     setResults((currentResults) =>
       currentResults.map((currentResult) =>
         currentResult.id === result.id
-          ? { ...currentResult, savedWithSuccess: true }
-        : currentResult,
+          ? {
+              ...currentResult,
+              savedWithSuccess: true,
+              savedToDocuments: result.savedToDocuments,
+              nativePath: result.nativePath,
+            }
+          : currentResult,
       ),
     )
     setExportNotice(
@@ -594,6 +615,7 @@ export default function FileCryptoWorkspace() {
       tone: 'success',
       message: t('files.workspace.status.packageSaved'),
     })
+    return result.nativePath
   }
 
   function handleDownloadFailure(error: unknown) {
@@ -618,13 +640,13 @@ export default function FileCryptoWorkspace() {
       throw new Error(t('files.workspace.results.nativeActionUnavailable'))
     }
 
-    if (!result.savedWithSuccess) {
-      await handleDownloadResult(result)
+    if (!result.savedWithSuccess || !result.nativePath) {
+      throw new Error(t('files.workspace.results.saveBeforeNativeAction'))
     }
 
     const { uri } = await Filesystem.getUri({
       directory: Directory.Documents,
-      path: sanitizeNativeFileName(result.name),
+      path: result.nativePath,
     })
 
     if (!uri) {
@@ -718,13 +740,28 @@ export default function FileCryptoWorkspace() {
       await exportFileToNativeDownloads(
         reportBlob,
         `${result.name}.relatorio-seguranca.json`,
+        undefined,
+        {
+          action: 'downloadSecurityReport',
+          trigger: 'downloadSecurityReport-button',
+          userInitiated: true,
+          previewMode: false,
+        },
       )
     } catch (error) {
       handleDownloadFailure(error)
     }
   }
 
-  async function saveRecoveredFile(result: ResultItem) {
+  async function saveRecoveredFile(
+    result: ResultItem,
+    exportContext: NativeExportContext = {
+      action: 'saveRecoveredFile',
+      trigger: 'saveRecoveredFile-button',
+      userInitiated: true,
+      previewMode: isPreviewOpen,
+    },
+  ) {
     if (import.meta.env.DEV) {
       console.debug('[CriptoVéu][click]', {
         handler: 'saveRecoveredFile',
@@ -732,7 +769,13 @@ export default function FileCryptoWorkspace() {
       })
     }
 
-    await handleDownloadResult(result)
+    await handleDownloadResult(result, undefined, exportContext)
+    setStatus({
+      tone: 'success',
+      message: mode === 'decrypt'
+        ? t('files.workspace.status.recoveredFileSaved')
+        : t('files.workspace.status.packageSaved'),
+    })
   }
 
   function handleSaveRecoveredFromPreview(event: MouseEvent<HTMLButtonElement>) {
@@ -762,7 +805,12 @@ export default function FileCryptoWorkspace() {
 
     results.forEach((result, index) => {
       window.setTimeout(() => {
-        void saveRecoveredFile(result).catch(handleDownloadFailure)
+        void saveRecoveredFile(result, {
+          action: 'saveAll',
+          trigger: 'downloadAll-button',
+          userInitiated: true,
+          previewMode: false,
+        }).catch(handleDownloadFailure)
       }, index * 120)
     })
   }
@@ -809,9 +857,16 @@ export default function FileCryptoWorkspace() {
   }
 
   function handleClosePreview() {
+    const closedUnsavedPreview = previewItem !== null && !previewItem.savedWithSuccess
     setIsPreviewOpen(false)
     setPreviewItem(null)
     setPreviewBlob(null)
+    if (closedUnsavedPreview && mode === 'decrypt') {
+      setStatus({
+        tone: 'info',
+        message: t('files.preview.previewClosedWithoutSave'),
+      })
+    }
   }
 
   function handlePreviewBackdropClick(event: MouseEvent<HTMLDivElement>) {
@@ -891,7 +946,6 @@ export default function FileCryptoWorkspace() {
       const failures: string[] = []
       let saveCancelled = false
       let savePending = false
-      const localPreferences = getPreferencesSync()
 
       for (const [index, currentFile] of files.entries()) {
         const currentStep = index + 1
@@ -965,6 +1019,8 @@ export default function FileCryptoWorkspace() {
             preview: nextPreview,
             securityReport,
             savedWithSuccess: false,
+            savedToDocuments: false,
+            nativePath: null,
             dispose,
           }
           if (mode === 'encrypt') {
@@ -973,20 +1029,15 @@ export default function FileCryptoWorkspace() {
               message: t('files.workspace.status.packageReady'),
             })
             if (supportsNativeFileExport()) {
-              await handleDownloadResult(processedResult, setProgress)
+              await handleDownloadResult(processedResult, setProgress, {
+                action: 'saveEncryptedFile',
+                trigger: 'process-success',
+                userInitiated: false,
+                previewMode: false,
+              })
             } else {
               savePending = true
             }
-          } else if (supportsNativeFileExport()) {
-            await handleDownloadResult(processedResult, setProgress)
-          }
-
-          if (
-            mode === 'encrypt' &&
-            localPreferences.crypto.autoDownloadJsonReport &&
-            supportsNativeFileExport()
-          ) {
-            await downloadSecurityReport(processedResult)
           }
 
           await incrementStats(1, currentFile.size, mode)
@@ -1084,21 +1135,13 @@ export default function FileCryptoWorkspace() {
                   detail: failures[0],
                 })}`
               : previewableResults.length > 0
-                ? t(
-                    supportsNativeFileExport()
-                    ? 'files.workspace.status.decryptedWithPreviewsNative'
-                      : 'files.workspace.status.decryptedWithPreviews',
-                    {
-                      processed: processedResults.length,
-                      previews: previewableResults.length,
-                    },
-                  )
-                : t(
-                    supportsNativeFileExport()
-                      ? 'files.workspace.status.decryptedSuccessNative'
-                      : 'files.workspace.status.decryptedSuccess',
-                    { count: processedResults.length },
-                  ),
+                ? t('files.workspace.status.decryptedWithPreviews', {
+                    processed: processedResults.length,
+                    previews: previewableResults.length,
+                  })
+                : t('files.workspace.status.decryptedSuccess', {
+                    count: processedResults.length,
+                  }),
       })
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return

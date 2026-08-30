@@ -1,4 +1,4 @@
-import { Check, Cpu, Download, HardDrive } from 'lucide-react'
+import { Check, Cpu, HardDrive } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { FILE_SECURITY_PROFILES } from '../../lib/criptoveu'
@@ -47,22 +47,6 @@ export default function CryptoPreferencesCard({ preferences, nativeApp, onChange
           )
         })}
       </fieldset>
-
-      <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3">
-        <input
-          type="checkbox"
-          checked={preferences.autoDownloadJsonReport}
-          onChange={(event) => onChange({ autoDownloadJsonReport: event.target.checked })}
-          className="mt-1 h-4 w-4 accent-cyan-400"
-        />
-        <span>
-          <span className="flex items-center gap-2 text-sm font-medium text-white">
-            <Download className="h-4 w-4 text-cyan-200" />
-            {t('settings.crypto.autoReport')}
-          </span>
-          <span className="mt-1 block text-xs leading-5 text-zinc-400">{t('settings.crypto.autoReportNote')}</span>
-        </span>
-      </label>
 
       <div className="mt-4 flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-xs leading-5 text-zinc-400">
         <HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
