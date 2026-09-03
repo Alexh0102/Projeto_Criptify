@@ -28,6 +28,7 @@ Principais recursos:
 
 - Criptografia e descriptografia de arquivos locais.
 - Processamento por blocos para arquivos grandes.
+- Paridade XOR recuperável para um ciphertext danificado por grupo (V6).
 - Pré-visualização local de arquivos descriptografados, quando o navegador oferece suporte.
 - Geração de chave longa no estilo usado por formatos como `.crypt15`.
 - QR Code protegido por senha.
@@ -64,6 +65,7 @@ Principais recursos:
 - Web Crypto API nativa do navegador.
 - hash-wasm para Argon2id em WebAssembly, executado em Web Worker.
 - OPFS para criptografia e descriptografia em um Web Worker dedicado quando `createSyncAccessHandle` está disponível.
+- Processamento por blocos de 2 MB com manifesto de integridade SHA-256 cifrado (V4/V5/V6).
 - qrcode para geração de QR Code.
 - jsqr para leitura de QR Code em imagens.
 - Service Worker e Web App Manifest para experiência PWA.
@@ -76,6 +78,7 @@ Principais recursos:
 | Ferramenta | Criptografia | Derivação de chave | Armazenamento / saída |
 |---|---|---|---|
 | Arquivos V5 com proteção dupla | AES-256-GCM + manifesto SHA-256 cifrado | SHA-256 de senha + arquivo-chave, seguido de Argon2id | Arquivo `.criptoveu` |
+| Arquivos V6 com paridade recuperável | AES-256-GCM + manifesto SHA-256 cifrado + paridade XOR local | Argon2id v1.3 via WASM em Web Worker | Arquivo `.criptoveu` |
 | Arquivos V4 | AES-256-GCM + manifesto SHA-256 cifrado | Argon2id v1.3 via WASM em Web Worker | Arquivo `.criptoveu` |
 | Arquivos legados | AES-GCM | Argon2id no `CRIPTOVEU3`; PBKDF2/SHA-256 nos anteriores | Pacotes `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1` |
 | Mensagens `MSG2` | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | Payload `CVM2` |
@@ -97,20 +100,21 @@ A criptografia e a descriptografia acontecem em blocos de até **2 MB**. Em nave
 
 O caminho OPFS remove o limite fixo anterior de 1 GB imposto pela aplicação. O limite prático passa a ser a quota de armazenamento disponível para o navegador, enquanto a memória permanece proporcional ao bloco ativo, aos dados de autenticação e ao perfil Argon2id selecionado, em vez de proporcional ao tamanho total do arquivo. Em navegadores sem a API OPFS necessária, o caminho alternativo continua disponível com uma proteção conservadora de 1 GB.
 
-Formato atual do pacote V4:
+Formato atual dos pacotes V4/V5/V6:
 
 ```text
-CRIPTOVEU4 + ram_mb_ascii + passes_ascii + salt + iv_inicial
+CRIPTOVEU[4|5|6] + ram_mb_ascii + passes_ascii + salt + iv_inicial
   + tamanho_bloco + quantidade_blocos
   + [tipo_dados + tamanho_ciphertext + ciphertext]...
+  + [tipo_paridade + tamanho_paridade + paridade]... (somente V6, após cada grupo de até 4 blocos)
   + [tipo_manifesto + tamanho_ciphertext + manifesto_cifrado]
 ```
 
-Estrutura do cabeçalho V4:
+Estrutura do cabeçalho V4, V5 e V6:
 
 ```text
 offset  tamanho   campo
-0       10        assinatura: "CRIPTOVEU4"
+0       10        assinatura: "CRIPTOVEU4", "CRIPTOVEU5" ou "CRIPTOVEU6"
 10      4         RAM Argon2id em MB, ASCII decimal
 14      4         passes Argon2id, ASCII decimal
 18      16        salt
@@ -127,18 +131,20 @@ Detalhes técnicos:
 - Parâmetros Argon2id: `t=2`, `p=1`.
 - Perfis de memória Argon2id: **64 MB**, **256 MB** por padrão ou **512 MB**.
 - A seleção de memória fica em cache apenas para criar arquivos novos.
-- O cabeçalho V4 registra RAM, passes, salt, IV inicial, tamanho de bloco e quantidade de blocos.
+- O cabeçalho V4/V5/V6 registra RAM, passes, salt, IV inicial, tamanho de bloco e quantidade de blocos.
 - A descriptografia lê os parâmetros diretamente do pacote; não depende de `localStorage`.
 - Cada bloco tem até 2 MB.
 - O cabeçalho fixo, tipo, índice e tamanho de cada registro entram no AAD para rejeitar alteração, reordenação e truncamento.
 - O primeiro bloco usa o IV armazenado no cabeçalho.
 - Os registros seguintes usam IVs exclusivos derivados do IV inicial e do índice; o manifesto usa o índice imediatamente posterior ao último bloco.
+- No V6, cada grupo de até quatro blocos cifrados é seguido por um registro de paridade XOR. Um ciphertext de dados danificado por grupo pode ser reconstruído antes da verificação AES-GCM e SHA-256; vários blocos danificados ou a paridade danificada não podem ser recuperados.
 - O **Escudo de Integridade** calcula SHA-256 do arquivo completo e de cada bloco em um Web Worker separado.
 - O manifesto guarda nome original, tipo MIME, tamanho, hashes, algoritmos e parâmetros Argon2id. Ele é cifrado e autenticado como o último registro do pacote.
 - Depois da recuperação, o navegador recalcula os hashes do conteúdo e só confirma a integridade quando todos coincidem.
 - O diagnóstico sem senha valida apenas a estrutura do pacote e usa a expressão **estrutura plausível**. Autenticidade exige a senha correta.
 - Cada resultado pode gerar um relatório JSON local com formato, KDF, parâmetros, contagem de blocos e estado da verificação.
 - Compatibilidade de leitura com `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2` e `CRIPTIFY1`.
+- A paridade recuperável V6 não pode ser combinada com a proteção V5 por arquivo-chave; escolha um modo de proteção por pacote.
 - Com OPFS, o limite prático é o armazenamento local disponível e a quota do navegador. O caminho alternativo fica limitado a **1 GB**.
 
 No aplicativo Android com Capacitor, os resultados concluídos são exportados para `Download/` pelo plugin nativo Filesystem, uma fatia de 2 MB codificada em Base64 por vez. Em versões do Android que não permitem `ExternalStorage`, o gerenciador de downloads do WebView é usado como alternativa.
@@ -180,8 +186,16 @@ Regras de segurança:
 - um arquivo público ou previsível oferece pouco ganho contra um atacante que
   já tenha acesso a ele.
 
-Pacotes sem proteção dupla continuam sendo criados como `CRIPTOVEU4`. A leitura
-de V4 e de todos os formatos anteriores permanece compatível.
+Pacotes sem arquivo-chave ou paridade recuperável são criados como `CRIPTOVEU4`
+por padrão. A proteção por arquivo-chave cria `CRIPTOVEU5`, e a paridade
+recuperável cria `CRIPTOVEU6`. A leitura de V4, V5, V6 e de todos os formatos
+anteriores permanece compatível.
+
+#### Paridade recuperável com `CRIPTOVEU6`
+
+Quando o **Modo recuperável com paridade** é ativado, novos arquivos usam a assinatura `CRIPTOVEU6`. O pacote mantém o cabeçalho autenticado, o manifesto cifrado e a verificação SHA-256 do V4/V5/V6, acrescentando um registro de paridade XOR local após cada grupo de até quatro blocos cifrados. Se um ciphertext de dados de um grupo for danificado, mas os demais ciphertexts e a paridade permanecerem íntegros, a aplicação reconstrói o ciphertext e depois o valida com AES-GCM e os hashes finais do manifesto.
+
+Paridade é redundância, não substitui criptografia nem backup. Ela não recupera dois blocos de dados danificados no mesmo grupo, um registro de paridade danificado, um registro excluído ou uma senha perdida. O modo não pode ser combinado com arquivo-chave e acrescenta aproximadamente 25% de espaço em grupos completos de quatro blocos.
 
 ---
 
@@ -266,14 +280,17 @@ permite exportar o mesmo conteúdo como um arquivo portátil
 `.criptoveu-note`. Títulos, textos, etiquetas e identificadores ficam dentro
 do ciphertext; a busca só acontece localmente depois do desbloqueio.
 
-O envelope é criptografado com AES-256-GCM e protegido por senha mestre. Novos
-cofres usam `NOTE2` por fora e o documento autenticado `PORTABLE_VAULT1` por
-dentro.
+O envelope é criptografado com AES-256-GCM e protegido por senha mestre. Cofres
+no modo padrão usam `NOTE2` por fora; o **Modo recuperável com paridade** usa
+`NOTE3`. Ambos contêm o documento autenticado `PORTABLE_VAULT1` por dentro.
 
 Parâmetros principais:
 
 - Senha mínima: **12 caracteres**.
 - Argon2id em Web Worker com **128 MB**, `t=2` e `p=1`.
+- O modo padrão armazena um ciphertext autenticado no `NOTE2`.
+- O modo recuperável armazena dois ciphertexts autenticados com IVs independentes e um valor de paridade XOR no `NOTE3`. Um ciphertext danificado pode ser reconstruído se o outro ciphertext e a paridade permanecerem íntegros; o plaintext resultante ainda precisa passar pela autenticação AES-GCM e pela validação do cofre.
+- O modo recuperável torna o envelope cifrado aproximadamente três vezes maior e não recupera dois ciphertexts danificados, paridade danificada ou senha perdida.
 - Tipo, versão e parâmetros da KDF são autenticados como AAD.
 - Até **500 notas**, com títulos, conteúdo e até 12 etiquetas por nota.
 - Busca local por título, texto ou etiqueta somente durante a sessão aberta.
@@ -281,6 +298,7 @@ Parâmetros principais:
 - Troca de senha com confirmação da senha atual e novo salt Argon2id.
 - Exportação em `.criptoveu-note`; backups JSON antigos continuam aceitos.
 - Cofres `NOTE1` com PBKDF2 continuam legíveis.
+- Cofres `NOTE2` e `NOTE3` continuam legíveis, e o modo de recuperação pode ser alternado depois do desbloqueio.
 - Depois de uma abertura legada bem-sucedida, a nota única é convertida em uma
   nota do cofre portátil e recriptografada como `NOTE2`; o blob antigo só é
   substituído após a nova criptografia terminar.
@@ -302,9 +320,11 @@ esperado.
 Salt e IV fixos existem apenas nesses vetores. A produção sempre usa
 `crypto.getRandomValues`.
 
-A suíte automatizada verifica compatibilidade V1, migração de `NOTE1`, senha
-incorreta, payload truncado e adulterações de ciphertext, IV, salt, tipo,
-versão, KDF, parâmetros Argon2id, expiração e limite.
+A suíte automatizada verifica compatibilidade V1, migração de `NOTE1`, recuperação
+de paridade `NOTE3`, senha incorreta, payload truncado e adulterações de
+ciphertext, IV, salt, tipo, versão, KDF, parâmetros Argon2id, expiração e limite.
+Os testes de arquivos também cobrem a recuperação `CRIPTOVEU6` de um bloco de
+dados danificado e a rejeição quando a paridade não consegue recuperar o grupo.
 
 Os testes do gerador verificam o tamanho real da chave de 256 bits, as classes
 da senha aleatória, a estrutura da frase-senha, unicidade amostral, uso de Web
@@ -449,7 +469,9 @@ Ideias e melhorias futuras planejadas ou em estudo:
 - [x] Escudo de Integridade para arquivos com `CRIPTOVEU4`, manifesto cifrado, verificação pós-recuperação, inspetor estrutural e relatório local.
 - [x] Gerador local de frase, senha e chave de 256 bits, com medidor heurístico e avisos de padrões fracos.
 - [x] Proteção dupla de arquivos com senha + arquivo-chave no formato `CRIPTOVEU5`.
+- [x] Pacotes de arquivos recuperáveis com paridade XOR local no `CRIPTOVEU6`.
 - [x] Cofre portátil VéuNotes com várias notas, etiquetas, busca local, troca de senha e arquivo `.criptoveu-note`.
+- [x] Envelopes VéuNotes recuperáveis com paridade XOR no `NOTE3`.
 - [x] Diagnóstico do navegador com verificação local de APIs críticas e recomendação conservadora de perfis Argon2id.
 
 > Observação sobre o futuro chat: mesmo sem armazenar mensagens, um servidor de sinalização ou relay poderá observar metadados como IP, horário, duração da sessão e tamanho aproximado dos pacotes. Isso deve ser documentado claramente quando o recurso for implementado.
