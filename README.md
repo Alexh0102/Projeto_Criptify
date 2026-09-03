@@ -28,6 +28,7 @@ Main features:
 
 - Local file encryption and decryption.
 - Chunked processing for large files.
+- Recoverable XOR parity for one damaged data ciphertext per group.
 - Local preview of decrypted files when supported by the browser.
 - Long-key generation in the style used by formats such as `.crypt15`.
 - Password-protected QR codes.
@@ -58,9 +59,10 @@ Main features:
 
 - AES-256-GCM via the Web Crypto API.
 - Argon2id v1.3 via WebAssembly in Web Workers (`hash-wasm`).
-- 2 MB chunked file processing with an encrypted integrity manifest (V4/V5).
+- 2 MB chunked file processing with an encrypted integrity manifest (V4/V5/V6).
 - OPFS-backed file encryption and decryption in a dedicated Web Worker when `createSyncAccessHandle` is available.
 - Dual protection with password + key file (V5).
+- Recoverable XOR parity for one damaged ciphertext per group (V6).
 - Portable encrypted note vault (VéuNotes / `PORTABLE_VAULT1`).
 - URL hash payload serialization for links and QR codes; payloads are never sent in HTTP requests.
 - LSB steganography for PNG images.
@@ -85,13 +87,14 @@ Additional technologies:
 | Tool | Cryptography | Key derivation | Storage / output |
 |---|---|---|---|
 | V5 files with dual protection | AES-256-GCM + encrypted SHA-256 manifest | SHA-256 of password + key file, followed by Argon2id | `.criptoveu` file |
+| V6 files with recoverable parity | AES-256-GCM + encrypted SHA-256 manifest + local XOR parity | Argon2id v1.3 via WASM in a Web Worker | `.criptoveu` file |
 | V4 files | AES-256-GCM + encrypted SHA-256 manifest | Argon2id v1.3 via WASM in a Web Worker | `.criptoveu` file |
 | Legacy files | AES-GCM | Argon2id in `CRIPTOVEU3`; PBKDF2/SHA-256 in earlier formats | `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2`, and `CRIPTIFY1` packages |
 | `MSG2` messages | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | `CVM2` payload |
 | Protected `QR2` QR codes | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | `CVQ2` payload in the URL hash |
 | Protected `LINK2` links | AES-256-GCM | Argon2id, 64 MB, `t=2`, `p=1` | `CVL2` payload in the URL hash |
 | Steganography | `MSG2` message protected before hiding | Argon2id, 64 MB, `t=2`, `p=1` | PNG image with hidden data |
-| VéuNotes `NOTE2` + `PORTABLE_VAULT1` | AES-256-GCM | Argon2id, 128 MB, `t=2`, `p=1` | `localStorage` and `.criptoveu-note` file |
+| VéuNotes `NOTE2`/`NOTE3` + `PORTABLE_VAULT1` | AES-256-GCM; NOTE3 adds XOR parity | Argon2id, 128 MB, `t=2`, `p=1` | `localStorage` and `.criptoveu-note` file |
 | Legacy V1 formats | AES-GCM | PBKDF2/SHA-256 | Read-compatible; new creations use V2 |
 
 ---
@@ -106,20 +109,21 @@ Encryption and decryption take place in chunks of up to **2 MB**. On browsers th
 
 The OPFS path removes the previous fixed 1 GB application limit. Its practical boundary is the storage quota available to the browser, while memory remains proportional to the active chunk, authentication data, and selected Argon2id profile rather than to the total file size. On browsers without the required OPFS API, the compatibility fallback remains available with a conservative 1 GB safety guard.
 
-Current V4 package format:
+Current V4/V5/V6 package format:
 
 ```text
-CRIPTOVEU4 + ram_mb_ascii + passes_ascii + salt + initial_iv
+CRIPTOVEU[4|5|6] + ram_mb_ascii + passes_ascii + salt + initial_iv
   + chunk_size + block_count
   + [data_type + ciphertext_size + ciphertext]...
+  + [parity_type + parity_size + parity]... (V6 only, after each group of up to 4 data blocks)
   + [manifest_type + ciphertext_size + encrypted_manifest]
 ```
 
-V4 header structure:
+V4, V5, and V6 header structure:
 
 ```text
 offset  size   field
-0       10     signature: "CRIPTOVEU4"
+0       10     signature: "CRIPTOVEU4", "CRIPTOVEU5", or "CRIPTOVEU6"
 10      4      Argon2id RAM in MB, decimal ASCII
 14      4      Argon2id passes, decimal ASCII
 18      16     salt
@@ -136,18 +140,20 @@ Technical details:
 - Argon2id parameters: `t=2`, `p=1`.
 - Argon2id memory profiles: **64 MB**, **256 MB** by default, or **512 MB**.
 - Memory selection is cached only for creating new files.
-- The V4 header records RAM, passes, salt, initial IV, chunk size, and block count.
+- The V4/V5/V6 header records RAM, passes, salt, initial IV, chunk size, and block count.
 - Decryption reads parameters directly from the package and does not depend on `localStorage`.
 - Each block is up to 2 MB.
 - The fixed header, type, index, and size of each record are included in AAD to reject tampering, reordering, and truncation.
 - The first block uses the IV stored in the header.
 - Subsequent records use unique IVs derived from the initial IV and index; the manifest uses the index immediately after the last block.
+- In V6, each group of up to four encrypted data blocks is followed by an XOR parity record. One damaged data ciphertext per group can be reconstructed before AES-GCM and SHA-256 verification; multiple damaged blocks or damaged parity cannot be recovered.
 - The **Integrity Shield** calculates SHA-256 for the complete file and each block in a separate Web Worker.
 - The manifest stores the original name, MIME type, size, hashes, algorithms, and Argon2id parameters. It is encrypted and authenticated as the final package record.
 - After recovery, the browser recalculates content hashes and confirms integrity only when all hashes match.
 - Password-free inspection validates only package structure and uses the phrase **plausible structure**. Authenticity requires the correct password.
 - Each result can produce a local JSON report containing the format, KDF, Argon2id parameters, block count, and verification status.
 - Reading remains compatible with `CRIPTOVEU3`, `CRIPTOVEU2`, `CRIPTIFY2`, and `CRIPTIFY1`.
+- V6 recoverable parity cannot be combined with the V5 key-file protection; choose one protection mode per package.
 - With OPFS, the practical limit is the available local storage and browser quota. The fallback path is limited to **1 GB**.
 
 In the Capacitor Android app, completed results are exported to `Download/` through the native Filesystem plugin, one 2 MB Base64-encoded slice at a time. On Android versions where `ExternalStorage` is unavailable, the WebView download manager is used as a fallback.
@@ -183,7 +189,13 @@ Security rules:
 - Losing either factor makes recovery impossible.
 - A public or predictable key file provides little protection against an attacker who already has access to it.
 
-Files without dual protection continue to be created as `CRIPTOVEU4`. Reading V4 and all previous formats remains supported.
+Files without a key file or recoverable parity are created as `CRIPTOVEU4` by default. Key-file protection creates `CRIPTOVEU5`, and recoverable parity creates `CRIPTOVEU6`. Reading V4, V5, V6, and all previous formats remains supported.
+
+#### Recoverable parity with `CRIPTOVEU6`
+
+When **Recoverable mode with parity** is enabled, new files use the `CRIPTOVEU6` signature. The package keeps the V4/V5/V6 authenticated header, encrypted manifest, and SHA-256 verification, while adding one local XOR parity record after each group of up to four encrypted data blocks. If one data ciphertext in a group is damaged but the other data ciphertexts and parity remain intact, the application reconstructs that ciphertext and then verifies it with AES-GCM and the final manifest hashes.
+
+Parity is redundancy, not a replacement for encryption or a backup. It cannot recover two damaged data blocks in the same group, a damaged parity record, a deleted record, or a lost password. The mode cannot be combined with a key file and adds roughly 25% overhead for full four-block groups.
 
 ---
 
@@ -254,12 +266,15 @@ Applied limits:
 
 VéuNotes organizes multiple notes in an encrypted `localStorage` vault and allows exporting the same content as a portable `.criptoveu-note` file. Titles, text, labels, and identifiers remain inside the ciphertext; search happens locally only after unlocking.
 
-The envelope is encrypted with AES-256-GCM and protected by a master password. New vaults use `NOTE2` externally and the authenticated `PORTABLE_VAULT1` document internally.
+The envelope is encrypted with AES-256-GCM and protected by a master password. Standard vaults use `NOTE2` externally; **Recoverable mode with parity** uses `NOTE3`. Both contain the authenticated `PORTABLE_VAULT1` document internally.
 
 Main parameters:
 
 - Minimum password: **12 characters**.
 - Argon2id in a Web Worker with **128 MB**, `t=2`, and `p=1`.
+- Standard mode stores one authenticated ciphertext in `NOTE2`.
+- Recoverable mode stores two authenticated ciphertexts with independent IVs plus an XOR parity value in `NOTE3`. One damaged ciphertext can be reconstructed if the other ciphertext and parity remain intact; the resulting plaintext still must pass AES-GCM and vault validation.
+- Recoverable mode makes the encrypted envelope approximately three times larger and cannot recover two damaged ciphertexts, damaged parity, or a lost password.
 - Type, version, and KDF parameters are authenticated as AAD.
 - Up to **500 notes**, with titles, content, and up to 12 labels per note.
 - Local search by title, text, or label only during an unlocked session.
@@ -267,6 +282,7 @@ Main parameters:
 - Password changes require confirmation of the current password and use a new Argon2id salt.
 - Export to `.criptoveu-note`; older JSON backups remain accepted.
 - `NOTE1` vaults using PBKDF2 remain readable.
+- `NOTE2` and `NOTE3` vaults remain readable, and the recovery mode can be toggled after unlocking.
 - After successful legacy opening, the single note is converted into a portable-vault note and re-encrypted as `NOTE2`; the old blob is replaced only after re-encryption finishes.
 - Imports validate size, allowed fields, limits, and AES-GCM authentication before replacing the local vault.
 
@@ -280,7 +296,7 @@ Directories under `test-vectors/` contain reproducible vectors for `MSG2`, `QR2`
 
 Fixed salts and IVs exist only in these vectors. Production always uses `crypto.getRandomValues`.
 
-The automated suite checks V1 compatibility, `NOTE1` migration, incorrect passwords, truncated payloads, and tampering of ciphertext, IV, salt, type, version, KDF, Argon2id parameters, expiration, and limits.
+The automated suite checks V1 compatibility, `NOTE1` migration, `NOTE3` parity recovery, incorrect passwords, truncated payloads, and tampering of ciphertext, IV, salt, type, version, KDF, Argon2id parameters, expiration, and limits. File tests also cover `CRIPTOVEU6` recovery of one damaged data block and rejection when parity cannot recover the group.
 
 Generator tests check the actual 256-bit key size, random-password character classes, passphrase structure, sample uniqueness, Web Crypto usage, and weak-pattern detection.
 
@@ -423,7 +439,9 @@ Future ideas and improvements planned or under consideration:
 - [x] Integrity Shield for files with `CRIPTOVEU4`, encrypted manifest, post-recovery verification, structural inspector, and local report.
 - [x] Local passphrase, password, and 256-bit key generator with heuristic meter and weak-pattern warnings.
 - [x] Dual file protection with password + key file in `CRIPTOVEU5`.
+- [x] Recoverable file packages with local XOR parity in `CRIPTOVEU6`.
 - [x] VéuNotes portable vault with multiple notes, labels, local search, password changes, and `.criptoveu-note` files.
+- [x] Recoverable VéuNotes envelopes with XOR parity in `NOTE3`.
 - [x] Browser diagnostics with local checks of critical APIs and conservative Argon2id profile recommendations.
 
 > Note about future chat: even without storing messages, a signaling or relay server may observe metadata such as IP address, time, session duration, and approximate packet size. This must be documented clearly when the feature is implemented.
