@@ -407,6 +407,7 @@ export default function FileCryptoWorkspace() {
     }
 
     resultCleanupRef.current = []
+    releasePreviewUrl()
     setResults([])
     setPreviewItem(null)
     setPreviewBlob(null)
@@ -815,13 +816,31 @@ export default function FileCryptoWorkspace() {
     })
   }
 
+  function releasePreviewUrl() {
+    const url = previewUrlRef.current
+    previewUrlRef.current = null
+
+    if (url) {
+      URL.revokeObjectURL(url)
+    }
+
+    setPreviewUrl(null)
+  }
+
   function handleOpenPreview(result: ResultItem | null = results[0] ?? null) {
     if (!result || result.preview.kind === 'none') {
       return
     }
 
+    if (result.preview.kind === 'video' || result.preview.kind === 'audio') {
+      setStatus({
+        tone: 'info',
+        message: t('files.preview.largeFileNotice'),
+      })
+    }
+
     const resolvedMimeType = resolvePreviewMimeType(result.name, result.blob.type)
-    const nextPreviewBlob = new Blob([result.blob], { type: resolvedMimeType })
+    const nextPreviewBlob = result.blob
 
     if (nextPreviewBlob.size === 0) {
       setStatus({
@@ -858,6 +877,7 @@ export default function FileCryptoWorkspace() {
 
   function handleClosePreview() {
     const closedUnsavedPreview = previewItem !== null && !previewItem.savedWithSuccess
+    releasePreviewUrl()
     setIsPreviewOpen(false)
     setPreviewItem(null)
     setPreviewBlob(null)
@@ -1852,6 +1872,21 @@ export default function FileCryptoWorkspace() {
                       ) : null}
                     </div>
 
+                    {mode === 'decrypt' &&
+                    result.preview.reason === 'too-large' &&
+                    result.preview.limit ? (
+                      <div
+                        role="alert"
+                        className="mt-4 rounded-[20px] border border-amber-400/25 bg-amber-400/10 p-4 text-sm leading-7 text-amber-50"
+                      >
+                        {t(
+                          result.preview.limit === 'mobile'
+                            ? 'files.preview.limitExceededAndroid'
+                            : 'files.preview.limitExceededDesktop',
+                        )}
+                      </div>
+                    ) : null}
+
                     <div
                       className={`mt-4 rounded-[20px] border p-4 ${
                         result.securityReport.integrity.status !== 'aead-only'
@@ -2087,9 +2122,6 @@ export default function FileCryptoWorkspace() {
     </>
   )
 }
-
-
-
 
 
 

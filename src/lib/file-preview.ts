@@ -1,6 +1,10 @@
+import { Capacitor } from '@capacitor/core'
+
 export const MAX_AUTO_PREVIEW_SIZE_BYTES = 100 * 1024 * 1024
 export const MAX_NATIVE_PREVIEW_SIZE_BYTES = 50 * 1024 * 1024
 export const MAX_TEXT_PREVIEW_SIZE_BYTES = 5 * 1024 * 1024
+export const MAX_MOBILE_VIDEO_PREVIEW_SIZE_BYTES = 1024 * 1024 * 1024
+export const MAX_DESKTOP_VIDEO_PREVIEW_SIZE_BYTES = 5 * 1024 * 1024 * 1024
 
 const MIME_BY_EXTENSION: Record<string, string> = {
   png: 'image/png',
@@ -32,6 +36,24 @@ export function resolvePreviewMimeType(
 
   const extension = fileName.split('.').pop()?.toLowerCase()
   return (extension && MIME_BY_EXTENSION[extension]) || 'application/octet-stream'
+}
+
+export function isMobilePreviewEnvironment() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false
+  }
+
+  const platform = Capacitor.getPlatform()
+  const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(
+    navigator.userAgent,
+  )
+
+  return (
+    Capacitor.isNativePlatform() ||
+    platform === 'android' ||
+    platform === 'ios' ||
+    (navigator.maxTouchPoints > 0 && mobileUserAgent)
+  )
 }
 
 export type FilePreviewKind = 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'unsupported'
