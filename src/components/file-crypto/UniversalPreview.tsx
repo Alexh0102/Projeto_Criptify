@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ArrowLeft,
   Download,
   ExternalLink,
   FastForward,
@@ -346,15 +347,6 @@ export default function UniversalPreview({
 
       return (
         <div className="space-y-3">
-          {!videoReady && !videoError ? (
-            <div
-              role="status"
-              aria-live="polite"
-              className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm leading-6 text-cyan-50"
-            >
-              {t('files.preview.largeFileNotice')}
-            </div>
-          ) : null}
           {videoError ? (
             <div
               role="alert"
@@ -382,7 +374,7 @@ export default function UniversalPreview({
                     setVideoError(true)
                   }}
                   className={`w-full ${
-                    expanded ? 'max-h-[76vh]' : 'max-h-[420px]'
+                    expanded ? 'max-h-[min(62dvh,640px)]' : 'max-h-[420px]'
                   }`}
                   aria-label={t('files.preview.videoAria', { fileName })}
                 >
@@ -398,7 +390,7 @@ export default function UniversalPreview({
                 ) : null}
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-2 sm:p-3">
                 <label htmlFor="preview-video-timeline" className="sr-only">
                   {t('files.preview.timeline')}
                 </label>
@@ -414,7 +406,7 @@ export default function UniversalPreview({
                   className="w-full accent-cyan-400"
                   aria-label={t('files.preview.timeline')}
                 />
-                <div className="mt-2 flex items-center justify-between gap-3 text-xs text-zinc-400">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
                   <span>
                     {formatMediaTime(videoCurrentTime)} /{' '}
                     {formatMediaTime(videoDuration)}
@@ -437,13 +429,18 @@ export default function UniversalPreview({
                     </select>
                   </label>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-2 grid grid-cols-4 gap-2 sm:mt-3 sm:flex">
                   <button
                     type="button"
                     onClick={handleVideoPlayPause}
                     disabled={!videoReady}
-                    className="btn-secondary"
+                    className="btn-secondary min-h-10 min-w-0 justify-center px-2 sm:flex-1"
                     aria-label={
+                      videoPlaying
+                        ? t('files.preview.pause')
+                        : t('files.preview.play')
+                    }
+                    title={
                       videoPlaying
                         ? t('files.preview.pause')
                         : t('files.preview.play')
@@ -454,39 +451,49 @@ export default function UniversalPreview({
                     ) : (
                       <Play className="h-4 w-4" />
                     )}
-                    {videoPlaying
-                      ? t('files.preview.pause')
-                      : t('files.preview.play')}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleVideoSkip(-10)}
                     disabled={!videoReady}
-                    className="btn-secondary"
+                    className="btn-secondary min-h-10 min-w-0 justify-center px-2 sm:flex-1"
+                    aria-label={t('files.preview.rewind10')}
+                    title={t('files.preview.rewind10')}
                   >
                     <Rewind className="h-4 w-4" />
-                    {t('files.preview.rewind10')}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleVideoSkip(10)}
                     disabled={!videoReady}
-                    className="btn-secondary"
+                    className="btn-secondary min-h-10 min-w-0 justify-center px-2 sm:flex-1"
+                    aria-label={t('files.preview.forward10')}
+                    title={t('files.preview.forward10')}
                   >
                     <FastForward className="h-4 w-4" />
-                    {t('files.preview.forward10')}
                   </button>
                   <button
                     type="button"
                     onClick={handleVideoFullscreen}
                     disabled={!videoReady}
-                    className="btn-secondary"
+                    className="btn-secondary min-h-10 min-w-0 justify-center px-2 sm:flex-1"
+                    aria-label={t('files.preview.fullscreen')}
+                    title={t('files.preview.fullscreen')}
                   >
                     <Maximize2 className="h-4 w-4" />
-                    {t('files.preview.fullscreen')}
                   </button>
                 </div>
               </div>
+
+              {!videoReady ? (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm leading-6 text-cyan-50"
+                >
+                  {t('files.preview.largeFileNotice')}
+                </div>
+              ) : null}
             </>
           )}
         </div>
@@ -564,71 +571,138 @@ export default function UniversalPreview({
         : metadata.kind === 'text' || metadata.kind === 'pdf'
           ? FileText
           : ShieldOff
-  const previewContainerClassName = `surface-technical min-w-0 overflow-hidden rounded-[24px] p-3 transition duration-300 sm:p-4 ${
+  const previewContainerClassName = `surface-technical min-w-0 rounded-[24px] transition duration-300 ${
+    expanded ? 'overflow-visible p-2 sm:p-4' : 'overflow-hidden p-3 sm:p-4'
+  } ${
     isInactive ? 'cv-privacy-blur' : ''
   }`
 
   return (
-    <div ref={containerRef} className="min-w-0 space-y-4 overflow-hidden">
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="icon-chip p-2">
-            <PreviewIcon className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="break-words text-xs uppercase tracking-[0.18em] text-cyan-100/80 sm:tracking-[0.28em]">
-              {t('files.preview.safePreview', { label: previewKindLabel })}
-            </p>
-            <p className="mt-2 break-words text-sm font-semibold text-white">{fileName}</p>
-          </div>
-        </div>
-
-        <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-flow-col sm:auto-cols-max">
-          {canExpand ? (
-            <button type="button" onClick={onOpen} className="btn-secondary w-full">
-              <Maximize2 className="h-4 w-4" />
-              {t('common.expand')}
-            </button>
-          ) : null}
-
-          {onDownload ? (
-            <button type="button" onClick={handleDownloadClick} className="btn-secondary w-full">
-              <Download className="h-4 w-4" />
-              {t('common.download')}
-            </button>
-          ) : null}
-
-          {onShare ? (
-            <button type="button" onClick={handleShareClick} className="btn-secondary w-full">
-              <Share2 className="h-4 w-4" />
-              {t('files.workspace.results.share')}
-            </button>
-          ) : null}
-
-          {onOpenExternal ? (
-            <button type="button" onClick={handleOpenExternalClick} className="btn-secondary w-full">
-              <ExternalLink className="h-4 w-4" />
-              {t('files.workspace.results.openExternal')}
-            </button>
-          ) : null}
-
+    <div
+      ref={containerRef}
+      className={
+        expanded
+          ? 'flex min-w-0 flex-1 flex-col gap-3'
+          : 'min-w-0 space-y-4 overflow-hidden'
+      }
+    >
+      {expanded ? (
+        <div className="sticky top-0 z-20 flex min-w-0 shrink-0 items-center gap-2 border-b border-white/10 bg-zinc-950/95 py-2 backdrop-blur sm:gap-3">
           {onClose ? (
-            <button type="button" onClick={onClose} className="btn-secondary w-full">
-              <X className="h-4 w-4" />
-              {t('common.close')}
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary h-10 shrink-0 gap-2 px-3 text-xs font-semibold uppercase tracking-[0.12em]"
+              aria-label={t('files.preview.closeExpandedAria')}
+              title={t('layout.header.back')}
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span>{t('layout.header.back')}</span>
             </button>
           ) : null}
+          <div className="min-w-0 flex-1 px-1 text-center">
+            <p className="truncate text-sm font-semibold text-white" title={fileName}>
+              {fileName}
+            </p>
+            <p className="truncate text-[11px] uppercase tracking-[0.16em] text-cyan-100/70">
+              {previewKindLabel}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {onDownload ? (
+              <button
+                type="button"
+                onClick={handleDownloadClick}
+                className="btn-secondary h-10 w-10 justify-center p-0"
+                aria-label={t('common.download')}
+                title={t('common.download')}
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            ) : null}
+            {onShare ? (
+              <button
+                type="button"
+                onClick={handleShareClick}
+                className="btn-secondary h-10 w-10 justify-center p-0"
+                aria-label={t('files.workspace.results.share')}
+                title={t('files.workspace.results.share')}
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
+            ) : null}
+            {onOpenExternal ? (
+              <button
+                type="button"
+                onClick={handleOpenExternalClick}
+                className="btn-secondary h-10 w-10 justify-center p-0"
+                aria-label={t('files.workspace.results.openExternal')}
+                title={t('files.workspace.results.openExternal')}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="icon-chip p-2">
+              <PreviewIcon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="break-words text-xs uppercase tracking-[0.18em] text-cyan-100/80 sm:tracking-[0.28em]">
+                {t('files.preview.safePreview', { label: previewKindLabel })}
+              </p>
+              <p className="mt-2 break-words text-sm font-semibold text-white">{fileName}</p>
+            </div>
+          </div>
 
-      {isInactive ? (
+          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-flow-col sm:auto-cols-max">
+            {canExpand ? (
+              <button type="button" onClick={onOpen} className="btn-secondary w-full">
+                <Maximize2 className="h-4 w-4" />
+                {t('common.expand')}
+              </button>
+            ) : null}
+            {onDownload ? (
+              <button type="button" onClick={handleDownloadClick} className="btn-secondary w-full">
+                <Download className="h-4 w-4" />
+                {t('common.download')}
+              </button>
+            ) : null}
+            {onShare ? (
+              <button type="button" onClick={handleShareClick} className="btn-secondary w-full">
+                <Share2 className="h-4 w-4" />
+                {t('files.workspace.results.share')}
+              </button>
+            ) : null}
+            {onOpenExternal ? (
+              <button type="button" onClick={handleOpenExternalClick} className="btn-secondary w-full">
+                <ExternalLink className="h-4 w-4" />
+                {t('files.workspace.results.openExternal')}
+              </button>
+            ) : null}
+            {onClose ? (
+              <button type="button" onClick={onClose} className="btn-secondary w-full">
+                <X className="h-4 w-4" />
+                {t('common.close')}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {!expanded && isInactive ? (
         <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm text-cyan-50">
           <Pause className="h-4 w-4" />
           {t('files.preview.hiddenByInactivity')}
         </div>
       ) : null}
 
-      <p className="text-xs leading-6 text-zinc-500">{t('files.preview.localPreviewNote')}</p>
+      {!expanded ? (
+        <p className="text-xs leading-6 text-zinc-500">{t('files.preview.localPreviewNote')}</p>
+      ) : null}
 
       {isInactive ? (
         <div className={previewContainerClassName} aria-hidden="true">
@@ -637,6 +711,20 @@ export default function UniversalPreview({
       ) : (
         <div className={previewContainerClassName}>{renderPreview()}</div>
       )}
+
+      {expanded ? (
+        <>
+          {isInactive ? (
+            <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm text-cyan-50">
+              <Pause className="h-4 w-4" />
+              {t('files.preview.hiddenByInactivity')}
+            </div>
+          ) : null}
+          <p className="pb-2 text-xs leading-6 text-zinc-500">
+            {t('files.preview.localPreviewNote')}
+          </p>
+        </>
+      ) : null}
     </div>
   )
 }

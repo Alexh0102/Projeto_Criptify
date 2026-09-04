@@ -2010,13 +2010,13 @@ export default function FileCryptoWorkspace() {
 
       {isPreviewOpen && activePreviewItem && previewUrl && preview.kind !== 'none' ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-black/95 px-2 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,24px)] backdrop-blur-sm sm:px-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="recovered-file-preview-title"
           onClick={handlePreviewBackdropClick}
         >
-          <div className="relative z-10 w-full max-w-6xl rounded-[32px] border border-white/10 bg-zinc-950/95 p-4 shadow-2xl shadow-black/40 sm:p-6">
+          <div className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-1 flex-col py-2 sm:py-4">
             <h2 id="recovered-file-preview-title" className="sr-only">
               {t('files.workspace.preview.expandedAria')}
             </h2>
