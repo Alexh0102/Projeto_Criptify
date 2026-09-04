@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "clean:android": "npm run build && npx cap copy android && npx cap sync android",
     "lint": "eslint .",
     "test": "node --test tests/*.test.mjs",
     "preview": "vite preview"
