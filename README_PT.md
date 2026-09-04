@@ -29,7 +29,7 @@ Principais recursos:
 - Criptografia e descriptografia de arquivos locais.
 - Processamento por blocos para arquivos grandes.
 - Paridade XOR recuperável para um ciphertext danificado por grupo (V6).
-- Pré-visualização local de arquivos descriptografados, quando o navegador oferece suporte.
+- Pré-visualização local de arquivos descriptografados, quando o navegador oferece suporte, incluindo player avançado de vídeo.
 - Geração de chave longa no estilo usado por formatos como `.crypt15`.
 - QR Code protegido por senha.
 - Link protegido com expiração embutida no payload e limite de visualizações controlado localmente no navegador.
@@ -66,6 +66,7 @@ Principais recursos:
 - hash-wasm para Argon2id em WebAssembly, executado em Web Worker.
 - OPFS para criptografia e descriptografia em um Web Worker dedicado quando `createSyncAccessHandle` está disponível.
 - Processamento por blocos de 2 MB com manifesto de integridade SHA-256 cifrado (V4/V5/V6).
+- Pré-visualizações de mídia locais usam URLs de objeto a partir do arquivo recuperado, sem conversão para Base64 ou carregamento do arquivo inteiro em `ArrayBuffer`.
 - qrcode para geração de QR Code.
 - jsqr para leitura de QR Code em imagens.
 - Service Worker e Web App Manifest para experiência PWA.
@@ -196,6 +197,24 @@ anteriores permanece compatível.
 Quando o **Modo recuperável com paridade** é ativado, novos arquivos usam a assinatura `CRIPTOVEU6`. O pacote mantém o cabeçalho autenticado, o manifesto cifrado e a verificação SHA-256 do V4/V5/V6, acrescentando um registro de paridade XOR local após cada grupo de até quatro blocos cifrados. Se um ciphertext de dados de um grupo for danificado, mas os demais ciphertexts e a paridade permanecerem íntegros, a aplicação reconstrói o ciphertext e depois o valida com AES-GCM e os hashes finais do manifesto.
 
 Paridade é redundância, não substitui criptografia nem backup. Ela não recupera dois blocos de dados danificados no mesmo grupo, um registro de paridade danificado, um registro excluído ou uma senha perdida. O modo não pode ser combinado com arquivo-chave e acrescenta aproximadamente 25% de espaço em grupos completos de quatro blocos.
+---
+
+### Pré-visualização de mídia descriptografada
+
+As mídias descriptografadas são pré-visualizadas localmente a partir do `File`/`Blob` recuperado por meio de `URL.createObjectURL`. A prévia nunca converte a mídia para Base64 nem carrega o arquivo inteiro em um `ArrayBuffer` do JavaScript. A URL temporária é revogada quando a pré-visualização é fechada ou desmontada.
+
+Os limites de vídeo são escolhidos conforme a plataforma em execução:
+
+| Ambiente | Tamanho máximo do vídeo |
+|---|---:|
+| Capacitor Android/iOS ou navegador móvel com toque | **1 GB** |
+| Navegador desktop convencional | **5 GB** |
+
+As demais mídias mantêm os limites conservadores existentes: **100 MB** na web, **50 MB** no aplicativo nativo e **5 MB** para textos. Arquivos acima do limite aplicável continuam disponíveis para download, mas não são abertos no player do navegador.
+
+O player de vídeo exibe aviso de carregamento e spinner até que os metadados ou a reprodução estejam disponíveis. Ele oferece timeline para busca, tempo decorrido/total, controles de recuo e avanço de 10 segundos, velocidades de **0,5x, 1,0x, 1,25x, 1,5x e 2,0x** e tela cheia nativa. No desktop, `Espaço` alterna reprodução/pausa, as setas esquerda e direita buscam 10 segundos e `F` alterna a tela cheia.
+
+Se o navegador ou WebView não conseguir decodificar o formato ou codec do vídeo, o player é substituído por uma explicação e o usuário é orientado a baixar o arquivo descriptografado para reproduzi-lo no VLC ou no player nativo do dispositivo.
 
 ---
 

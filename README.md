@@ -29,7 +29,7 @@ Main features:
 - Local file encryption and decryption.
 - Chunked processing for large files.
 - Recoverable XOR parity for one damaged data ciphertext per group.
-- Local preview of decrypted files when supported by the browser.
+- Local preview of decrypted files when supported by the browser, including an advanced video player.
 - Long-key generation in the style used by formats such as `.crypt15`.
 - Password-protected QR codes.
 - Protected links with expiration embedded in the payload and a view limit controlled locally by the browser.
@@ -61,6 +61,7 @@ Main features:
 - Argon2id v1.3 via WebAssembly in Web Workers (`hash-wasm`).
 - 2 MB chunked file processing with an encrypted integrity manifest (V4/V5/V6).
 - OPFS-backed file encryption and decryption in a dedicated Web Worker when `createSyncAccessHandle` is available.
+- Local media previews use object URLs from the recovered file without Base64 conversion or whole-file ArrayBuffer loading.
 - Dual protection with password + key file (V5).
 - Recoverable XOR parity for one damaged ciphertext per group (V6).
 - Portable encrypted note vault (VéuNotes / `PORTABLE_VAULT1`).
@@ -196,6 +197,24 @@ Files without a key file or recoverable parity are created as `CRIPTOVEU4` by de
 When **Recoverable mode with parity** is enabled, new files use the `CRIPTOVEU6` signature. The package keeps the V4/V5/V6 authenticated header, encrypted manifest, and SHA-256 verification, while adding one local XOR parity record after each group of up to four encrypted data blocks. If one data ciphertext in a group is damaged but the other data ciphertexts and parity remain intact, the application reconstructs that ciphertext and then verifies it with AES-GCM and the final manifest hashes.
 
 Parity is redundancy, not a replacement for encryption or a backup. It cannot recover two damaged data blocks in the same group, a damaged parity record, a deleted record, or a lost password. The mode cannot be combined with a key file and adds roughly 25% overhead for full four-block groups.
+---
+
+### Decrypted media preview
+
+Decrypted media is previewed locally from the recovered `File`/`Blob` through `URL.createObjectURL`. The preview never converts the media to Base64 or loads the entire file into a JavaScript `ArrayBuffer`. The temporary object URL is revoked when the preview closes or unmounts.
+
+Video preview limits are selected from the runtime platform:
+
+| Environment | Maximum video size |
+|---|---:|
+| Capacitor Android/iOS or touch mobile browser | **1 GB** |
+| Conventional desktop browser | **5 GB** |
+
+Other media keeps the existing conservative preview limits: **100 MB** on the web, **50 MB** in the native app, and **5 MB** for text. Files above their applicable limit remain available for download but are not opened in the browser player.
+
+The video player displays a loading notice and spinner until metadata or playback is available. It provides a seek timeline, elapsed/total time, 10-second rewind and fast-forward controls, playback rates of **0.5x, 1.0x, 1.25x, 1.5x, and 2.0x**, and native fullscreen. On desktop, `Space` toggles play/pause, the left and right arrows seek by 10 seconds, and `F` toggles fullscreen.
+
+If the browser or WebView cannot decode the video's format or codec, the player is replaced with an explanation and the user is directed to download the decrypted file for playback in VLC or the device's native media player.
 
 ---
 
