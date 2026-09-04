@@ -17,7 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import type { ChangeEvent, MouseEvent, SyntheticEvent } from 'react'
+import type { ChangeEvent, MouseEvent, RefObject, SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -36,6 +36,7 @@ type UniversalPreviewProps = {
   onDownload?: (event: MouseEvent<HTMLButtonElement>) => void
   onShare?: (event: MouseEvent<HTMLButtonElement>) => void
   onOpenExternal?: (event: MouseEvent<HTMLButtonElement>) => void
+  fullscreenTargetRef?: RefObject<HTMLDivElement>
   previewUrlRevoked?: boolean
 }
 
@@ -73,6 +74,7 @@ export default function UniversalPreview({
   onDownload,
   onShare,
   onOpenExternal,
+  fullscreenTargetRef,
   previewUrlRevoked = false,
 }: UniversalPreviewProps) {
   const { t } = useTranslation()
@@ -158,8 +160,12 @@ export default function UniversalPreview({
         event.preventDefault()
         if (document.fullscreenElement) {
           void document.exitFullscreen()
-        } else if (typeof video.requestFullscreen === 'function') {
-          void video.requestFullscreen()
+        } else {
+          const fullscreenTarget = fullscreenTargetRef?.current ?? containerRef.current
+
+          if (fullscreenTarget && typeof fullscreenTarget.requestFullscreen === 'function') {
+            void fullscreenTarget.requestFullscreen()
+          }
         }
       }
     }
@@ -336,12 +342,15 @@ export default function UniversalPreview({
       }
 
       function handleVideoFullscreen() {
-        const video = videoRef.current
-
         if (document.fullscreenElement) {
           void document.exitFullscreen()
-        } else if (video && typeof video.requestFullscreen === 'function') {
-          void video.requestFullscreen()
+          return
+        }
+
+        const fullscreenTarget = fullscreenTargetRef?.current ?? containerRef.current
+
+        if (fullscreenTarget && typeof fullscreenTarget.requestFullscreen === 'function') {
+          void fullscreenTarget.requestFullscreen()
         }
       }
 
@@ -361,7 +370,6 @@ export default function UniversalPreview({
                 <video
                   ref={videoRef}
                   src={url}
-                  controls
                   playsInline
                   preload="metadata"
                   onLoadedMetadata={handleVideoLoaded}
@@ -374,7 +382,7 @@ export default function UniversalPreview({
                     setVideoError(true)
                   }}
                   className={`w-full ${
-                    expanded ? 'max-h-[min(62dvh,640px)]' : 'max-h-[420px]'
+                    expanded ? 'max-h-[min(62dvh,640px)]' : 'max-h-[60vh]'
                   }`}
                   aria-label={t('files.preview.videoAria', { fileName })}
                 >
@@ -390,7 +398,7 @@ export default function UniversalPreview({
                 ) : null}
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-black/30 p-2 sm:p-3">
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-2 pb-[max(16px,env(safe-area-inset-bottom,28px))] sm:p-3 sm:pb-[max(16px,env(safe-area-inset-bottom,28px))]">
                 <label htmlFor="preview-video-timeline" className="sr-only">
                   {t('files.preview.timeline')}
                 </label>
@@ -587,16 +595,16 @@ export default function UniversalPreview({
       }
     >
       {expanded ? (
-        <div className="sticky top-0 z-20 flex min-w-0 shrink-0 items-center gap-2 border-b border-white/10 bg-zinc-950/95 py-2 backdrop-blur sm:gap-3">
+        <header className="sticky top-0 z-20 flex w-full min-w-0 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-zinc-950/90 px-4 pt-[env(safe-area-inset-top,16px)] pb-3 backdrop-blur">
           {onClose ? (
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary h-10 shrink-0 gap-2 px-3 text-xs font-semibold uppercase tracking-[0.12em]"
+              className="btn-secondary h-8 shrink-0 gap-1 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] sm:h-10 sm:gap-2 sm:px-3 sm:text-xs sm:tracking-[0.12em]"
               aria-label={t('files.preview.closeExpandedAria')}
               title={t('layout.header.back')}
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>{t('layout.header.back')}</span>
             </button>
           ) : null}
@@ -608,12 +616,12 @@ export default function UniversalPreview({
               {previewKindLabel}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-2">
             {onDownload ? (
               <button
                 type="button"
                 onClick={handleDownloadClick}
-                className="btn-secondary h-10 w-10 justify-center p-0"
+                className="btn-secondary h-8 w-8 justify-center p-0 sm:h-10 sm:w-10"
                 aria-label={t('common.download')}
                 title={t('common.download')}
               >
@@ -624,7 +632,7 @@ export default function UniversalPreview({
               <button
                 type="button"
                 onClick={handleShareClick}
-                className="btn-secondary h-10 w-10 justify-center p-0"
+                className="btn-secondary h-8 w-8 justify-center p-0 sm:h-10 sm:w-10"
                 aria-label={t('files.workspace.results.share')}
                 title={t('files.workspace.results.share')}
               >
@@ -635,7 +643,7 @@ export default function UniversalPreview({
               <button
                 type="button"
                 onClick={handleOpenExternalClick}
-                className="btn-secondary h-10 w-10 justify-center p-0"
+                className="btn-secondary h-8 w-8 justify-center p-0 sm:h-10 sm:w-10"
                 aria-label={t('files.workspace.results.openExternal')}
                 title={t('files.workspace.results.openExternal')}
               >
@@ -643,7 +651,7 @@ export default function UniversalPreview({
               </button>
             ) : null}
           </div>
-        </div>
+        </header>
       ) : (
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
