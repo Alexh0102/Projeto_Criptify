@@ -197,7 +197,6 @@ Files without a key file or recoverable parity are created as `CRIPTOVEU4` by de
 When **Recoverable mode with parity** is enabled, new files use the `CRIPTOVEU6` signature. The package keeps the V4/V5/V6 authenticated header, encrypted manifest, and SHA-256 verification, while adding one local XOR parity record after each group of up to four encrypted data blocks. If one data ciphertext in a group is damaged but the other data ciphertexts and parity remain intact, the application reconstructs that ciphertext and then verifies it with AES-GCM and the final manifest hashes.
 
 Parity is redundancy, not a replacement for encryption or a backup. It cannot recover two damaged data blocks in the same group, a damaged parity record, a deleted record, or a lost password. The mode cannot be combined with a key file and adds roughly 25% overhead for full four-block groups.
-
 ---
 
 ### Decrypted media preview

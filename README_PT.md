@@ -197,7 +197,6 @@ anteriores permanece compatível.
 Quando o **Modo recuperável com paridade** é ativado, novos arquivos usam a assinatura `CRIPTOVEU6`. O pacote mantém o cabeçalho autenticado, o manifesto cifrado e a verificação SHA-256 do V4/V5/V6, acrescentando um registro de paridade XOR local após cada grupo de até quatro blocos cifrados. Se um ciphertext de dados de um grupo for danificado, mas os demais ciphertexts e a paridade permanecerem íntegros, a aplicação reconstrói o ciphertext e depois o valida com AES-GCM e os hashes finais do manifesto.
 
 Paridade é redundância, não substitui criptografia nem backup. Ela não recupera dois blocos de dados danificados no mesmo grupo, um registro de paridade danificado, um registro excluído ou uma senha perdida. O modo não pode ser combinado com arquivo-chave e acrescenta aproximadamente 25% de espaço em grupos completos de quatro blocos.
-
 ---
 
 ### Pré-visualização de mídia descriptografada
