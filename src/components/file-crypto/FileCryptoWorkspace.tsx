@@ -193,6 +193,7 @@ export default function FileCryptoWorkspace() {
   const keyFileInputId = useId()
   const passwordInputId = useId()
   const previewUrlRef = useRef<string | null>(null)
+  const previewModalRef = useRef<HTMLDivElement | null>(null)
   const resultCleanupRef = useRef<(() => void)[]>([])
   const abortControllerRef = useRef<AbortController | null>(null)
   const resultPanelRef = useRef<HTMLDivElement | null>(null)
@@ -2010,7 +2011,8 @@ export default function FileCryptoWorkspace() {
 
       {isPreviewOpen && activePreviewItem && previewUrl && preview.kind !== 'none' ? (
         <div
-          className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-black/95 px-2 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,24px)] backdrop-blur-sm sm:px-4"
+          ref={previewModalRef}
+          className="fixed inset-0 z-[10000] flex min-h-[100dvh] flex-col overflow-y-auto bg-black/95 px-2 backdrop-blur-sm sm:px-4 [&:fullscreen]:h-screen [&:fullscreen]:w-screen [&:fullscreen]:justify-between [&:fullscreen]:bg-black"
           role="dialog"
           aria-modal="true"
           aria-labelledby="recovered-file-preview-title"
@@ -2046,6 +2048,7 @@ export default function FileCryptoWorkspace() {
                     }
                   : undefined
               }
+              fullscreenTargetRef={previewModalRef}
             />
           </div>
         </div>
